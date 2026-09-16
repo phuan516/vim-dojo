@@ -1,0 +1,5 @@
+title=Many files, one window
+belt=blue
+par=260
+vscode=tabs, Ctrl+Tab, split editor
+open=src/domain/order/order.provider.ts src/configuration/errors/default.json

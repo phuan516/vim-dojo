@@ -1,0 +1,5 @@
+title=Searching inside a file
+belt=orange
+par=160
+vscode=Ctrl+F
+open=order.repository.ts answers.txt

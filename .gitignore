@@ -1,0 +1,4 @@
+levels/*/work/
+levels/*/.done
+.dojo/state
+.dojo/keys.log

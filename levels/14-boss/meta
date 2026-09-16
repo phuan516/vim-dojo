@@ -1,0 +1,5 @@
+title=Boss: a feature in four files
+belt=black
+par=700
+vscode=a normal afternoon
+open=src/domain/order/order.entity.ts

@@ -1,0 +1,5 @@
+title=Search the repo, fix every hit
+belt=purple
+par=320
+vscode=Ctrl+Shift+F
+open=src/configuration/registry.ts

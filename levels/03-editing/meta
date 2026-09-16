@@ -1,0 +1,5 @@
+title=Delete, copy, paste, change
+belt=yellow
+par=140
+vscode=Ctrl+X, Ctrl+C, Ctrl+V, Shift+Alt+Down
+open=config.ts

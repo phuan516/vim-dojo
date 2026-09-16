@@ -1,0 +1,10 @@
+# Every answer lives in a file you have not opened yet. Find each
+# file by name - do not go hunting through directories.
+#
+# First, teach vim to search subdirectories:   :set path=.,**
+# Then :find customer.entity.ts   (Tab completes, and ** searches down)
+
+fields_in_the_Customer_type=
+error_code_whose_sentry_is_true=
+name_of_the_abstract_class_in_base.repository.ts=
+number_of_container.register_lines_in_registry.ts=

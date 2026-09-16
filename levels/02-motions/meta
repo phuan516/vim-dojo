@@ -1,0 +1,5 @@
+title=Moving without arrow keys
+belt=white
+par=200
+vscode=arrow keys, Ctrl+Home/End, Ctrl+G
+open=order.provider.ts answers.txt

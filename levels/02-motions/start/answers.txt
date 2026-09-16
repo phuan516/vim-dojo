@@ -1,0 +1,9 @@
+# Navigate order.provider.ts and fill in the blanks.
+# Turn line numbers on first:  :set number
+# Put your answer right after the = with no spaces.
+
+total_lines=
+line_number_of_the_last_import=
+first_word_on_line_26=
+first_word_on_line_30=
+line_number_of_the_word_CANCELLED=

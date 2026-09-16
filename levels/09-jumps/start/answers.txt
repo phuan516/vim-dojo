@@ -1,0 +1,6 @@
+# % jumps between a bracket and its partner. Put the cursor on a
+# bracket and press % . :set number first.
+
+line_matching_the_open_paren_on_line_8=
+line_matching_the_open_brace_on_line_7=
+line_matching_the_open_brace_on_line_16=

@@ -1,0 +1,183 @@
+#!/usr/bin/env bash
+# vim-dojo - learn vim by playing
+set -uo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LEVELS="$ROOT/levels"
+STATE="$ROOT/.dojo/state"
+KEYLOG="$ROOT/.dojo/keys.log"
+
+B=$'\033[1m'; D=$'\033[2m'; R=$'\033[0m'
+GRN=$'\033[32m'; RED=$'\033[31m'; YEL=$'\033[33m'; CYA=$'\033[36m'; MAG=$'\033[35m'
+
+# ---------- state ----------
+init_state() { [ -f "$STATE" ] || printf 'level=01\nhints=0\n' > "$STATE"; }
+get() { init_state; sed -n "s/^$1=//p" "$STATE" | head -1; }
+set_() {
+  init_state
+  if grep -q "^$1=" "$STATE"; then
+    sed -i "s|^$1=.*|$1=$2|" "$STATE"
+  else
+    printf '%s=%s\n' "$1" "$2" >> "$STATE"
+  fi
+}
+
+level_dir() { echo "$LEVELS/$(ls "$LEVELS" | grep "^$1-" | head -1)"; }
+all_levels() { ls "$LEVELS" | sed 's/-.*//' ; }
+last_level() { all_levels | tail -1; }
+meta() { sed -n "s/^$2=//p" "$1/meta" | head -1; }
+
+# ---------- rendering ----------
+rule() { printf "${D}%s${R}\n" "────────────────────────────────────────────────────────────────"; }
+
+banner() {
+  local d="$1" n="$2"
+  printf "\n${B}${CYA}  LEVEL %s${R}${B}  %s${R}\n" "$n" "$(meta "$d" title)"
+  printf "  ${D}belt:${R} %s   ${D}par:${R} %s keys   ${D}in VS Code you'd press:${R} %s\n" \
+    "$(meta "$d" belt)" "$(meta "$d" par)" "$(meta "$d" vscode)"
+  rule
+}
+
+# ---------- commands ----------
+cmd_status() {
+  local cur; cur=$(get level)
+  printf "\n${B}${MAG}  ⚔  vim-dojo${R}\n\n"
+  local n d mark
+  for n in $(all_levels); do
+    d=$(level_dir "$n")
+    if [ -f "$d/.done" ]; then mark="${GRN}✔${R}"
+    elif [ "$n" = "$cur" ]; then mark="${YEL}▸${R}"
+    else mark="${D}·${R}"; fi
+    if [ "$n" = "$cur" ]; then
+      printf "  %s ${B}%s  %-34s${R} ${D}%s${R}\n" "$mark" "$n" "$(meta "$d" title)" "$(meta "$d" belt)"
+    else
+      printf "  %s %s  %-34s ${D}%s${R}\n" "$mark" "$n" "$(meta "$d" title)" "$(meta "$d" belt)"
+    fi
+  done
+  printf "\n  ${D}./dojo play${R}    read the mission and open the files\n"
+  printf "  ${D}./dojo check${R}   grade your work\n"
+  printf "  ${D}./dojo hint${R}    one nudge at a time\n\n"
+}
+
+cmd_brief() {
+  local n=${1:-$(get level)} d; d=$(level_dir "$n")
+  banner "$d" "$n"; cat "$d/brief.md"; echo
+}
+
+cmd_play() {
+  local n; n=$(get level); local d; d=$(level_dir "$n")
+  [ -d "$d/work" ] || cp -r "$d/start" "$d/work"
+  cmd_brief "$n"
+  rule
+  printf "  ${D}files are in${R} levels/$(basename "$d")/work/\n"
+  printf "  ${D}press Enter to open vim   (Ctrl-C to just read)${R} "
+  read -r _
+  rm -f "$KEYLOG"
+  ( cd "$d/work" && vim -w "$KEYLOG" $(meta "$d" open) )
+  echo
+  cmd_check
+}
+
+keystrokes() { [ -f "$KEYLOG" ] && wc -c < "$KEYLOG" | tr -d ' ' || echo 0; }
+used_arrows() {
+  [ -f "$KEYLOG" ] || { echo no; return; }
+  if LC_ALL=C grep -q $'\x80' "$KEYLOG"; then echo yes; else echo no; fi
+}
+
+norm() { sed 's/[[:space:]]*$//' "$1"; }
+
+cmd_check() {
+  local n; n=$(get level); local d; d=$(level_dir "$n")
+  if [ ! -d "$d/work" ]; then printf "\n  ${YEL}Nothing to check yet — run ./dojo play${R}\n\n"; return 1; fi
+
+  local fails=0 f rel
+  rule
+  while IFS= read -r f; do
+    rel="${f#"$d/expected/"}"
+    if [ ! -f "$d/work/$rel" ]; then
+      printf "  ${RED}✘${R} %s  ${D}missing${R}\n" "$rel"; fails=$((fails+1)); continue
+    fi
+    if diff -q -B <(norm "$d/expected/$rel") <(norm "$d/work/$rel") >/dev/null; then
+      printf "  ${GRN}✔${R} %s\n" "$rel"
+    else
+      printf "  ${RED}✘${R} %s\n" "$rel"
+      diff -u -B --label expected --label yours <(norm "$d/expected/$rel") <(norm "$d/work/$rel") \
+        | sed 's/^/      /' | head -25
+      fails=$((fails+1))
+    fi
+  done < <(find "$d/expected" -type f | sort)
+
+  rule
+  local keys par; keys=$(keystrokes); par=$(meta "$d" par)
+  if [ "$fails" -gt 0 ]; then
+    printf "\n  ${RED}${B}Not yet.${R} Fix the diffs above and run ${B}./dojo check${R} again.\n"
+    printf "  ${D}stuck? ./dojo hint   ·   start over? ./dojo reset${R}\n\n"
+    return 1
+  fi
+
+  touch "$d/.done"
+  printf "\n  ${GRN}${B}✔ LEVEL %s CLEARED${R}\n\n" "$n"
+  if [ "$keys" -gt 0 ]; then
+    printf "  keystrokes: ${B}%s${R}   par: %s   " "$keys" "$par"
+    if [ "$keys" -le "$par" ]; then printf "${GRN}under par ⭐${R}\n"
+    elif [ "$keys" -le $((par*2)) ]; then printf "${YEL}over par — try ./dojo replay${R}\n"
+    else printf "${RED}way over par — read ./dojo solution, then ./dojo replay${R}\n"; fi
+    if [ "$(used_arrows)" = no ]; then printf "  ${GRN}🏅 no arrow keys, no mouse${R}\n"
+    else printf "  ${D}(arrow keys or mouse detected — hjkl is faster than you think)${R}\n"; fi
+  fi
+  local nx; nx=$(all_levels | grep -A1 "^$n$" | tail -1)
+  if [ "$nx" = "$n" ]; then
+    printf "\n  ${B}${MAG}That was the last level. You can drive vim.${R}\n\n"
+  else
+    set_ level "$nx"; set_ hints 0
+    printf "\n  next up: ${B}%s${R}  ${D}(./dojo play)${R}\n\n" "$(meta "$(level_dir "$nx")" title)"
+  fi
+}
+
+cmd_hint() {
+  local n; n=$(get level); local d; d=$(level_dir "$n")
+  local i; i=$(( $(get hints) + 1 ))
+  local h; h=$(awk -v want="$i" 'BEGIN{c=1} /^---$/{c++; next} c==want' "$d/hints.md")
+  if [ -z "${h// }" ]; then printf "\n  ${D}No hints left. Try ./dojo solution${R}\n\n"; return; fi
+  set_ hints "$i"
+  printf "\n  ${YEL}${B}hint %s${R}\n" "$i"; echo "$h" | sed 's/^/  /'; echo
+}
+
+cmd_solution() {
+  local n; n=$(get level); local d; d=$(level_dir "$n")
+  printf "\n  ${B}solution — level %s${R}\n" "$n"; rule; cat "$d/solution.md"; echo
+}
+
+cmd_reset() {
+  local n; n=$(get level); local d; d=$(level_dir "$n")
+  rm -rf "$d/work"; rm -f "$d/.done" "$KEYLOG"; set_ hints 0
+  printf "\n  ${D}level %s reset${R}\n\n" "$n"
+}
+
+cmd_replay() { cmd_reset >/dev/null; cmd_play; }
+
+cmd_goto() {
+  local n; n=$(printf '%02d' "$((10#${1#0}))")
+  if [ -z "$(ls "$LEVELS" | grep "^$n-")" ]; then printf "  no level %s\n" "$n"; return 1; fi
+  set_ level "$n"; set_ hints 0; cmd_status
+}
+
+cmd_keys() {
+  local n; n=$(get level); local d; d=$(level_dir "$n")
+  printf "\n  ${B}keys for this level${R}\n"; rule; cat "$d/keys.md" 2>/dev/null || echo "  (see the cheatsheet)"; echo
+}
+
+case "${1:-status}" in
+  status|"") cmd_status ;;
+  play|start) cmd_play ;;
+  brief) cmd_brief ;;
+  check) cmd_check ;;
+  hint) cmd_hint ;;
+  keys) cmd_keys ;;
+  solution|solve) cmd_solution ;;
+  reset) cmd_reset ;;
+  replay) cmd_replay ;;
+  goto) cmd_goto "${2:?usage: ./dojo goto 05}" ;;
+  cheat) ${PAGER:-less} "$ROOT/CHEATSHEET.md" ;;
+  *) printf "\n  usage: ./dojo [status|play|check|hint|keys|solution|reset|replay|goto N|cheat]\n\n" ;;
+esac

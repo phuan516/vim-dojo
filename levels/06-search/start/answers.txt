@@ -1,0 +1,9 @@
+# Use search to answer these. Do not count by eye.
+#
+#   :%s/word//gn     counts matches without changing anything
+#                    ( gn = "how many, do not replace" )
+
+count_of_customerId=
+count_of_records=
+line_of_the_first_toEntity=
+line_of_the_last_deleted=
