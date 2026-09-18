@@ -1,0 +1,474 @@
+@meta
+id: 19-19
+title: Scenario — the rename
+chapter: 19
+type: scenario
+skills: vimgrep, quickfix-nav, cdo, sub-confirm
+par: 204
+minutes: 14
+vscode: Replace All in Files, twice, then git diff to find what it broke
+vimrc: set nohidden
+open: README.md
+
+@brief
+A ticket, not an exercise.
+
+    PAY-732  PaymentService.sendRefund is misnamed: it sends nothing, it
+             asks the gateway to issue a refund. Rename it issueRefund
+             wherever code refers to it, test names included. The
+             gateway endpoint it posts to is still /sendRefund, the
+             payments exchange still routes on payment.sendRefund, and
+             the gateway timing metric keeps its name: dashboards are
+             built on it. While you are in there, the error code it
+             throws becomes PAYMENT_REFUND_FAILED, in the code and in
+             the error table.
+
+Two renames. The first has four hits that must survive and no pattern
+that cleanly separates them from the nine that must change, so it wants
+a look at the list and then a confirm. The second crosses a `.json`
+file, so `**/*.ts` will not find all of it. The README documents the
+endpoint and the routing key and is correct as it stands; the changelog
+records the release that introduced `REFUND_FAILED` and is history.
+Neither changes.
+
+`hidden` is off, as it is in a stock vim.
+
+@keys
+| `:vimgrep` `:copen` | find, then read before you act |
+| `:cdo s/old/new/gc \| update` | change each hit with a prompt |
+| `:grep -r name src` | every file type under `src`, into the same list |
+| `:cdo s/old/new/g \| update` | change each hit blind, when the list is clean |
+
+@hints
+`:vimgrep /sendRefund/ **/*.ts` then `:copen`. Thirteen hits. Four of
+them are inside quotes: the path twice, the routing key, the metric.
+--
+`:cdo s/sendRefund/issueRefund/gc | update` and answer each prompt. The
+prompt shows the line, so a quoted string is easy to spot. In list
+order: the order test (four, all yes), the order provider (yes), the
+producer (no), the payment provider (yes), the service test (yes, no,
+yes), the service (yes, no, no).
+--
+The error code: `:grep -r REFUND_FAILED src` reaches the json as well
+as the code, and nothing under `src` should keep the old name, so a
+plain `:cdo s/REFUND_FAILED/PAYMENT_REFUND_FAILED/g | update` is safe.
+`:qa` at the end because the quickfix window is open.
+--
+Par assumes one confirm pass for the method and one blind pass for the
+code. A narrower pattern can take some of the load: `sendRefund[^'.]`
+drops the path and the routing key, but it also drops the test's
+`.sendRefund.mockResolvedValue`, so the confirm is needed either way.
+
+@solution
+    :vimgrep /sendRefund/ **/*.ts<Enter>  :copen<Enter>
+    :cdo s/sendRefund/issueRefund/gc | update<Enter>  y y y y y n y y n y y n n
+    :grep -r REFUND_FAILED src<Enter>  :cdo s/REFUND_FAILED/PAYMENT_REFUND_FAILED/g | update<Enter>
+    :qa<Enter>
+
+The whole chapter in one ticket. The first rename is the reason the
+list exists: a Replace All would have renamed the gateway endpoint and
+the routing key, the deploy would have gone out, and the ledger service
+would have stopped receiving refund events with nothing in the logs to
+say why. Reading the list before acting is the entire discipline, and
+the confirm prompt is how you act on what you read.
+
+The second rename is the reason `:grep` exists alongside `:vimgrep`:
+the code and its error table are different file types, and grep does
+not care. Under `src` the old code had no reason to survive, so the
+blind form was correct there. Knowing when the blind form is fine is
+as much a skill as knowing when it is not.
+
+Thirteen prompts is about the limit of the confirm approach. Past
+that, narrow the pattern first, as lesson 6 did, and confirm only what
+the pattern cannot separate. Here the metric `'gateway.sendRefund.ms'`
+and the mock `.sendRefund.mockResolvedValue` look identical to a
+regex, one character either side, so some prompting was unavoidable.
+Pick the pattern when the distinction is mechanical; pick the prompt
+when it takes a person to see it.
+
+@start README.md
+# Orders service
+
+Cancelling an order refunds it through `PaymentService.sendRefund`, which
+is named after the gateway's `/sendRefund` endpoint. A refund the gateway
+rejects raises `REFUND_FAILED`. Refund events go out on the
+`payment.sendRefund` routing key, which the ledger service consumes.
+
+@start docs/CHANGELOG.md
+# Changelog
+
+## 1.4.0
+
+- Refunds now go through the payment gateway's `/sendRefund` endpoint.
+  A rejected refund raises `REFUND_FAILED` with a 502.
+
+## 1.3.2
+
+- Fix: cancelled orders were refunded twice when the ledger retried.
+
+@start src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "PAYMENT_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@expected src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "PAYMENT_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "PAYMENT_REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@start src/configuration/registry.ts
+import { container } from 'tsyringe';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderRepository } from '../domain/order/order.repository';
+import { PaymentProducer } from '../domain/payment/payment.producer';
+import { PaymentProvider } from '../domain/payment/payment.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+
+container.register(PaymentProducer, { useClass: PaymentProducer });
+container.register(OrderRepository, { useClass: OrderRepository });
+container.register(OrderProvider, { useClass: OrderProvider });
+container.register(PaymentProvider, { useClass: PaymentProvider });
+container.register(PaymentService, { useClass: PaymentService });
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.sendRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.issueRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start src/domain/order/order.provider.test.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { orderFactory } from '../../../test/factories/order.factory';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const provider = new OrderProvider(orderRepository, paymentService);
+
+  afterEach(() => jest.resetAllMocks());
+
+  it('calls sendRefund when a pending order is cancelled', async () => {
+    const order = orderFactory({ status: 'PENDING' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    reveal(paymentService).sendRefund.mockResolvedValue(undefined);
+
+    await provider.cancel(order.id);
+
+    expect(paymentService.sendRefund).toHaveBeenCalledWith(order.id);
+  });
+
+  it('refuses to cancel a shipped order', async () => {
+    const order = orderFactory({ status: 'SHIPPED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+
+    await expect(provider.cancel(order.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+    expect(paymentService.sendRefund).not.toHaveBeenCalled();
+  });
+});
+
+@expected src/domain/order/order.provider.test.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { orderFactory } from '../../../test/factories/order.factory';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const provider = new OrderProvider(orderRepository, paymentService);
+
+  afterEach(() => jest.resetAllMocks());
+
+  it('calls issueRefund when a pending order is cancelled', async () => {
+    const order = orderFactory({ status: 'PENDING' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    reveal(paymentService).issueRefund.mockResolvedValue(undefined);
+
+    await provider.cancel(order.id);
+
+    expect(paymentService.issueRefund).toHaveBeenCalledWith(order.id);
+  });
+
+  it('refuses to cancel a shipped order', async () => {
+    const order = orderFactory({ status: 'SHIPPED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+
+    await expect(provider.cancel(order.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+    expect(paymentService.issueRefund).not.toHaveBeenCalled();
+  });
+});
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@start src/domain/payment/payment.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { PaymentRepository } from './payment.repository';
+import { PaymentProducer } from './payment.producer';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class PaymentProvider {
+  constructor(
+    @inject(PaymentRepository) protected paymentRepository: PaymentRepository,
+    @inject(PaymentProducer) protected paymentProducer: PaymentProducer,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async reverse(id: string) {
+    const payment = await this.paymentRepository.findOne({ where: { id } });
+
+    if (!payment) {
+      throw exception('PAYMENT_NOT_FOUND');
+    }
+
+    const receipt = await this.paymentService.sendRefund(payment.orderId);
+
+    await this.paymentProducer.refundIssued({ paymentId: id, receipt });
+
+    return receipt;
+  }
+}
+
+@expected src/domain/payment/payment.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { PaymentRepository } from './payment.repository';
+import { PaymentProducer } from './payment.producer';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class PaymentProvider {
+  constructor(
+    @inject(PaymentRepository) protected paymentRepository: PaymentRepository,
+    @inject(PaymentProducer) protected paymentProducer: PaymentProducer,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async reverse(id: string) {
+    const payment = await this.paymentRepository.findOne({ where: { id } });
+
+    if (!payment) {
+      throw exception('PAYMENT_NOT_FOUND');
+    }
+
+    const receipt = await this.paymentService.issueRefund(payment.orderId);
+
+    await this.paymentProducer.refundIssued({ paymentId: id, receipt });
+
+    return receipt;
+  }
+}
+
+@start src/domain/payment/payment.producer.ts
+import { injectable, inject } from 'tsyringe';
+import { Channel } from '../../infrastructure/rabbit/channel';
+
+type RefundIssuedEvent = {
+  paymentId: string;
+  receipt: string;
+};
+
+@injectable()
+export class PaymentProducer {
+  constructor(@inject(Channel) protected channel: Channel) {}
+
+  public async refundIssued(event: RefundIssuedEvent) {
+    await this.channel.publish('payments', 'payment.sendRefund', event);
+  }
+}
+
+@start src/infrastructure/services/payment.service.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { HttpClient } from '../http/http.client';
+
+@injectable()
+export class PaymentService {
+  constructor(@inject(HttpClient) protected http: HttpClient) {}
+
+  public async sendRefund(orderId: string) {
+    const started = Date.now();
+    const response = await this.http.post('/sendRefund', { orderId });
+
+    this.metrics.timing('gateway.sendRefund.ms', Date.now() - started);
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@expected src/infrastructure/services/payment.service.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { HttpClient } from '../http/http.client';
+
+@injectable()
+export class PaymentService {
+  constructor(@inject(HttpClient) protected http: HttpClient) {}
+
+  public async issueRefund(orderId: string) {
+    const started = Date.now();
+    const response = await this.http.post('/sendRefund', { orderId });
+
+    this.metrics.timing('gateway.sendRefund.ms', Date.now() - started);
+
+    if (response.status !== 200) {
+      throw exception('PAYMENT_REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@start src/infrastructure/services/payment.service.test.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { PaymentService } from './payment.service';
+import { HttpClient } from '../http/http.client';
+import { httpResponseFactory } from '../../../test/factories/http.factory';
+
+describe('PaymentService', () => {
+  const http = stub<HttpClient>();
+  const service = new PaymentService(http);
+
+  afterEach(() => jest.resetAllMocks());
+
+  it('posts to the gateway and returns the receipt', async () => {
+    reveal(http).post.mockResolvedValue(httpResponseFactory({ status: 200, data: 'rcpt_1' }));
+
+    await expect(service.sendRefund('ord_1')).resolves.toBe('rcpt_1');
+    expect(http.post).toHaveBeenCalledWith('/sendRefund', { orderId: 'ord_1' });
+  });
+
+  it('raises when the gateway rejects the refund', async () => {
+    reveal(http).post.mockResolvedValue(httpResponseFactory({ status: 422 }));
+
+    await expect(service.sendRefund('ord_1')).rejects.toThrow('REFUND_FAILED');
+  });
+});
+
+@expected src/infrastructure/services/payment.service.test.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { PaymentService } from './payment.service';
+import { HttpClient } from '../http/http.client';
+import { httpResponseFactory } from '../../../test/factories/http.factory';
+
+describe('PaymentService', () => {
+  const http = stub<HttpClient>();
+  const service = new PaymentService(http);
+
+  afterEach(() => jest.resetAllMocks());
+
+  it('posts to the gateway and returns the receipt', async () => {
+    reveal(http).post.mockResolvedValue(httpResponseFactory({ status: 200, data: 'rcpt_1' }));
+
+    await expect(service.issueRefund('ord_1')).resolves.toBe('rcpt_1');
+    expect(http.post).toHaveBeenCalledWith('/sendRefund', { orderId: 'ord_1' });
+  });
+
+  it('raises when the gateway rejects the refund', async () => {
+    reveal(http).post.mockResolvedValue(httpResponseFactory({ status: 422 }));
+
+    await expect(service.issueRefund('ord_1')).rejects.toThrow('PAYMENT_REFUND_FAILED');
+  });
+});

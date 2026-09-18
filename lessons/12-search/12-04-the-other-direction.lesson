@@ -1,0 +1,237 @@
+@meta
+id: 12-04
+title: Searching backwards
+chapter: 12
+type: lesson
+skills: search-slash, search-next
+par: 36
+minutes: 5
+vscode: the up-arrow button in the find widget
+open: order.repository.ts
+
+@brief
+`softDelete` does not delete anything. It writes `undefined` into the
+`deleted` column, which Prisma reads as "leave it alone", so the record
+stays live. It should stamp the column with `new Date()`.
+
+Start at the bottom of the file — `toEntity` is where you always end up
+when you open a repository — and work upwards from there. Searching only
+runs forwards is a habit from find boxes, not a property of vim.
+
+While you are here, learn what happens to "next match" once you have
+searched backwards: it follows the direction you chose, not the
+direction of the file.
+
+@keys
+| `?text` `Enter` | search backwards |
+| `n` | next match, in the direction you searched |
+| `N` | previous match, against the direction you searched |
+| `G` | last line of the file |
+
+@hints
+Get to the bottom of the file first, then look upwards for the wrong
+value. There is a backwards twin of the search key — and `toEntity` has
+a couple of innocent `undefined`s in it that you will pass on the way.
+--
+`?` searches backwards. After a `?` search, `n` keeps going backwards
+and `N` turns around — the pair is relative to your search, not to the
+file.
+--
+`G` to the bottom, then `?undefined` `Enter`. That lands on the nearest
+`undefined` above you, which is in `toEntity` — keep going with `n` until
+you are in `softDelete`. The cursor is on
+the first letter of the word, so `cw` clears exactly that word and drops
+you into insert mode to type the replacement.
+
+@solution
+G  ?undefined<Enter>  cwnew Date()<Esc>  :wq<Enter>
+
+`?` is `/` pointed the other way, and everything you know about `/`
+applies: `n` and `N` still work, the pattern is remembered, and the
+message line still tells you when you wrap past the top of the file.
+
+The bit that catches people out is `n`. It does not mean "downwards". It
+means "again", in whichever direction you last asked for. After `?`,
+pressing `n` walks you further up the file and `N` walks back down. If
+that feels backwards, remember that the alternative — `n` always meaning
+down — would leave you with no way to keep going the way you were going.
+
+When you genuinely cannot remember which way you searched, `N` is a safe
+poke: it moves one match the other way and you can always press `n`
+again.
+
+@start order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord, PrismaClient } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findOne(args: { where: { id: string } }) {
+    const record = await this.prisma.order.findFirst({
+      where: { id: args.where.id, deleted: null },
+    });
+
+    return record ? this.toEntity(record) : undefined;
+  }
+
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+      orderBy: { created: 'desc' },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public async findPending(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, status: 'PENDING', deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public async findShippedSince(args: { customerId: string; since: Date }) {
+    const records = await this.prisma.order.findMany({
+      where: {
+        customerId: args.customerId,
+        status: 'SHIPPED',
+        created: { gte: args.since },
+        deleted: null,
+      },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public async countForCustomer(args: { customerId: string }) {
+    return this.prisma.order.count({
+      where: { customerId: args.customerId, deleted: null },
+    });
+  }
+
+  public async create(args: { values: { customerId: string; total: number } }) {
+    const record = await this.prisma.order.create({ data: args.values });
+
+    return this.toEntity(record);
+  }
+
+  public async update(args: { where: { id: string }; values: Partial<OrderRecord> }) {
+    const record = await this.prisma.order.update({
+      where: { id: args.where.id },
+      data: args.values,
+    });
+
+    return this.toEntity(record);
+  }
+
+  public async softDelete(args: { where: { id: string } }) {
+    const record = await this.prisma.order.update({
+      where: { id: args.where.id },
+      data: { deleted: undefined },
+    });
+
+    return this.toEntity(record);
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      carrier: record.carrier ?? undefined,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}
+
+@expected order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord, PrismaClient } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findOne(args: { where: { id: string } }) {
+    const record = await this.prisma.order.findFirst({
+      where: { id: args.where.id, deleted: null },
+    });
+
+    return record ? this.toEntity(record) : undefined;
+  }
+
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+      orderBy: { created: 'desc' },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public async findPending(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, status: 'PENDING', deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public async findShippedSince(args: { customerId: string; since: Date }) {
+    const records = await this.prisma.order.findMany({
+      where: {
+        customerId: args.customerId,
+        status: 'SHIPPED',
+        created: { gte: args.since },
+        deleted: null,
+      },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public async countForCustomer(args: { customerId: string }) {
+    return this.prisma.order.count({
+      where: { customerId: args.customerId, deleted: null },
+    });
+  }
+
+  public async create(args: { values: { customerId: string; total: number } }) {
+    const record = await this.prisma.order.create({ data: args.values });
+
+    return this.toEntity(record);
+  }
+
+  public async update(args: { where: { id: string }; values: Partial<OrderRecord> }) {
+    const record = await this.prisma.order.update({
+      where: { id: args.where.id },
+      data: args.values,
+    });
+
+    return this.toEntity(record);
+  }
+
+  public async softDelete(args: { where: { id: string } }) {
+    const record = await this.prisma.order.update({
+      where: { id: args.where.id },
+      data: { deleted: new Date() },
+    });
+
+    return this.toEntity(record);
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      carrier: record.carrier ?? undefined,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}

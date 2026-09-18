@@ -1,0 +1,395 @@
+@meta
+id: 12-18
+title: Scenario — the refund cleanup
+chapter: 12
+type: scenario
+skills: search-slash, search-next, search-star, search-motion, search-offset, dot-repeat
+par: 140
+minutes: 14
+vscode: two tabs, five Ctrl+F round trips, one nervous replace-all
+vimrc: set hlsearch incsearch
+open: order.provider.ts errors.json
+
+@brief
+The last job of the chapter, and the biggest. A hundred and thirty lines,
+four fixes, and every one of them is found by naming it rather than by
+looking for it.
+
+    ORD-902  Refund tidy-up before the gateway migration.
+
+  1. `legacyRefund` goes. The whole method, and the blank line after it,
+     so that `refundPartial` sits directly below `submit`. The legacy
+     gateway was switched off in March.
+
+  2. `refundPartial` sends pounds to a service that expects pence. The
+     `amount` it passes needs multiplying by 100. Only that one — the
+     `refunded` value written to the database stays in pounds.
+
+  3. The refund call in `cancel` still passes the old three-argument
+     signature. It takes one argument now:
+
+         await this.paymentService.refund(order.id);
+
+  4. `CANCELED` is spelled with two Ls everywhere else in the codebase.
+     Three lines in this file spell it with one. Fix 1 takes care of the
+     first; make the other two `CANCELLED`.
+
+`errors.json` is open as a second file so you can check the codes exist.
+It is already correct. Change anything in it and the check fails — and
+because two files are open, `:wq` will not let you leave. `:wqa` writes
+both and quits.
+
+@keys
+| `d/text` `Enter` | delete from here to the next match |
+| `c/text` `Enter` | change from here to the next match |
+| `/text/e` `Enter` | land on the last character of the match |
+| `*` `n` | search for the word under the cursor, then keep going |
+| `.` | repeat the last change |
+| `^` | first non-blank character of the line |
+| `:wqa` | write every open file and quit |
+
+@hints
+Work top to bottom and the whole job is one pass through the file. Each
+fix starts with a search that names the thing you are about to change.
+--
+For the method: land on its first line, put the cursor at the first
+non-blank character, and delete up to the next `public`. That takes the
+method and its trailing blank line and leaves the indentation of the next
+one intact.
+
+For the pence fix, the amount you want is the one inside the
+`refundPartial` call, not the one below it — so search for something that
+only appears in the call.
+--
+For the signature, `c/)` `Enter` replaces the whole argument list in one
+go; type the single argument and `Esc`.
+
+For the two spellings, do the first with `ciw` and then use `n` and `.`
+for the second — the search takes you there, the dot repeats the change.
+Afterwards, `:wqa`.
+
+@solution
+One route through it, top to bottom.
+
+    /legacyRefund<Enter>  ^  d/public<Enter>
+    /amount: args.amount/e<Enter>  a * 100<Esc>
+    /order.id, order.total<Enter>  c/)<Enter>order.id<Esc>
+    /CANCELED<Enter>  ciwCANCELLED<Esc>  n  .
+    :wqa<Enter>
+
+Four fixes, one pass, no scrolling. Worth walking through what each line
+is actually doing, because between them they are the whole chapter.
+
+`d/public` is the chapter's central idea: an operator taking a search as
+its motion. Deleting a method without counting its lines, without
+selecting it, and without caring how long it is. Starting from `^` is
+what keeps the next method's indentation.
+
+`/amount: args.amount/e` shows why patterns are allowed to be long. A
+short pattern would have matched the wrong `amount`; a long one is
+specific, and the `/e` offset puts the cursor exactly where the new text
+goes. Typing a longer search to avoid pressing `n` three times and
+checking each one is usually the better trade.
+
+`c/)` replaces a run of text whose two ends are a word and a bracket —
+the shape no text object covers.
+
+And the last one is the one that tells you the chapter landed: `n` then
+`.`. The search took you to the next bad spelling and the dot repeated
+the fix, so the second one cost two keystrokes. If your instinct there
+was to type the search out again, or to reach for a replace-all across a
+file you had not read, that is the instinct this chapter is for.
+
+Search in VS Code is a way of looking at a file. Search in vim is a way
+of moving through one and, once you attach an operator to it, a way of
+editing it. Everything after this — regex in chapter 13, `:substitute` in
+14, `:global` in 15 — is built on the pattern you just typed.
+
+@start order.provider.ts
+import { REFUND_APPROVAL_LIMIT } from '../../configuration/limits';
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { CustomerRepository } from '../customer/customer.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+import { AuditProducer } from '../../events/audit.producer';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+    @inject(AuditProducer) protected auditProducer: AuditProducer,
+  ) {}
+
+  public async findOne(args: { id: string }) {
+    const order = await this.orderRepository.findOne({ where: { id: args.id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(args: { customerId: string }) {
+    const customer = await this.customerRepository.findOne({
+      where: { id: args.customerId },
+    });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return this.orderRepository.findByCustomer({ customerId: customer.id });
+  }
+
+  public async create(args: { customerId: string; total: number }) {
+    const order = await this.orderRepository.create({
+      values: {
+        customerId: args.customerId,
+        total: args.total,
+        status: 'PENDING',
+      },
+    });
+
+    await this.auditProducer.publish({
+      type: 'order.created',
+      orderId: order.id,
+    });
+
+    return order;
+  }
+
+  public async submit(args: { id: string }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (order.total <= 0) {
+      throw exception('ORDER_EMPTY');
+    }
+
+    await this.paymentService.charge(order.id, order.total);
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { status: 'SUBMITTED' },
+    });
+  }
+
+  public async legacyRefund(args: { id: string }) {
+    const order = await this.findOne({ id: args.id });
+
+    await this.paymentService.refundLegacy(order.id, order.total);
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { status: 'CANCELED' },
+    });
+  }
+
+  public async refundPartial(args: { id: string; amount: number }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (args.amount > order.total) {
+      throw exception('REFUND_EXCEEDS_TOTAL');
+    }
+
+    await this.paymentService.refundPartial({
+      orderId: order.id,
+      amount: args.amount,
+    });
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { refunded: args.amount },
+    });
+  }
+
+  public async requiresApproval(args: { id: string; amount: number }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (args.amount > REFUND_APPROVAL_LIMIT) {
+      return true;
+    }
+
+    return order.total > REFUND_APPROVAL_LIMIT;
+  }
+
+  public async expire(args: { id: string }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_ALREADY_SUBMITTED');
+    }
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { status: 'CANCELED' },
+    });
+  }
+
+  public async cancel(args: { id: string }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id, order.total, 'LEGACY');
+
+    await this.emailService.sendCancellation(order.id);
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { status: 'CANCELED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { REFUND_APPROVAL_LIMIT } from '../../configuration/limits';
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { CustomerRepository } from '../customer/customer.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+import { AuditProducer } from '../../events/audit.producer';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+    @inject(AuditProducer) protected auditProducer: AuditProducer,
+  ) {}
+
+  public async findOne(args: { id: string }) {
+    const order = await this.orderRepository.findOne({ where: { id: args.id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(args: { customerId: string }) {
+    const customer = await this.customerRepository.findOne({
+      where: { id: args.customerId },
+    });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return this.orderRepository.findByCustomer({ customerId: customer.id });
+  }
+
+  public async create(args: { customerId: string; total: number }) {
+    const order = await this.orderRepository.create({
+      values: {
+        customerId: args.customerId,
+        total: args.total,
+        status: 'PENDING',
+      },
+    });
+
+    await this.auditProducer.publish({
+      type: 'order.created',
+      orderId: order.id,
+    });
+
+    return order;
+  }
+
+  public async submit(args: { id: string }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (order.total <= 0) {
+      throw exception('ORDER_EMPTY');
+    }
+
+    await this.paymentService.charge(order.id, order.total);
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { status: 'SUBMITTED' },
+    });
+  }
+
+  public async refundPartial(args: { id: string; amount: number }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (args.amount > order.total) {
+      throw exception('REFUND_EXCEEDS_TOTAL');
+    }
+
+    await this.paymentService.refundPartial({
+      orderId: order.id,
+      amount: args.amount * 100,
+    });
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { refunded: args.amount },
+    });
+  }
+
+  public async requiresApproval(args: { id: string; amount: number }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (args.amount > REFUND_APPROVAL_LIMIT) {
+      return true;
+    }
+
+    return order.total > REFUND_APPROVAL_LIMIT;
+  }
+
+  public async expire(args: { id: string }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_ALREADY_SUBMITTED');
+    }
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async cancel(args: { id: string }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    await this.emailService.sendCancellation(order.id);
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_EMPTY": { "statusCode": 422, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "ORDER_ALREADY_SUBMITTED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_EXCEEDS_TOTAL": { "statusCode": 422, "sentry": false },
+  "REFUND_NOT_AUTHORISED": { "statusCode": 403, "sentry": false },
+  "PAYMENT_REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}

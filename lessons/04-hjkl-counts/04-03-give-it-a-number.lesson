@@ -1,0 +1,182 @@
+@meta
+id: 04-03
+title: Give the motion a number
+chapter: 04
+type: lesson
+skills: hjkl, count-prefix
+par: 20
+minutes: 4
+vscode: page down, then hunt with the mouse
+open: payments.log
+vimrc: set number
+
+@brief
+Sixty lines of payment log. One charge was declined and the retry flag
+never got written. It is on line 27, and it is the only line in the file
+that does not end in `ok`.
+
+Append `  retry` — two spaces, then the word — to the end of that line.
+
+You could hold `j` down, or the down arrow, and watch the cursor drift
+past it twenty-six lines later. Do not. Every
+motion in vim takes a number in front of it: type the number first, then
+the motion, and the motion happens that many times. `10j` is ten lines
+down, as one thought and three keystrokes, and it lands exactly where you
+said rather than wherever you let go.
+
+Line numbers are switched on for this file so you can do the arithmetic.
+
+@keys
+| `26j` | down twenty-six lines |
+| `9k` | up nine lines |
+| `3l` | right three characters |
+| `A` | append at the end of the line |
+
+@hints
+You start on line 1 and you want line 27. The count is the difference,
+not the destination.
+--
+`26j`. Type the digits first, then `j` — vim collects the number and
+waits for a motion to spend it on.
+--
+`26j` then `A`, type the two spaces and `retry`, `Esc`, `:wq`.
+
+@solution
+    26j A <space><space>retry <Esc> :wq<Enter>
+
+Fifteen keystrokes for a jump that would have been twenty-six taps, or a
+held key and a correction afterwards.
+
+Two things are worth taking from this. The first is that a count is
+universal: it works in front of `h`, `j`, `k`, `l` and in front of nearly
+every other motion in the rest of this course, so learning it once pays
+out forever.
+
+The second is the arithmetic you just did. You wanted line 27, you were on
+line 1, so you worked out 26. That subtraction is a small tax on every
+jump, and you will pay it on every single one until lesson six, where a
+single setting does the sum for you.
+
+@start payments.log
+2024-03-11 09:01:04  ORD-1001  charge   1999  ok
+2024-03-11 09:01:17  ORD-1002  charge   4750  ok
+2024-03-11 09:02:03  ORD-1003  charge    899  ok
+2024-03-11 09:02:41  ORD-1004  refund   1999  ok
+2024-03-11 09:03:12  ORD-1005  charge  12500  ok
+2024-03-11 09:03:55  ORD-1006  charge   2399  ok
+2024-03-11 09:04:08  ORD-1007  charge    640  ok
+2024-03-11 09:04:33  ORD-1008  charge   8899  ok
+2024-03-11 09:05:01  ORD-1009  refund   4750  ok
+2024-03-11 09:05:29  ORD-1010  charge   1550  ok
+2024-03-11 09:06:02  ORD-1011  charge   3300  ok
+2024-03-11 09:06:44  ORD-1012  charge    975  ok
+2024-03-11 09:07:10  ORD-1013  charge   2199  ok
+2024-03-11 09:07:52  ORD-1014  charge    760  ok
+2024-03-11 09:08:19  ORD-1015  refund    899  ok
+2024-03-11 09:08:47  ORD-1016  charge   5400  ok
+2024-03-11 09:09:03  ORD-1017  charge   1899  ok
+2024-03-11 09:09:38  ORD-1018  charge   2750  ok
+2024-03-11 09:10:11  ORD-1019  charge    410  ok
+2024-03-11 09:10:46  ORD-1020  charge   6620  ok
+2024-03-11 09:11:02  ORD-1021  charge   1180  ok
+2024-03-11 09:11:37  ORD-1022  refund   1550  ok
+2024-03-11 09:12:09  ORD-1023  charge   2050  ok
+2024-03-11 09:12:44  ORD-1024  charge    735  ok
+2024-03-11 09:13:18  ORD-1025  charge   9900  ok
+2024-03-11 09:13:51  ORD-1026  charge   1425  ok
+2024-03-11 09:14:07  ORD-1027  charge   3875  declined
+2024-03-11 09:14:39  ORD-1028  charge   2640  ok
+2024-03-11 09:15:12  ORD-1029  charge    518  ok
+2024-03-11 09:15:48  ORD-1030  refund   2399  ok
+2024-03-11 09:16:05  ORD-1031  charge   7310  ok
+2024-03-11 09:16:33  ORD-1032  charge   1240  ok
+2024-03-11 09:17:01  ORD-1033  charge   3990  ok
+2024-03-11 09:17:44  ORD-1034  charge    860  ok
+2024-03-11 09:18:20  ORD-1035  charge   2075  ok
+2024-03-11 09:18:57  ORD-1036  charge   1130  ok
+2024-03-11 09:19:14  ORD-1037  refund    640  ok
+2024-03-11 09:19:49  ORD-1038  charge   4425  ok
+2024-03-11 09:20:06  ORD-1039  charge   1795  ok
+2024-03-11 09:20:38  ORD-1040  charge    555  ok
+2024-03-11 09:21:15  ORD-1041  charge   8140  ok
+2024-03-11 09:21:52  ORD-1042  charge   2260  ok
+2024-03-11 09:22:11  ORD-1043  charge   1015  ok
+2024-03-11 09:22:49  ORD-1044  refund   3300  ok
+2024-03-11 09:23:24  ORD-1045  charge   6750  ok
+2024-03-11 09:23:58  ORD-1046  charge   1470  ok
+2024-03-11 09:24:16  ORD-1047  charge   2890  ok
+2024-03-11 09:24:52  ORD-1048  charge    920  ok
+2024-03-11 09:25:30  ORD-1049  charge   5115  ok
+2024-03-11 09:25:59  ORD-1050  charge   1660  ok
+2024-03-11 09:26:22  ORD-1051  refund    975  ok
+2024-03-11 09:26:58  ORD-1052  charge   3450  ok
+2024-03-11 09:27:33  ORD-1053  charge   1285  ok
+2024-03-11 09:27:59  ORD-1054  charge   7020  ok
+2024-03-11 09:28:31  ORD-1055  charge   2610  ok
+2024-03-11 09:29:04  ORD-1056  charge    845  ok
+2024-03-11 09:29:41  ORD-1057  charge   4190  ok
+2024-03-11 09:30:08  ORD-1058  charge   1360  ok
+2024-03-11 09:30:45  ORD-1059  refund   2050  ok
+2024-03-11 09:31:19  ORD-1060  charge   9985  ok
+
+@expected payments.log
+2024-03-11 09:01:04  ORD-1001  charge   1999  ok
+2024-03-11 09:01:17  ORD-1002  charge   4750  ok
+2024-03-11 09:02:03  ORD-1003  charge    899  ok
+2024-03-11 09:02:41  ORD-1004  refund   1999  ok
+2024-03-11 09:03:12  ORD-1005  charge  12500  ok
+2024-03-11 09:03:55  ORD-1006  charge   2399  ok
+2024-03-11 09:04:08  ORD-1007  charge    640  ok
+2024-03-11 09:04:33  ORD-1008  charge   8899  ok
+2024-03-11 09:05:01  ORD-1009  refund   4750  ok
+2024-03-11 09:05:29  ORD-1010  charge   1550  ok
+2024-03-11 09:06:02  ORD-1011  charge   3300  ok
+2024-03-11 09:06:44  ORD-1012  charge    975  ok
+2024-03-11 09:07:10  ORD-1013  charge   2199  ok
+2024-03-11 09:07:52  ORD-1014  charge    760  ok
+2024-03-11 09:08:19  ORD-1015  refund    899  ok
+2024-03-11 09:08:47  ORD-1016  charge   5400  ok
+2024-03-11 09:09:03  ORD-1017  charge   1899  ok
+2024-03-11 09:09:38  ORD-1018  charge   2750  ok
+2024-03-11 09:10:11  ORD-1019  charge    410  ok
+2024-03-11 09:10:46  ORD-1020  charge   6620  ok
+2024-03-11 09:11:02  ORD-1021  charge   1180  ok
+2024-03-11 09:11:37  ORD-1022  refund   1550  ok
+2024-03-11 09:12:09  ORD-1023  charge   2050  ok
+2024-03-11 09:12:44  ORD-1024  charge    735  ok
+2024-03-11 09:13:18  ORD-1025  charge   9900  ok
+2024-03-11 09:13:51  ORD-1026  charge   1425  ok
+2024-03-11 09:14:07  ORD-1027  charge   3875  declined  retry
+2024-03-11 09:14:39  ORD-1028  charge   2640  ok
+2024-03-11 09:15:12  ORD-1029  charge    518  ok
+2024-03-11 09:15:48  ORD-1030  refund   2399  ok
+2024-03-11 09:16:05  ORD-1031  charge   7310  ok
+2024-03-11 09:16:33  ORD-1032  charge   1240  ok
+2024-03-11 09:17:01  ORD-1033  charge   3990  ok
+2024-03-11 09:17:44  ORD-1034  charge    860  ok
+2024-03-11 09:18:20  ORD-1035  charge   2075  ok
+2024-03-11 09:18:57  ORD-1036  charge   1130  ok
+2024-03-11 09:19:14  ORD-1037  refund    640  ok
+2024-03-11 09:19:49  ORD-1038  charge   4425  ok
+2024-03-11 09:20:06  ORD-1039  charge   1795  ok
+2024-03-11 09:20:38  ORD-1040  charge    555  ok
+2024-03-11 09:21:15  ORD-1041  charge   8140  ok
+2024-03-11 09:21:52  ORD-1042  charge   2260  ok
+2024-03-11 09:22:11  ORD-1043  charge   1015  ok
+2024-03-11 09:22:49  ORD-1044  refund   3300  ok
+2024-03-11 09:23:24  ORD-1045  charge   6750  ok
+2024-03-11 09:23:58  ORD-1046  charge   1470  ok
+2024-03-11 09:24:16  ORD-1047  charge   2890  ok
+2024-03-11 09:24:52  ORD-1048  charge    920  ok
+2024-03-11 09:25:30  ORD-1049  charge   5115  ok
+2024-03-11 09:25:59  ORD-1050  charge   1660  ok
+2024-03-11 09:26:22  ORD-1051  refund    975  ok
+2024-03-11 09:26:58  ORD-1052  charge   3450  ok
+2024-03-11 09:27:33  ORD-1053  charge   1285  ok
+2024-03-11 09:27:59  ORD-1054  charge   7020  ok
+2024-03-11 09:28:31  ORD-1055  charge   2610  ok
+2024-03-11 09:29:04  ORD-1056  charge    845  ok
+2024-03-11 09:29:41  ORD-1057  charge   4190  ok
+2024-03-11 09:30:08  ORD-1058  charge   1360  ok
+2024-03-11 09:30:45  ORD-1059  refund   2050  ok
+2024-03-11 09:31:19  ORD-1060  charge   9985  ok

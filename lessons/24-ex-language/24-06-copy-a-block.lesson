@@ -1,0 +1,92 @@
+@meta
+id: 24-06
+title: Copy a block below itself
+chapter: 24
+type: lesson
+skills: ex-copy
+par: 30
+minutes: 5
+vscode: select six lines, Ctrl-C, click after them, Ctrl-V, fix the id
+open: orders.fixture.ts
+
+@brief
+The fixture needs a second pending order for the pagination test. It
+should be identical to `ord_1001`, lines 2 to 7, except for its id,
+which is `ord_1002`. It goes directly below the first one.
+
+`t` is copy. It has exactly the shape of `m`: a range in front, a
+destination after, and the copy lands below the destination line. The
+original stays where it is. `:2,7t7` puts a copy of lines 2 to 7 below
+line 7, which is to say right after themselves. Then fix the id on the
+copy; it is on line 9.
+
+@keys
+| `:2,7t7` | copy lines 2 to 7 to below line 7 |
+| `:t.` | copy the current line to below itself |
+| `:t$` | copy the current line to the end of the file |
+| `:9s/1001/1002/` | substitute on line 9, from chapter 14 |
+
+@hints
+Same shape as move. Range, `t`, destination line.
+--
+The copy starts on line 8, so the line with the id is line 9. A
+substitute with a line number in front changes that one line and needs
+no cursor movement.
+--
+`:2,7t7` Enter, `:9s/1001/1002/` Enter, `:wq`.
+
+@solution
+    :2,7t7<Enter>  :9s/1001/1002/<Enter>  :wq<Enter>
+
+Twenty-six keystrokes, and no register was involved.
+
+`t` is short for `copy`, and `:co` works too; `t` won because it is one
+letter. It is `yy` and `p` without the round trip through a register,
+which matters when the register already holds something you want to
+keep, and it takes a range, so it copies six lines as easily as one.
+
+Two forms you will use constantly. `:t.` duplicates the current line in
+place: the next line down is a copy, and the cursor is on it, ready to
+edit. `:t$` sends a copy of the current line to the bottom of the file,
+which is how you collect a few scattered lines into one place without
+losing them from where they were. `:t0` is the same, pointed at the top.
+
+@start orders.fixture.ts
+export const orders = [
+  {
+    id: 'ord_1001',
+    customerId: 'cus_501',
+    status: 'PENDING',
+    total: 4200,
+  },
+  {
+    id: 'ord_1003',
+    customerId: 'cus_501',
+    status: 'CANCELLED',
+    total: 650,
+    cancellationReason: 'REFUND_WINDOW_EXPIRED',
+  },
+];
+
+@expected orders.fixture.ts
+export const orders = [
+  {
+    id: 'ord_1001',
+    customerId: 'cus_501',
+    status: 'PENDING',
+    total: 4200,
+  },
+  {
+    id: 'ord_1002',
+    customerId: 'cus_501',
+    status: 'PENDING',
+    total: 4200,
+  },
+  {
+    id: 'ord_1003',
+    customerId: 'cus_501',
+    status: 'CANCELLED',
+    total: 650,
+    cancellationReason: 'REFUND_WINDOW_EXPIRED',
+  },
+];

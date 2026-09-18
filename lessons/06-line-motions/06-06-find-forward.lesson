@@ -1,0 +1,62 @@
+@meta
+id: 06-06
+title: Fly to a character with f
+chapter: 06
+type: lesson
+skills: find-f
+par: 14
+minutes: 4
+vscode: click between the d and the colon
+open: refund.types.ts
+
+@brief
+`orderId` is not always known when a refund is opened from the finance
+console, so the field has to become optional:
+
+    { orderId?: string, ... }
+
+One character, inserted in one exact place, thirty characters into the line.
+This is the most common movement problem in editing code, and it has a
+two-key answer.
+
+Look at where the `?` goes. It is immediately before a colon — and the
+character you need is nearly always sitting next to a piece of punctuation
+you can name.
+
+@keys
+| `f` | find: the next occurrence of the character you type next |
+| `fx` | jump forward onto the next `x` on this line |
+| `i` | insert to the left of the cursor |
+
+@hints
+Do not count characters and do not press `l` thirty times. Name the
+punctuation you are aiming at instead.
+--
+`f` followed by a character jumps the cursor onto the next one of those on
+this line. `f:` goes to the next colon.
+--
+`f:` lands you on the first colon, which is `orderId`'s. `i`, `?`, `Esc`.
+
+@solution
+    f : i ? <Esc> :wq<Enter>
+
+Five keystrokes to make the edit, two of them the travel.
+
+`f` only ever searches the line you are on, which is what makes it safe to
+fire without looking. It is the reason vim users rarely reach for the mouse
+on a long line: the destination is described, not measured. You are not
+saying go right thirty-one columns, you are saying go to the colon — and if
+someone renames the field tomorrow, that instruction still works.
+
+Pick the rarest punctuation near your target. `f(`, `f{`, `f'`, `f=`, `f<`
+tend to be unique or nearly so in a line of TypeScript, while `fe` in a line
+of English is a lottery. When your target is not the first match, you have
+`;` and counts coming later in this chapter.
+
+@start refund.types.ts
+export type RefundArgs = { orderId: string, amount: number, reason: string };
+export type RefundResult = { refundId: string, status: RefundStatus };
+
+@expected refund.types.ts
+export type RefundArgs = { orderId?: string, amount: number, reason: string };
+export type RefundResult = { refundId: string, status: RefundStatus };

@@ -1,0 +1,84 @@
+@meta
+id: 28-02
+title: The three lines at the top
+chapter: 28
+type: lesson
+skills: vimrc-structure
+par: 82
+minutes: 5
+vscode: nothing — the defaults are not negotiable there
+open: .vimrc
+
+@brief
+Almost every vimrc you will ever read opens with the same three lines,
+and most people who have them cannot tell you what they do.
+
+    set nocompatible
+    syntax on
+    filetype plugin indent on
+
+`nocompatible` turns off bug-for-bug vi emulation. It is usually
+redundant: the mere existence of a vimrc already switches it off, and so
+does `vim --clean`. It only matters when you source a config another way,
+such as `vim -u somefile`. Harmless, conventional, first.
+
+`syntax on` turns on highlighting. `filetype plugin indent on` is the
+load-bearing one: it tells vim to detect the kind of file you opened, and
+then to load that language's plugin *and* its indent rules. Without it,
+`o` inside a TypeScript object does not indent itself, `gq` does not know
+what a comment is, and the whole of lesson 28-13 is impossible.
+
+Put all three at the top of your config, above the settings that are
+already there.
+
+@keys
+| `O` | open a line above and start typing |
+| `Enter` | in insert mode, keep going onto the next line |
+| `/text` `Enter` | jump to the next match |
+
+@hints
+They go above `set number`, which is the first setting in the file.
+Search for it rather than counting lines.
+--
+`O` opens a line *above* the cursor. Once you are in insert mode, Enter
+starts the next line — you do not need to leave and re-enter for each.
+--
+`/set number` Enter, then `O`, then the three lines separated by Enter,
+then Esc and `:wq`.
+
+@start .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set number
+set ruler
+set showcmd
+
+@expected .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+set number
+set ruler
+set showcmd
+
+@solution
+    /set number<Enter>  O set nocompatible<Enter> syntax on<Enter>
+    filetype plugin indent on<Enter> <Esc> :wq<Enter>
+
+The trailing Enter is what leaves the blank line between the header block
+and the settings. Typing the three lines and then `o` for the gap costs
+the same; either is fine.
+
+Why this order. `filetype plugin indent on` and `syntax on` both install
+autocommands, and vim runs autocommands in the order they were defined —
+so anything later in your config that depends on a filetype being known
+has to come after these lines. Put them first and the question never
+arises.
+
+One more reason to understand these three rather than copy them: when
+something in your config misbehaves, the first question is always "is
+this vim's default, or did I do it?". Three lines you can explain is a
+config you can debug. Five hundred lines from a gist is not.

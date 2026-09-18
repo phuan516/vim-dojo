@@ -1,0 +1,104 @@
+@meta
+id: 18-12
+title: The file next door
+chapter: 18
+type: lesson
+skills: edit-file
+par: 49
+minutes: 4
+vscode: click the sibling in the Explorer
+open: src/domain/order/order.provider.ts
+
+@brief
+Money is moving to integer minor units. On the order entity, the field
+`total` is being renamed `totalMinor`. The provider does not reference
+it, so only the entity changes.
+
+The entity is in the same directory as the provider you are in. You
+could `:find` it, or Tab through the tree. There is a third way that
+needs neither `path` nor completion: on the command line, `%` stands
+for the current file's name, and `:h` chops it down to its directory.
+`:e %:h/order.entity.ts` opens the sibling.
+
+Make the rename and save.
+
+@keys
+| `%` | the current file's path, on the command line |
+| `%:h` | its directory ("head") |
+| `%:t` | its name without the directory ("tail") |
+| `%:r` | its path without the extension ("root") |
+| `%:e` | the extension alone |
+| `%:p` | the full absolute path |
+
+@hints
+`:e %:h/` and then the sibling's name. Tab completes the name too.
+--
+`/total` finds the field. `ea` appends after the word.
+--
+`:e %:h/order.entity.ts` Enter, `/total` Enter, `eaMinor`, `Esc`, `:wq`.
+
+@solution
+    :e %:h/order.entity.ts<Enter> /total<Enter> eaMinor <Esc> :wq<Enter>
+
+The modifiers chain. `%:p:h` is the absolute directory. `%:t:r` is the
+bare name with no directory and no extension, which is what you want
+when you are naming a test after the file it tests.
+
+They work anywhere vim takes a file name: `:e`, `:w`, `:r`, `:sp`,
+`:args`. A pair you will use again and again:
+
+    :e %:r.spec.ts        the test for this file, creating it if new
+    :w %:r.bak            a quick copy next to the original
+
+The second scenario in this chapter has you create a spec that way.
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+}
+
+@start src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@expected src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  totalMinor: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start src/domain/customer/customer.entity.ts
+export type Customer = {
+  id: string;
+  email: string;
+  name: string;
+};

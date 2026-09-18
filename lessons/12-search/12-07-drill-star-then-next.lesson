@@ -1,0 +1,87 @@
+@meta
+id: 12-07
+title: Drill — star, then keep going
+chapter: 12
+type: drill
+skills: search-star, search-next
+par: 28
+minutes: 5
+reps: 8
+vscode: double-click, Ctrl+F, Enter, Enter, Enter, Enter
+open: invoice.status.ts
+
+@brief
+Eight times: `VOID` appears six times in this file. Change the last one —
+the one in `reopenableStatuses` — to `CANCELLED`. Leave the other five.
+
+Start from the `VOID` on line 1 and let the search do the walking.
+
+@keys
+| `*` | search for the word under the cursor |
+| `n` | the next match of it |
+| `ciw` | change the word the cursor is on |
+
+@hints
+Put the cursor on the first `VOID`, press the key that searches for the
+word under it, then step to the last match.
+--
+`fV` gets you onto the word. `*` takes you to the second occurrence —
+`*` moves as well as searching — so it is `*` and then four `n`s.
+
+@solution
+fV  *  n n n n  ciwCANCELLED<Esc>  :wq<Enter>
+
+The rhythm is what you are drilling: land on a word, `*`, then `n` `n`
+`n` until the cursor is where you want it. No scrolling, no counting
+lines, no reading the file between jumps — you can see where you are from
+the highlight.
+
+Remember that `*` itself moves you to the *next* match, not the one you
+are standing on. That off-by-one trips people up when they count
+occurrences: from the first, `*` plus four `n` lands on the sixth.
+
+@start invoice.status.ts
+export type InvoiceStatus = 'DRAFT' | 'ISSUED' | 'PAID' | 'VOID';
+
+export const invoiceTransitions: Record<InvoiceStatus, InvoiceStatus[]> = {
+  DRAFT: ['ISSUED', 'VOID'],
+  ISSUED: ['PAID', 'VOID'],
+  PAID: [],
+  VOID: [],
+};
+
+export const invoiceLabels: Record<InvoiceStatus, string> = {
+  DRAFT: 'Draft',
+  ISSUED: 'Issued',
+  PAID: 'Paid',
+  VOID: 'Voided',
+};
+
+export const editableStatuses: InvoiceStatus[] = ['DRAFT'];
+
+export const payableStatuses: InvoiceStatus[] = ['ISSUED'];
+
+export const reopenableStatuses: InvoiceStatus[] = ['VOID'];
+
+@expected invoice.status.ts
+export type InvoiceStatus = 'DRAFT' | 'ISSUED' | 'PAID' | 'VOID';
+
+export const invoiceTransitions: Record<InvoiceStatus, InvoiceStatus[]> = {
+  DRAFT: ['ISSUED', 'VOID'],
+  ISSUED: ['PAID', 'VOID'],
+  PAID: [],
+  VOID: [],
+};
+
+export const invoiceLabels: Record<InvoiceStatus, string> = {
+  DRAFT: 'Draft',
+  ISSUED: 'Issued',
+  PAID: 'Paid',
+  VOID: 'Voided',
+};
+
+export const editableStatuses: InvoiceStatus[] = ['DRAFT'];
+
+export const payableStatuses: InvoiceStatus[] = ['ISSUED'];
+
+export const reopenableStatuses: InvoiceStatus[] = ['CANCELLED'];

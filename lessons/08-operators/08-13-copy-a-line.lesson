@@ -1,0 +1,71 @@
+@meta
+id: 08-13
+title: Copy a line and edit the copy
+chapter: 08
+type: lesson
+skills: yank-y, put-p, change-c, replace-r
+par: 40
+minutes: 5
+vscode: select the line, Ctrl-C, Ctrl-V, then fix the copy
+open: default.json
+
+@brief
+Delete puts things in the register. So does copy, and in vim copy is
+called *yank* — `y` — because `c` was already taken by change.
+
+Yank behaves exactly like delete except that the text stays where it is.
+`yy` takes a line, `p` puts it back. Together they are the fastest way to
+write a line that is nearly the same as one already in the file, and the
+error registry is full of those.
+
+Add `ORDER_ALREADY_SHIPPED` to the registry, directly under
+`ORDER_NOT_FOUND`. It is a client error, so `sentry` stays `false`, and
+its status code is 409.
+
+Copy the line you already have. Do not type the whole thing.
+
+@keys
+| `yy` | yank the current line into the register |
+| `p` | put it back below |
+| `cw` | change to the end of the word |
+| `r` | replace one character |
+| `f4` `;` | forward to a `4`, then the next one |
+
+@hints
+The line you need is almost identical to the one above it. Make a copy
+first and correct the copy afterwards.
+--
+`yy` then `p` gives you a duplicate on the line below, with the cursor on
+it. From there only the code name and one digit are wrong.
+--
+`j yy p` makes the copy. `^ f_ l cw` then `ALREADY_SHIPPED` and `Esc`
+fixes the name. `f4 ; r9` turns 404 into 409.
+
+@solution
+    j yy p  ^f_l cwALREADY_SHIPPED<Esc>  f4;r9  :wq<Enter>
+
+Notice how little of this was typing and how much of it was aiming. That
+is the trade vim keeps offering: a few precise keys instead of a lot of
+retyping, and the parts of the line you never touched cannot be wrong.
+
+`yy` is worth its own habit even when you are not about to paste. Yank a
+line before you rewrite it and you have a copy in the register for free,
+which is a second undo that survives the first one.
+
+Vim has a capital `Y` as well. Sensibly it would mean "yank to the end of
+the line", to match `D` and `C` in the next lesson but one. It does not —
+`Y` is just another `yy`. It is the most complained-about key in vim, and
+a lot of people remap it. Know the trap and move on.
+
+@start default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "PAYMENT_REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@expected default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "PAYMENT_REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}

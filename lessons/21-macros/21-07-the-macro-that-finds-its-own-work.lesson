@@ -1,0 +1,171 @@
+@meta
+id: 21-07
+title: The macro that finds its own work
+chapter: 21
+type: lesson
+skills: macro-record, macro-count
+par: 56
+minutes: 8
+vscode: find next, edit, find next, edit, six times, two edits each
+open: order.spec.ts
+
+@brief
+`OrderService` went async and the spec did not. Six tests still call it
+synchronously. Each one needs two edits, on two different lines:
+
+    it('cancels a pending order', () => {            →   it('cancels a pending order', async () => {
+      const result = service.cancel('ord_101');      →     const result = await service.cancel('ord_101');
+
+The tests are not on consecutive lines, so `j` is no use as the step
+between replays. Put a search inside the macro instead, and choose the
+pattern so that it no longer matches once the edit has been made.
+Then throw a big count at it.
+
+Two tests in the file are already async and must stay as they are.
+
+@keys
+| `/pattern` `Enter` | inside a macro, a search is just another motion |
+| `f(` `;` | to the first bracket, then the next one |
+| `j0` `f=` `w` | down and to column one, onto the `=`, then the word after it |
+| `99@a` | until the search fails |
+
+@hints
+Record starting with the search: `/it(.*, () =>` and Enter. It lands on
+the `it`. After the edit, that line reads `async () =>`, so the pattern
+cannot match it again.
+--
+From the `it`: `f(;` reaches the empty brackets, `iasync ` and `Esc`.
+Then `j0f=w` and `iawait ` and `Esc`. The `0` matters: `j` keeps the
+column and `f=` only looks forward. No `j` at the end; the search at
+the start is the step.
+--
+`qa/it(.*, () =><Enter>f(;iasync <Esc>j0f=wiawait <Esc>q` then `99@a`.
+The seventh replay searches, finds nothing, and the count dies.
+
+@solution
+    qa /it(.*, () => <Enter> f(; iasync  <Esc> j0 f=w iawait  <Esc> q   99@a   :wq<Enter>
+
+Forty-nine keystrokes for twelve edits scattered across a file.
+
+The search is doing two jobs. It is the motion that gets the macro to
+the next target, wherever that is, and it is the guard from the last
+lesson: when there is nothing left to find, it fails, and the count
+stops. Lines you never meant to touch are never visited.
+
+The pattern is chosen with care. `it(.*, () =>` matches a test that
+has not yet been made async, and only that. `describe(` blocks do not
+contain `it(`; the two tests that are already `async () =>` do not
+contain `, () =>`. The edit itself removes the match. That last
+property is the important one. A search wraps round to the top of the
+file when it runs out of matches below the cursor, so a macro whose
+pattern still matches after the edit would cheerfully go round again
+and edit the first test a second time. Make the edit consume the
+match, and `99@a` is safe. If you cannot, count exactly.
+
+One more thing went into this recording: the `0` after `j`. The first
+insert leaves the cursor forty columns in, `j` keeps that column, and
+`f=` only looks forward. Without the `0` the macro works on no line at
+all. When a recording makes a find on a different line from the one it
+started on, reset the column first.
+
+@start order.spec.ts
+import { OrderService } from './order.service';
+
+describe('OrderService', () => {
+  let service: OrderService;
+
+  beforeEach(() => {
+    service = new OrderService(repository, payments);
+  });
+
+  it('cancels a pending order', () => {
+    const result = service.cancel('ord_101');
+    expect(result.status).toBe('CANCELLED');
+  });
+
+  it('refuses to cancel a shipped order', () => {
+    const attempt = service.cancel('ord_102');
+    expect(attempt).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+  });
+
+  it('marks a packed order as shipped', async () => {
+    const result = await service.markShipped('ord_103');
+    expect(result.status).toBe('SHIPPED');
+  });
+
+  it('refunds inside the window', () => {
+    const refund = service.refund('ord_104');
+    expect(refund.amount).toBe(1200);
+  });
+
+  it('records the reason outside the window', () => {
+    const result = service.cancel('ord_105');
+    expect(result.cancellationReason).toBe('REFUND_WINDOW_EXPIRED');
+  });
+
+  it('finds an order by id', async () => {
+    const order = await service.findOne('ord_106');
+    expect(order.id).toBe('ord_106');
+  });
+
+  it('throws for an unknown id', () => {
+    const attempt = service.findOne('ord_999');
+    expect(attempt).rejects.toThrow('ORDER_NOT_FOUND');
+  });
+
+  it('lists orders for a customer', () => {
+    const orders = service.findByCustomer('cus_7');
+    expect(orders).toHaveLength(3);
+  });
+});
+
+@expected order.spec.ts
+import { OrderService } from './order.service';
+
+describe('OrderService', () => {
+  let service: OrderService;
+
+  beforeEach(() => {
+    service = new OrderService(repository, payments);
+  });
+
+  it('cancels a pending order', async () => {
+    const result = await service.cancel('ord_101');
+    expect(result.status).toBe('CANCELLED');
+  });
+
+  it('refuses to cancel a shipped order', async () => {
+    const attempt = await service.cancel('ord_102');
+    expect(attempt).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+  });
+
+  it('marks a packed order as shipped', async () => {
+    const result = await service.markShipped('ord_103');
+    expect(result.status).toBe('SHIPPED');
+  });
+
+  it('refunds inside the window', async () => {
+    const refund = await service.refund('ord_104');
+    expect(refund.amount).toBe(1200);
+  });
+
+  it('records the reason outside the window', async () => {
+    const result = await service.cancel('ord_105');
+    expect(result.cancellationReason).toBe('REFUND_WINDOW_EXPIRED');
+  });
+
+  it('finds an order by id', async () => {
+    const order = await service.findOne('ord_106');
+    expect(order.id).toBe('ord_106');
+  });
+
+  it('throws for an unknown id', async () => {
+    const attempt = await service.findOne('ord_999');
+    expect(attempt).rejects.toThrow('ORDER_NOT_FOUND');
+  });
+
+  it('lists orders for a customer', async () => {
+    const orders = await service.findByCustomer('cus_7');
+    expect(orders).toHaveLength(3);
+  });
+});

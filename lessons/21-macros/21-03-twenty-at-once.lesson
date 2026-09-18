@@ -1,0 +1,103 @@
+@meta
+id: 21-03
+title: Twenty at once
+chapter: 21
+type: lesson
+skills: macro-count, macro-record
+par: 74
+minutes: 7
+vscode: a regex replace with three groups, and a header row you forgot
+open: orders.fixture.ts
+
+@brief
+The orders fixture arrived as CSV, header row and all, pasted into the
+middle of an array. Each data row becomes a record:
+
+    ord_101,cus_7,1200        →    { id: 'ord_101', customerId: 'cus_7', total: 1200 },
+
+Twenty rows. The header row is not data; it goes.
+
+A substitute could do this with three capture groups, if you get the
+pattern right first time. The macro is the edit you would make by hand
+on one line, with three `f,` in it, and then a number in front of `@a`.
+
+@keys
+| `20@a` | play `a` twenty times |
+| `f,` | to the next comma |
+| `s` | replace the character under the cursor and start inserting |
+
+@hints
+Delete the header first, so the cursor is on the first real row when
+you start recording.
+--
+On one line: `^i{ id: '` `Esc`, then `f,` and `s', customerId: '` `Esc`,
+then `f,` and `s', total: ` `Esc`, then `A },` `Esc` and `j`. The `s`
+on the comma is the trick: it deletes the comma and starts typing in
+the same keystroke.
+--
+`jdd`, record it, then `19@a`. Nineteen, because the recording already
+did the first row.
+
+@solution
+    j dd   qa ^i{ id: ' <Esc> f, s', customerId: ' <Esc> f, s', total:  <Esc> A }, <Esc> j q   19@a   :wq<Enter>
+
+Sixty-one keystrokes, and the count is three of them.
+
+A count in front of `@a` is exactly a count in front of anything else:
+do it that many times. Nineteen replays of the macro, each starting
+where the last one's `j` left off. Twenty rows or two hundred, the
+count is the only thing that changes.
+
+Notice that counting the rows was not really necessary. If you had said
+`25@a` the macro would have run off the bottom of the data and stopped
+on its own. The next lessons are about why that is safe and how to
+lean on it.
+
+@start orders.fixture.ts
+export const orders = [
+  id,customerId,total
+  ord_101,cus_7,1200
+  ord_102,cus_7,450
+  ord_103,cus_12,9900
+  ord_104,cus_3,1575
+  ord_105,cus_21,80
+  ord_106,cus_12,2200
+  ord_107,cus_8,640
+  ord_108,cus_8,640
+  ord_109,cus_30,12000
+  ord_110,cus_3,315
+  ord_111,cus_17,1999
+  ord_112,cus_21,4250
+  ord_113,cus_9,75
+  ord_114,cus_12,3600
+  ord_115,cus_4,880
+  ord_116,cus_30,150
+  ord_117,cus_7,7300
+  ord_118,cus_17,520
+  ord_119,cus_2,1010
+  ord_120,cus_9,999
+];
+
+@expected orders.fixture.ts
+export const orders = [
+  { id: 'ord_101', customerId: 'cus_7', total: 1200 },
+  { id: 'ord_102', customerId: 'cus_7', total: 450 },
+  { id: 'ord_103', customerId: 'cus_12', total: 9900 },
+  { id: 'ord_104', customerId: 'cus_3', total: 1575 },
+  { id: 'ord_105', customerId: 'cus_21', total: 80 },
+  { id: 'ord_106', customerId: 'cus_12', total: 2200 },
+  { id: 'ord_107', customerId: 'cus_8', total: 640 },
+  { id: 'ord_108', customerId: 'cus_8', total: 640 },
+  { id: 'ord_109', customerId: 'cus_30', total: 12000 },
+  { id: 'ord_110', customerId: 'cus_3', total: 315 },
+  { id: 'ord_111', customerId: 'cus_17', total: 1999 },
+  { id: 'ord_112', customerId: 'cus_21', total: 4250 },
+  { id: 'ord_113', customerId: 'cus_9', total: 75 },
+  { id: 'ord_114', customerId: 'cus_12', total: 3600 },
+  { id: 'ord_115', customerId: 'cus_4', total: 880 },
+  { id: 'ord_116', customerId: 'cus_30', total: 150 },
+  { id: 'ord_117', customerId: 'cus_7', total: 7300 },
+  { id: 'ord_118', customerId: 'cus_17', total: 520 },
+  { id: 'ord_119', customerId: 'cus_2', total: 1010 },
+  { id: 'ord_120', customerId: 'cus_9', total: 999 },
+];

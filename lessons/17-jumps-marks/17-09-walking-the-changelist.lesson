@@ -1,0 +1,137 @@
+@meta
+id: 17-09
+title: Walking the changelist both ways
+chapter: 17
+type: lesson
+skills: changelist
+par: 62
+minutes: 7
+vscode: no equivalent beyond one step back
+open: payment.service.ts
+
+@brief
+The gateway has moved to `/v2`. All three paths in this service say
+`/v1`; change them, top to bottom. Search once and let `n` and the dot
+command do the other two.
+
+Then a second job that sends you back through your own edits. `capture`
+has no status check. `charge` has the right one: the `if` block after
+its request, with the blank line that follows it. Copy those four lines
+from `charge`, put them into `capture` after its blank line, and change
+the error code in the copy to `CAPTURE_FAILED`.
+
+You are standing on the third `v2` when the first job ends. The block
+you need is two lines under the first `v2`, and the place it goes is
+just under the third. Use the changelist to get to both, in both
+directions, and use `:changes` to see the numbers before you press
+anything.
+
+@keys
+| `g;` | older change; takes a count |
+| `g,` | newer change; takes a count |
+| `:changes` | the changelist, newest at the bottom, `>` where you are |
+| `n` `.` | next match, repeat the change |
+| `y3j` | yank this line and the three below |
+
+@hints
+After three edits the changelist has three entries, and you are on the
+newest. `:changes` shows the count you need to reach the oldest.
+--
+`3g;` lands on the first `v2`. From there the block is `2j` down, and
+`y3j` takes it with its blank line. `2g,` then goes forward two changes
+to the third `v2`.
+--
+`/v1` Enter, `ciwv2` Esc, `n.` `n.`, `3g;` `2jy3j` `2g,` `jp`, then
+`j` `fC` `ciwCAPTURE_FAILED` Esc.
+
+@solution
+    /v1<Enter> ciwv2<Esc> n. n.
+    3g; 2jy3j 2g, jp jfCciwCAPTURE_FAILED<Esc> :wq<Enter>
+
+`g;` and `g,` are `Ctrl-O` and `Ctrl-I` for the changelist. Older and
+newer, and both take a count. `:changes` is `:jumps` for the same list
+and reads the same way: newest at the bottom, `>` where you are, the
+number in the left column being the count to give.
+
+Why this beat the jumplist. The three `n` presses were jumps, so the
+jumplist also held the three positions, mixed in with the initial
+search. The changelist held *only* the three edits, in order, with
+nothing else in it, so `3g;` meant "the first thing I changed" with no
+arithmetic.
+
+The yank in the middle mattered. Yanking does not touch the changelist,
+so after `y3j` the list was intact and `2g,` still made sense. Had you
+made any edit at the first `v2`, that edit would have become the newest
+entry and `g,` would have had nowhere to go. When you need to visit
+several of your own edits, do the reading and copying first and the
+new edits last.
+
+@start payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async charge(args: { orderId: string; amount: number }) {
+    const response = await this.http.post('/v1/charges', args);
+
+    if (response.status !== 200) {
+      throw exception('CHARGE_FAILED');
+    }
+
+    return response.data;
+  }
+
+  public async refund(args: { orderId: string; amount: number }) {
+    const response = await this.http.post('/v1/refunds', args);
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+
+  public async capture(args: { orderId: string }) {
+    const response = await this.http.post('/v1/captures', args);
+
+    return response.data;
+  }
+}
+
+@expected payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async charge(args: { orderId: string; amount: number }) {
+    const response = await this.http.post('/v2/charges', args);
+
+    if (response.status !== 200) {
+      throw exception('CHARGE_FAILED');
+    }
+
+    return response.data;
+  }
+
+  public async refund(args: { orderId: string; amount: number }) {
+    const response = await this.http.post('/v2/refunds', args);
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+
+  public async capture(args: { orderId: string }) {
+    const response = await this.http.post('/v2/captures', args);
+
+    if (response.status !== 200) {
+      throw exception('CAPTURE_FAILED');
+    }
+
+    return response.data;
+  }
+}

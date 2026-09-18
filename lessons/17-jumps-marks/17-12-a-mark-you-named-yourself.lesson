@@ -1,0 +1,248 @@
+@meta
+id: 17-12
+title: A mark you named yourself
+chapter: 17
+type: lesson
+skills: marks-set, marks-jump, mark-backtick
+par: 104
+minutes: 7
+vscode: a bookmark extension, if you installed one
+open: order.provider.ts
+
+@brief
+Three review comments on this provider. The first one is on the
+`emailService.send` call in `create`: it is not awaited. Search for
+`this.email` to land on it. You will fix it last.
+
+The other two are elsewhere. In `cancel`, `ORDER_ALREADY_SHIPPED`
+should be `ORDER_NOT_CANCELLABLE`. In `refundPartial`,
+`REFUND_EXCEEDS_TOTAL` should be `REFUND_TOO_LARGE`. Fix both, in that
+order.
+
+Then come back to the first comment and insert `await ` in front of
+`this`. You have used `Ctrl-O` for this before, and you could count
+your jumps and use it again. Instead, before you leave, put a mark on
+the exact character you will need to be on when you return. Then the
+number of jumps in between is nobody's problem.
+
+@keys
+| `ma` | set mark `a` at the cursor position |
+| `` `a `` | jump to mark `a`, exact character |
+| `'a` | jump to the line of mark `a`, first non-blank |
+| `:marks` | list every mark that is set |
+
+@hints
+Set the mark while the cursor is on the `t` of `this`, which is where
+the search leaves it. That is the character `await ` goes in front of.
+--
+The backtick form returns you to the character; the apostrophe form
+only to the line. After `'a` you would still have to find `this`.
+--
+`/this.email` Enter, `ma`. `/ALREADY` Enter, `ciwORDER_NOT_CANCELLABLE`
+Esc. `/EXCEEDS` Enter, `ciwREFUND_TOO_LARGE` Esc. `` `a ``, `iawait `
+Esc.
+
+@solution
+    /this.email<Enter> ma
+    /ALREADY<Enter> ciwORDER_NOT_CANCELLABLE<Esc>
+    /EXCEEDS<Enter> ciwREFUND_TOO_LARGE<Esc>
+    `a iawait <Esc> :wq<Enter>
+
+Chapter 9 gave you `ma` and `'a` as a way to say "from here to there"
+for an operator. This is the other use, and the more common one: a
+bookmark. Drop it before you leave, jump back to it whenever you like.
+
+Compared with `Ctrl-O`, a mark has three properties worth having. It
+does not care how many jumps you made in between, so there is nothing
+to count. It does not move when you make other jumps, so it is still
+right after a long detour. And it has a name, so you can keep several:
+`ma` on the thing you are fixing, `mb` on the test for it, `mc` on the
+type definition, and hop between all three for as long as the file is
+open.
+
+`` `a `` versus `'a` is the backtick rule again. The apostrophe version
+lands on the first non-blank of the line, which here is the `a` of
+`await`'s future neighbour, four characters short of where you need
+to be. Use the backtick by default. Use the apostrophe when you mean
+whole lines, which mostly means when you are giving the mark to an
+operator, `d'a`, or to an Ex range, `:'a,.s`.
+
+`:marks` lists everything: your lowercase marks, and the automatic
+ones from the last few lessons. Look at it once to see that `.`, `^`,
+`[` and `]` are marks like any other.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { CustomerProvider } from '../customer/customer.provider';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerProvider) protected customerProvider: CustomerProvider,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(customerId: string) {
+    await this.customerProvider.findOne(customerId);
+
+    return this.orderRepository.findByCustomer({ customerId });
+  }
+
+  public async create(args: { customerId: string; total: number }) {
+    const customer = await this.customerProvider.findOne(args.customerId);
+
+    const order = await this.orderRepository.create({
+      values: { customerId: customer.id, total: args.total, status: 'PENDING' },
+    });
+
+    this.emailService.send({ orderId: order.id, template: 'order_confirmation' });
+
+    return order;
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_NOT_PENDING');
+    }
+
+    await this.orderRepository.update({ where: { id }, values: { status: 'SHIPPED' } });
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async refundPartial(id: string, amount: number) {
+    const order = await this.findOne(id);
+
+    if (amount > order.total) {
+      throw exception('REFUND_EXCEEDS_TOTAL');
+    }
+
+    await this.paymentService.refund(order.id, amount);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { refundedAmount: amount },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { CustomerProvider } from '../customer/customer.provider';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerProvider) protected customerProvider: CustomerProvider,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(customerId: string) {
+    await this.customerProvider.findOne(customerId);
+
+    return this.orderRepository.findByCustomer({ customerId });
+  }
+
+  public async create(args: { customerId: string; total: number }) {
+    const customer = await this.customerProvider.findOne(args.customerId);
+
+    const order = await this.orderRepository.create({
+      values: { customerId: customer.id, total: args.total, status: 'PENDING' },
+    });
+
+    await this.emailService.send({ orderId: order.id, template: 'order_confirmation' });
+
+    return order;
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_NOT_PENDING');
+    }
+
+    await this.orderRepository.update({ where: { id }, values: { status: 'SHIPPED' } });
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_NOT_CANCELLABLE');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async refundPartial(id: string, amount: number) {
+    const order = await this.findOne(id);
+
+    if (amount > order.total) {
+      throw exception('REFUND_TOO_LARGE');
+    }
+
+    await this.paymentService.refund(order.id, amount);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { refundedAmount: amount },
+    });
+  }
+}

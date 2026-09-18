@@ -1,0 +1,92 @@
+@meta
+id: 13-14
+title: Drill — very magic by reflex
+chapter: 13
+type: drill
+skills: regex-verymagic, regex-quantifiers
+par: 30
+minutes: 5
+reps: 8
+vscode: read every line, find the one without a caret or a tilde
+open: package.json
+
+@brief
+Eight times: one dependency in this file is pinned to an exact version
+with no `^` in front of it. Find it and give it the caret.
+
+The shape is a quote, three numbers with dots between them, a quote.
+Type it in very magic, every time, without stopping to think about
+which characters need a backslash.
+
+@keys
+| `\v` | very magic |
+| `\d+` | one or more digits, no backslash on the plus |
+| `\.` | a literal dot — still escaped, even under `\v` |
+| `a` | append after the cursor |
+
+@hints
+The caret-less version is the one where the digit sits directly after
+the opening quote. Put the quote in the pattern.
+--
+`/\v"\d+\.\d+\.\d+"` `Enter` lands on the opening quote. `a^` and
+`Esc`.
+
+@solution
+/\v"\d+\.\d+\.\d+"<Enter>  a^<Esc>  :wq<Enter>
+
+Twenty-six keystrokes, and the pattern is one you have typed in
+`grep`, in a test, in a validation rule. Under `\v` it is the same
+pattern here.
+
+By rep four the `\v` should be the first thing your fingers do after
+`/`, before you have decided what the pattern is. By rep eight the
+`\.` should be automatic too — the dot is the one character that is
+special in *every* dialect, so it needs its escape everywhere.
+
+@start package.json
+{
+  "name": "order-service",
+  "version": "0.3.0-beta.4",
+  "private": true,
+  "dependencies": {
+    "@prisma/client": "^5.14.0",
+    "amqplib": "^0.10.4",
+    "express": "~4.19.2",
+    "graphql": "^16.9.0",
+    "reflect-metadata": "^0.2.2",
+    "stripe": "14.25.0",
+    "tsyringe": "^4.8.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "jest": "^29.7.0",
+    "prisma": "^5.14.0",
+    "typescript": "~5.5.4",
+    "vitest": "latest"
+  }
+}
+
+@expected package.json
+{
+  "name": "order-service",
+  "version": "0.3.0-beta.4",
+  "private": true,
+  "dependencies": {
+    "@prisma/client": "^5.14.0",
+    "amqplib": "^0.10.4",
+    "express": "~4.19.2",
+    "graphql": "^16.9.0",
+    "reflect-metadata": "^0.2.2",
+    "stripe": "^14.25.0",
+    "tsyringe": "^4.8.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "jest": "^29.7.0",
+    "prisma": "^5.14.0",
+    "typescript": "~5.5.4",
+    "vitest": "latest"
+  }
+}

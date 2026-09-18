@@ -1,0 +1,72 @@
+@meta
+id: 25-13
+title: Drill — not column one
+chapter: 25
+type: drill
+skills: ex-normal
+par: 23
+minutes: 4
+reps: 8
+vscode: click six lines one at a time and type the dash yourself
+open: deploy-notes.md
+
+@brief
+Eight times: the six indented steps on lines 5 to 10 should be a bullet
+list. Put `- ` in front of the text on each one. The indentation in front
+of it stays exactly as it is.
+
+`:normal` puts the cursor in **column 1** on each line, not on the first
+non-blank. An `i` there types into the margin.
+
+@keys
+| `:5,10normal I- ` | insert `- ` at the first non-blank of each line |
+| `I` | insert before the first non-blank character |
+| `^` | move to the first non-blank character |
+
+@hints
+`i` inserts where the cursor is, and on these lines the cursor starts to
+the left of the indentation. You want the key that goes to the text
+first.
+--
+`:5,10normal I- ` Enter, `:wq`. Mind the space after the dash.
+
+@solution
+    :5,10normal I- <Enter>  :wq<Enter>
+
+Twenty keystrokes. `:5,10normal ^i- ` is the same thing spelled out:
+`^` to the first non-blank, then insert. `I` is that pair in one key, and
+it is the one to reach for.
+
+Column 1 is the single most common way a `:normal` goes wrong, and it is
+the same trap as `:g//normal` from chapter 15 — same cause, same fix.
+Anything that measures from the cursor is affected, not just insertion:
+`dw` on an indented line eats the indentation instead of the first word,
+`3x` takes three spaces, and `f(` starts its search from the margin,
+which is usually what you wanted but not always.
+
+The rule to carry: if the keys care where they start, start them with
+`^`. It costs one keystroke and removes a whole class of surprise.
+
+@start deploy-notes.md
+# Payments release
+
+Steps, in order:
+
+  run the pending migration
+  restart the payments worker
+  drain the refund queue
+  check the gateway dashboard
+  watch the queue depth fall
+  close the ticket
+
+@expected deploy-notes.md
+# Payments release
+
+Steps, in order:
+
+  - run the pending migration
+  - restart the payments worker
+  - drain the refund queue
+  - check the gateway dashboard
+  - watch the queue depth fall
+  - close the ticket

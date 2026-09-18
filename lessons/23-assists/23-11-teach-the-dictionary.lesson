@@ -1,0 +1,80 @@
+@meta
+id: 23-11
+title: Teach the dictionary your words
+chapter: 23
+type: lesson
+skills: spell
+par: 19
+minutes: 5
+vscode: "Add to workspace dictionary" in the lightbulb menu
+open: ARCHITECTURE.md
+vimrc: set spell spellfile=dojo.utf-8.add
+
+@brief
+Spell checking flags three words in this document. Two of them are
+correct — `tsyringe` and `prisma` are the names of libraries, and they
+will appear in every doc this project writes. Mark both as good so
+they stop being flagged, top to bottom.
+
+The third, `cancelation`, is a spelling the dictionary tolerates but
+the house style does not: this project writes `cancellation`. Mark it
+as wrong so it is flagged as a plain error from now on.
+
+The document itself must not change. What you are editing is the word
+list vim keeps for you, which for this lesson is `dojo.utf-8.add` in
+the working directory. That file is what gets checked.
+
+@keys
+| `zg` | mark the word under the cursor as good |
+| `zw` | mark it as wrong |
+| `zug` `zuw` | undo either |
+| `]s` | next flagged word |
+
+@hints
+`]s` finds the first flagged word. `zg` adds it to your word list.
+--
+`]s` `zg` twice for the two library names, then `]s` `zw` on
+`cancelation`.
+--
+`]szg ]szg ]szw :wq`. The `:wq` is only there to end the session; the
+document is unchanged and the word list was written the moment you
+pressed `zg`.
+
+@solution
+    ]szg ]szg ]szw :wq<Enter>
+
+Sixteen keystrokes.
+
+`zg` appends the word to the file named by `spellfile` and rebuilds
+the compiled list beside it, immediately. `zw` appends the word with a
+`/!` suffix, which means "this is wrong even if the dictionary says
+otherwise". Both take effect in every buffer from then on. Open the
+`.add` file if you are curious; it is plain text, one word per line,
+and safe to edit or commit.
+
+The distinction to keep straight is `zg` versus `1z=`. `1z=` changes
+the document; `zg` changes the dictionary. A flagged word that is
+right — a library, a product, a surname — gets `zg`, once, and never
+bothers you again. A flagged word that is wrong gets corrected.
+
+By default the word list lives under `~/.vim/spell/`. Many people
+point `spellfile` at a file inside the repo instead, so the project's
+vocabulary travels with the project.
+
+@start ARCHITECTURE.md
+# How the service is wired
+
+Every class is registered with tsyringe at startup. Providers hold the
+business rules, repositories hold the data access, and services hold
+anything that talks to the outside world.
+
+The schema is owned by prisma. Migrations are immutable: a change means
+a new migration, never an edit to an old one.
+
+A cancelation outside the refund window is not an error. The order
+still moves to CANCELLED and the reason is recorded.
+
+@expected dojo.utf-8.add
+tsyringe
+prisma
+cancelation/!

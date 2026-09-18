@@ -1,0 +1,181 @@
+@meta
+id: 29-06
+title: Changing one pair into another
+chapter: 29
+type: lesson
+skills: surround
+par: 20
+minutes: 5
+vscode: find and replace on quotes, and pray about the apostrophes
+open: messages.ts
+vimrc: set packpath^=. | packloadall!
+
+@brief
+Same plugin as last lesson, shipped in the same place —
+`pack/dojo/start/surround/plugin/surround.vim`, sitting in this
+directory. Still nothing installed.
+
+Its second verb is *change surround*: take the pair that is already
+around this text and make it a different pair. Not delete-and-retype.
+One command, two characters: the one you have and the one you want.
+
+The style guide moved to double quotes. `messages.ts` has five strings in
+single quotes. Convert them. The text inside must not change — that is
+the point of having a verb for it rather than a search and replace, which
+would also have eaten the apostrophe in any message that had one.
+
+@keys
+| `cs{old}{new}` | change the surrounding `{old}` pair into a `{new}` pair |
+| `cs'"` | single quotes become double quotes |
+| `cs"(` | double quotes become brackets |
+| `qq` … `q` then `4@q` | five of anything, recorded once |
+
+@hints
+`cs` needs two characters after it: what is there now, and what you want
+instead.
+--
+`cs'"` on the first string. Then do not do it four more times by hand —
+chapter 21 gave you a way to record it.
+--
+`j` to the first message, then `qq` `cs'"` `j0` `q` records one line's
+worth. `4@q` finishes the other four.
+
+@solution
+    j  qq cs'" j0 q  4@q  :wq<Enter>
+
+Seventeen keystrokes for five strings.
+
+`cs` is the verb that has no equivalent anywhere else, and it is the one
+that changes how you write. The alternatives are all worse:
+`:%s/'/"/g` would have destroyed any apostrophe in the prose; selecting
+the string and retyping it costs the whole string; `f'x` at each end costs
+four moves and leaves you hunting for the second quote.
+
+Note what it does *not* need from you: the cursor was at the start of the
+line each time, not on a quote. `cs'` uses vim's own `a'` text object,
+which finds the quoted string on the line for you. The plugin is not
+clever here — it is delegating to something vim already had, which is why
+it is eighty lines instead of eight hundred.
+
+The pairs it knows are the ones you would guess: `(`, `[`, `{`, `<` and
+their closers, plus any other single character used on both sides. In the
+real vim-surround the open bracket adds padding spaces and the closer does
+not — `cs"(` gives `( x )` and `cs")` gives `(x)`. The version shipped
+here never pads. Worth knowing before it surprises you on a real machine.
+
+@start pack/dojo/start/surround/plugin/surround.vim
+" dojo-surround.vim - a small, honest surround plugin.
+" Shipped inside this lesson. You did not install it; the dojo did.
+"
+"   ds{char}           delete the surrounding pair
+"   cs{old}{new}       change one surrounding pair into another
+"   ys{motion}{char}   surround the text the motion covers
+"   {Visual}S{char}    surround the selection
+"
+" Brackets come in pairs: ( [ { < all give you the matching closer.
+" Anything else is used on both sides, so " gives "..." and ` gives `...`.
+
+if exists('g:loaded_dojo_surround')
+  finish
+endif
+let g:loaded_dojo_surround = 1
+
+let s:pairs = {
+      \ '(': '()', ')': '()',
+      \ '[': '[]', ']': '[]',
+      \ '{': '{}', '}': '{}',
+      \ '<': '<>', '>': '<>',
+      \ }
+
+function! s:delims(char) abort
+  return get(s:pairs, a:char, a:char . a:char)
+endfunction
+
+" The text between the pair, without the pair itself.
+function! s:inner(char) abort
+  let save = @z
+  let @z = ''
+  silent execute 'normal! "zyi' . a:char
+  let text = @z
+  let @z = save
+  return text
+endfunction
+
+" A visual selection covering the pair AND what is between it. vi" selects
+" the inside; o h o l then walks each end out by one character onto the
+" delimiters. Doing it this way rather than with va" matters: va" also
+" swallows the whitespace next to the string.
+function! s:select(char) abort
+  return 'vi' . a:char . 'ohol'
+endfunction
+
+function! s:replace(char, text) abort
+  let save = @z
+  let @z = a:text
+  silent execute 'normal! ' . s:select(a:char) . '"zp'
+  let @z = save
+endfunction
+
+function! s:ds(char) abort
+  let inner = s:inner(a:char)
+  if inner ==# ''
+    return
+  endif
+  call s:replace(a:char, inner)
+endfunction
+
+function! s:cs(old, new) abort
+  let inner = s:inner(a:old)
+  if inner ==# ''
+    return
+  endif
+  let d = s:delims(a:new)
+  call s:replace(a:old, d[0] . inner . d[1])
+endfunction
+
+function! s:ys(type) abort
+  let d = s:delims(nr2char(getchar()))
+  let save = @z
+  if a:type ==# 'line'
+    silent execute "normal! '[V']\"zy"
+    call setreg('z', d[0] . "\n" . @z . d[1], 'V')
+    silent execute "normal! '[V']\"zp"
+  else
+    silent execute "normal! `[v`]\"zy"
+    let @z = d[0] . @z . d[1]
+    silent execute "normal! `[v`]\"zp"
+  endif
+  let @z = save
+endfunction
+
+function! s:vs(char) abort
+  let d = s:delims(a:char)
+  let save = @z
+  silent execute 'normal! gv"zy'
+  let @z = d[0] . @z . d[1]
+  silent execute 'normal! gv"zp'
+  let @z = save
+endfunction
+
+nnoremap <silent> ds :<C-u>call <SID>ds(nr2char(getchar()))<CR>
+nnoremap <silent> cs :<C-u>call <SID>cs(nr2char(getchar()), nr2char(getchar()))<CR>
+nnoremap <silent> ys :<C-u>set operatorfunc=<SID>ys<CR>g@
+xnoremap <silent> S :<C-u>call <SID>vs(nr2char(getchar()))<CR>
+
+@start messages.ts
+export const messages = {
+  orderNotFound: 'That order does not exist.',
+  orderAlreadyShipped: 'That order has already shipped.',
+  refundWindowExpired: 'The refund window has closed.',
+  paymentDeclined: 'The card was declined by the issuer.',
+  webhookInvalid: 'The signature did not match the payload.',
+};
+
+@expected messages.ts
+export const messages = {
+  orderNotFound: "That order does not exist.",
+  orderAlreadyShipped: "That order has already shipped.",
+  refundWindowExpired: "The refund window has closed.",
+  paymentDeclined: "The card was declined by the issuer.",
+  webhookInvalid: "The signature did not match the payload.",
+};

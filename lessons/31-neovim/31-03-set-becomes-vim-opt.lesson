@@ -1,0 +1,87 @@
+@meta
+id: 31-03
+title: set becomes vim.opt
+chapter: 31
+type: lesson
+skills: lua-config
+par: 97
+minutes: 6
+vscode: editing settings.json, one JSON key per setting
+open: init.lua
+
+@brief
+Here is the entire translation rule for boolean options, and it is as dull
+as it looks:
+
+    set number            ->  vim.opt.number = true
+    set nonumber          ->  vim.opt.number = false
+    set noexpandtab       ->  vim.opt.expandtab = false
+
+`vim.opt` is a table that stands in for `:set`. Assigning to a field is
+the same as running the `:set` command, and it happens at the moment the
+line runs, in file order, exactly like a vimrc.
+
+Two things people get wrong on their first day. There is no `no` prefix in
+Lua — a disabled option is `= false`, written out. And `vim.opt.number`
+without an assignment does nothing at all; Lua will not warn you, the line
+just evaluates and is thrown away. A silently ignored line is the most
+common bug in a hand-ported config.
+
+The file in front of you is the start of an `init.lua`. The first option is
+ported already. Port the remaining three from the vimrc section below,
+in this order, keeping the same style:
+
+    set relativenumber
+    set expandtab
+    set shiftwidth=2
+
+Numbers are written as numbers — no quotes. Graded in vim: you are writing
+the Lua, not running it.
+
+@keys
+| `G` | last line |
+| `o` | open a line below and insert |
+| `Enter` | in insert mode, keep going on a new line |
+
+@hints
+All three lines go at the bottom, under the option that is already there.
+--
+`G` then `o` opens one line below the last one. Stay in insert mode and
+press Enter between the three lines rather than leaving and re-entering.
+--
+Do not open the line from a comment. `o` on a `--` line gives you a `--`
+you did not ask for, exactly like `"` does in a vimrc.
+
+@solution
+    G o
+    vim.opt.relativenumber = true<Enter>
+    vim.opt.expandtab = true<Enter>
+    vim.opt.shiftwidth = 2<Esc>
+    :wq<Enter>
+
+Ninety-odd keystrokes and no thinking, which is the point: for plain
+options the port is mechanical. Most people do this part of the migration
+in one sitting with a substitution — `:%s/^set \(\w\+\)$/vim.opt.\1 = true/`
+gets the booleans, and you fix the handful of lines with values by hand.
+
+The reason `vim.opt` exists at all, rather than plain assignment, is that
+vim options are not all scalars. Some are lists, some are maps, and
+chapter 31-05 shows what `vim.opt` gives you that a plain variable could
+not. For now: booleans are `true`/`false`, numbers are numbers.
+
+@start init.lua
+-- ~/.config/nvim/init.lua
+-- Ported from ~/.vimrc, one section at a time.
+
+-- Display
+vim.opt.number = true
+
+@expected init.lua
+-- ~/.config/nvim/init.lua
+-- Ported from ~/.vimrc, one section at a time.
+
+-- Display
+vim.opt.number = true
+vim.opt.relativenumber = true
+vim.opt.expandtab = true
+vim.opt.shiftwidth = 2

@@ -1,0 +1,110 @@
+@meta
+id: 18-07
+title: Find by the start of the name
+chapter: 18
+type: lesson
+skills: find-path, wildmenu
+par: 34
+minutes: 4
+vscode: Ctrl+P "reg"
+vimrc: set path=.,** wildmenu wildmode=longest:full,full
+open: README.md
+
+@brief
+Dependency injection is failing at startup with "no registration for
+OrderResolver". The registry file registers it under a misspelled
+token: `OrderResolvr`. Fix the token so it matches the class name.
+
+You know the file is called `registry` something. `:find` completes
+against `path`, so `:find reg` and Tab finds every file under the
+project whose name starts with `reg` — one, in this case — and fills it
+in, directory and all. `path` and `wildmenu` are set for you.
+
+Only the token changes. The import stays as it is.
+
+@keys
+| `:find reg` `Tab` | complete a file name from anywhere in `path` |
+| `Tab` again | next candidate, when there are several |
+| `Enter` | open the one shown |
+
+@hints
+`:find reg`, Tab. Look at what it filled in before you press Enter.
+--
+Inside the file, `/Resolvr` lands on the misspelling. One letter is
+missing after the `v`.
+--
+`:find reg<Tab>` Enter, `/Resolvr` Enter, `fv`, `ae`, `Esc`, `:wq`.
+
+@solution
+    :find reg<Tab><Enter> /Resolvr<Enter> fv ae <Esc> :wq<Enter>
+
+This is the Ctrl+P you were missing, and it is three keys longer than
+the real thing: `:find` instead of a chord, and a Tab. In return it
+needs no plugin, works over ssh, and works in every vim you will ever
+sit down at once you have typed `set path=.,**` into its vimrc.
+
+The completion is a prefix match on the file name, not the path. `reg`
+finds `registry.ts` because the name starts with `reg`; it would not
+find it as `gistry`. The next lesson is about the other case.
+
+@start README.md
+# Orders service
+
+Handles orders, customers and refunds for the storefront.
+
+Services are registered with the DI container by token. The token must
+match the class name exactly or resolution fails at startup.
+
+@start src/configuration/registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderResolver } from '../domain/order/order.resolver';
+import { PaymentService } from '../infrastructure/services/payment.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('OrderResolvr', { useClass: OrderResolver });
+container.register('PaymentService', { useClass: PaymentService });
+
+@expected src/configuration/registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderResolver } from '../domain/order/order.resolver';
+import { PaymentService } from '../infrastructure/services/payment.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('OrderResolver', { useClass: OrderResolver });
+container.register('PaymentService', { useClass: PaymentService });
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+}
+
+@start src/infrastructure/services/payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string) {
+    const response = await this.http.post(`/refunds`, { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}

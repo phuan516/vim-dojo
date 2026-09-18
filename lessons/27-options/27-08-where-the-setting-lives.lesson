@@ -1,0 +1,74 @@
+@meta
+id: 27-08
+title: Where that setting should have lived
+chapter: 27
+type: lesson
+skills: set-local, filetype
+par: 76
+minutes: 6
+vscode: settings.json, a "[sql]" block with an editor.tabSize inside it
+open: after/ftplugin/sql.vim
+
+@brief
+Typing `:setlocal shiftwidth=4` every time you open a `.sql` file is not a
+workflow. Vim already has a place for "this is how I want SQL files to
+behave", and it will read it for you every time one is opened.
+
+When vim decides a buffer's filetype is `sql`, it sources every
+`ftplugin/sql.vim` it can find on the runtime path, and then every
+`after/ftplugin/sql.vim`. The `after/` ones run last, which is why yours
+go there: your settings land on top of whatever the shipped plugin decided,
+rather than underneath it.
+
+The file does not exist yet. Vim has opened an empty buffer at that path.
+Write the three lines that give SQL buffers four-space indentation with
+spaces rather than tabs:
+
+    setlocal shiftwidth=4
+    setlocal tabstop=4
+    setlocal expandtab
+
+Every line is `setlocal`, and the reason is the whole lesson.
+
+@keys
+| `:setlocal opt=…` | the only correct form inside an ftplugin |
+| `:set ft?` | what vim thinks this buffer is |
+| `:e ~/.vim/after/ftplugin/sql.vim` | where this file lives on a real machine |
+| `:scriptnames` | every file vim has sourced this session |
+
+@hints
+Nothing clever here — it is a new, empty buffer and three lines of text.
+The thinking is in why each one says `setlocal`.
+--
+`i`, the three lines with Enter between them, `Esc`, `:wq`.
+
+@solution
+    isetlocal shiftwidth=4<Enter>setlocal tabstop=4<Enter>setlocal expandtab<Esc>:wq<Enter>
+
+Sixty-five keystrokes, sixty of them the text.
+
+Why `setlocal` and never `set`: this file is sourced *every time a SQL
+buffer is created*. With `set shiftwidth=4` in it, opening one SQL file
+would change the global `shiftwidth`, and every TypeScript file you opened
+afterwards would inherit 4. One `.sql` file early in the morning would
+quietly reformat your afternoon. `setlocal` touches the buffer that
+triggered the load and nothing else.
+
+The layout on a real machine:
+
+    ~/.vim/ftplugin/sql.vim         runs instead of a shipped one
+    ~/.vim/after/ftplugin/sql.vim   runs after the shipped one
+
+Use `after/`. The shipped ftplugins are good and you rarely want to
+replace one wholesale; you want to disagree with it about two settings.
+
+This is also the answer to a question that comes up in every vim config:
+"where do I put a setting that only applies to one language?" Not in an
+`if` in your `.vimrc`, and not in an autocommand you wrote by hand. In an
+`after/ftplugin` file named after the filetype. Vim is already doing the
+detection and the dispatch; join in rather than rebuilding it.
+
+@expected after/ftplugin/sql.vim
+setlocal shiftwidth=4
+setlocal tabstop=4
+setlocal expandtab

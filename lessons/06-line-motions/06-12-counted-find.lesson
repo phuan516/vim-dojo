@@ -1,0 +1,64 @@
+@meta
+id: 06-12
+title: The fourth comma, in three keys
+chapter: 06
+type: lesson
+skills: find-f, line-start
+par: 55
+minutes: 5
+vscode: count the commas with your finger on the screen
+open: orders.csv
+
+@brief
+A CSV export needs a new `channel` column inserted between `currency` and
+`status`, with the value `web` on every data row:
+
+    order,customer,amount,currency,channel,status,placed_at
+
+The header and both rows have the same shape, so the insert point is the
+same in all three: immediately before the fourth comma.
+
+`f,` finds the first comma. You want the fourth, and you do not want to
+press `f,` four times.
+
+@keys
+| `4f,` | forward to the fourth comma on this line |
+| `3f(` | forward to the third open paren |
+| `0` | column one |
+
+@hints
+Counts work in front of `f` exactly as they worked in front of `j` in
+chapter 4.
+--
+`4f,` takes you to the fourth comma in three keystrokes. Then `i` puts your
+text in front of it.
+--
+Start each row with `0`. After an insert the cursor is somewhere in the
+middle of the line, and `f` counts from wherever the cursor is — not from
+the start of the line.
+
+@solution
+    4f, i ,channel <Esc> j 0 4f, i ,web <Esc> j 0 4f, i ,web <Esc> :wq<Enter>
+
+Counting commas with your eyes is slow and wrong about one time in ten.
+Counting them with a keystroke is instant and wrong never — and if you do
+miscount, `u` and a different count fixes it in two keys.
+
+Note what the count is doing. `4f,` does not mean go four commas further, it
+means go to the fourth comma from here. That is why the `0` at the start of
+each row matters: the count is only meaningful relative to a position you
+know. Anchor, count, land, edit.
+
+This is the shape of nearly all precise work in a delimited line — CSV rows,
+argument lists, long type literals. The field you want is the nth something,
+and a three-key motion gets you there while the mouse is still travelling.
+
+@start orders.csv
+order,customer,amount,currency,status,placed_at
+ord_1042,cus_88,4999,GBP,CANCELLED,2024-03-11
+ord_1043,cus_91,1250,GBP,PENDING,2024-03-12
+
+@expected orders.csv
+order,customer,amount,currency,channel,status,placed_at
+ord_1042,cus_88,4999,GBP,web,CANCELLED,2024-03-11
+ord_1043,cus_91,1250,GBP,web,PENDING,2024-03-12

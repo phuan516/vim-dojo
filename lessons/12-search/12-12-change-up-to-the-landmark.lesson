@@ -1,0 +1,165 @@
+@meta
+id: 12-12
+title: Change everything up to a landmark
+chapter: 12
+type: lesson
+skills: search-motion
+par: 44
+minutes: 6
+vscode: select from here to there with the mouse and retype
+open: refund.service.ts
+
+@brief
+Partial refunds are refunding the whole order. The gateway call in
+`submit` still passes the order total and the old `'LEGACY'` flag:
+
+    await this.gatewayClient.refund(order.id, order.total, 'LEGACY');
+
+It should pass the refund's own amount, and the flag is gone from the
+gateway API:
+
+    await this.gatewayClient.refund(order.id, refund.amount);
+
+The interesting part is the shape of the edit, not the code. You want to
+replace a run of text that starts at a word you can name and ends at a
+character you can name, and neither end is a word, a line or a bracket.
+No text object covers it. A search does.
+
+@keys
+| `c/text` `Enter` | change from here up to the next match, then type |
+| `d/text` `Enter` | the delete version |
+| `y/text` `Enter` | the yank version |
+| `gU/text` `Enter` | and so on — every operator takes it |
+
+@hints
+Get the cursor to where the replacement starts, then let one operator
+cover everything between there and the closing bracket.
+--
+`c` takes a motion and a search is a motion, so `c/` followed by the
+character you want to stop before will do it. The closing parenthesis is
+a fine thing to search for.
+--
+`/order.total` `Enter` lands you at the start of the text to replace.
+Then `c/)` `Enter` clears everything up to the closing bracket and leaves
+you in insert mode. Type the new argument and press `Esc`.
+
+@solution
+/order.total<Enter>  c/)<Enter>  refund.amount<Esc>  :wq<Enter>
+
+Thirty-five keystrokes, fourteen of which are the new argument.
+
+Notice what the search motion is doing for you here. The text you wanted
+to replace was `order.total, 'LEGACY'` — a fragment with a comma, a
+space, a string literal and no structure to grab hold of. Selecting it by
+hand means aiming twice. Naming its end — "up to the closing bracket" —
+means aiming once, and you do not have to be accurate about the middle.
+
+`c/` and `d/` are the two you will reach for constantly. `y/` is the same
+idea for copying: `y/}` `Enter` grabs everything from here to the next
+closing brace, which is a quick way to lift a block out of a file. All
+the operators take a search, including the ones that do not feel like
+they should: `>/text` indents up to a match, `gU/text` upper-cases up to
+one.
+
+One thing to watch. Because `/` motions are exclusive, `c/)` stops just
+before the bracket and leaves it in place — which is why the code still
+compiles. If you had wanted to swallow the bracket too, you would need
+the next lesson.
+
+@start refund.service.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { GatewayClient } from './gateway.client';
+import { AuditProducer } from '../events/audit.producer';
+
+@injectable()
+export class RefundService {
+  constructor(
+    @inject(GatewayClient) protected gatewayClient: GatewayClient,
+    @inject(AuditProducer) protected auditProducer: AuditProducer,
+  ) {}
+
+  public async authorise(args: { orderId: string; amount: number }) {
+    const authorisation = await this.gatewayClient.authorise({
+      orderId: args.orderId,
+      amount: args.amount,
+    });
+
+    if (!authorisation.approved) {
+      throw exception('REFUND_NOT_AUTHORISED');
+    }
+
+    return authorisation;
+  }
+
+  public async submit(refund: { id: string; orderId: string; amount: number }) {
+    const order = await this.gatewayClient.lookup(refund.orderId);
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    await this.gatewayClient.refund(order.id, order.total, 'LEGACY');
+
+    await this.auditProducer.publish({
+      type: 'refund.submitted',
+      refundId: refund.id,
+      orderId: order.id,
+    });
+
+    return { refundId: refund.id, submitted: true };
+  }
+
+  public async status(args: { refundId: string }) {
+    return this.gatewayClient.refundStatus(args.refundId);
+  }
+}
+
+@expected refund.service.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { GatewayClient } from './gateway.client';
+import { AuditProducer } from '../events/audit.producer';
+
+@injectable()
+export class RefundService {
+  constructor(
+    @inject(GatewayClient) protected gatewayClient: GatewayClient,
+    @inject(AuditProducer) protected auditProducer: AuditProducer,
+  ) {}
+
+  public async authorise(args: { orderId: string; amount: number }) {
+    const authorisation = await this.gatewayClient.authorise({
+      orderId: args.orderId,
+      amount: args.amount,
+    });
+
+    if (!authorisation.approved) {
+      throw exception('REFUND_NOT_AUTHORISED');
+    }
+
+    return authorisation;
+  }
+
+  public async submit(refund: { id: string; orderId: string; amount: number }) {
+    const order = await this.gatewayClient.lookup(refund.orderId);
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    await this.gatewayClient.refund(order.id, refund.amount);
+
+    await this.auditProducer.publish({
+      type: 'refund.submitted',
+      refundId: refund.id,
+      orderId: order.id,
+    });
+
+    return { refundId: refund.id, submitted: true };
+  }
+
+  public async status(args: { refundId: string }) {
+    return this.gatewayClient.refundStatus(args.refundId);
+  }
+}

@@ -1,0 +1,67 @@
+@meta
+id: 03-04
+title: Open a line below
+chapter: 03
+type: lesson
+skills: open-o
+par: 27
+minutes: 4
+vscode: click at the end of the line, press Enter, type
+open: order.entity.ts
+
+@brief
+`Order` needs a `placedAt: Date;` field, directly under `customerId`.
+
+Adding a new line under the one you are on is a single instruction in vim,
+not three. It makes the line, moves you onto it, puts you in insert mode,
+and copies the indentation of the line you came from — all of that before
+you type a character.
+
+Get the indentation from vim, not from your spacebar.
+
+@keys
+| `o` | open a new line below, and start typing on it |
+| `A` `Enter` | the long way round: end of line, then a new line |
+| `Esc` | out |
+
+@hints
+There is one key for "I want a new line under this one". It is the first
+letter of "open".
+--
+`o` — lowercase — opens below the current line. You do not need `A` first
+and you do not need Enter.
+--
+`jj` to get onto the `customerId` line, then `o`, type the field with no
+leading spaces, `Esc`, `:wq`.
+
+@solution
+    j j o placedAt: Date; <Esc> :wq<Enter>
+
+Type the field without indenting it. `o` already gave you two spaces,
+because the line above had two. If you type your own spaces on top of
+that you get four and the diff looks like you cannot use an editor.
+
+The comparison worth making is with what you would have done in VS Code:
+click to the end of `customerId: string;`, press Enter, then type. Three
+actions, one of which needs the mouse or `A` first. `o` is one key and it
+is position-independent — the cursor can be anywhere on the line above.
+
+`o` is also the key that makes writing new code in vim feel natural rather
+than fiddly. Whole functions get written as `o`, type, `Esc`.
+
+@start order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+};
+
+@expected order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  placedAt: Date;
+  status: OrderStatus;
+  total: number;
+};

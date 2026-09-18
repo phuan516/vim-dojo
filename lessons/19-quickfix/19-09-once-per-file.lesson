@@ -1,0 +1,338 @@
+@meta
+id: 19-09
+title: Once per file
+chapter: 19
+type: lesson
+skills: cfdo
+par: 115
+minutes: 6
+vscode: open each file from the results, paste the import at the top
+vimrc: set hidden
+open: README.md
+
+@brief
+`formatMoney` has moved into a shared package, and every file that
+calls it needs `import { formatMoney } from '@shared/money';` as its
+first line. The old local imports were removed in the last commit and
+the new one was never added, so nothing compiles. Three files call it,
+and two of them call it more than once.
+
+`:cdo` runs once per hit. Run "add the import" through `:cdo` and the
+files with two calls get two imports. `:cfdo` runs once per file in the
+list, with the cursor on that file's first hit. Same list, different
+granularity.
+
+The command to run is `normal ggO` followed by the import line: go to
+the top, open a line above, type. Two things to know. `:normal` takes
+everything after it as keystrokes, including a `|`, so `| update`
+cannot be chained onto it; write all the files afterwards with `:wa`
+instead. And `hidden` is on for this lesson, so `:cfdo` can move
+between modified buffers.
+
+@keys
+| `:cfdo cmd` | run `cmd` once per file in the quickfix list |
+| `:cfdo %s/old/new/g \| update` | a whole-file substitute, once per file |
+| `:cfdo normal keys` | normal-mode keys, once per file; `\|` is not a separator here |
+| `:wa` | write every modified buffer |
+
+@hints
+`:vimgrep /formatMoney(/ **/*.ts`. Five hits in three files.
+--
+`:cfdo normal ggOimport { formatMoney } from '@shared/money';` and
+Enter. Vim ends insert mode for you when `:normal` runs out of keys.
+--
+`:wa` then `:q`.
+
+@solution
+    :vimgrep /formatMoney(/ **/*.ts<Enter>
+    :cfdo normal ggOimport { formatMoney } from '@shared/money';<Enter>
+    :wa<Enter>  :q<Enter>
+
+`:cdo` when the edit belongs to the hit line; `:cfdo` when it belongs
+to the file. `:cfdo %s/old/new/g | update` is the common pairing: the
+list chose the files, `%s` handles every line in each. For a plain
+rename it gives the same result as `:cdo s/old/new/g | update`. It is
+the one to reach for when the edit is not on the hit line at all: an
+import at the top, a footer at the bottom, a `%s` that touches lines
+the search did not.
+
+`:normal` eating the bar is documented under `:help :bar`, together
+with the other commands that do it, `:global` among them. It is why the
+write here is a separate `:wa` and why `hidden` had to be on: with it
+off, `:cfdo` would stop at the second file with E37, exactly as `:cdo`
+did in lesson 5. `hidden` is on in your own vimrc, so in daily use this
+just works; the lesson turned it off earlier so you would see why the
+`| update` habit exists.
+
+@start README.md
+# Orders service
+
+Cancelling an order refunds it through `PaymentService.sendRefund`, which
+is named after the gateway's `/sendRefund` endpoint. A refund the gateway
+rejects raises `REFUND_FAILED`. Refund events go out on the
+`payment.sendRefund` routing key, which the ledger service consumes.
+
+@start src/configuration/registry.ts
+import { container } from 'tsyringe';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderRepository } from '../domain/order/order.repository';
+import { PaymentProducer } from '../domain/payment/payment.producer';
+import { PaymentProvider } from '../domain/payment/payment.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+
+container.register(PaymentProducer, { useClass: PaymentProducer });
+container.register(OrderRepository, { useClass: OrderRepository });
+container.register(OrderProvider, { useClass: OrderProvider });
+container.register(PaymentProvider, { useClass: PaymentProvider });
+container.register(PaymentService, { useClass: PaymentService });
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.sendRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async summary(id: string) {
+    const order = await this.findOne(id);
+
+    return {
+      total: formatMoney(order.total),
+      refundable: formatMoney(order.status === 'SHIPPED' ? 0 : order.total),
+    };
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { formatMoney } from '@shared/money';
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.sendRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async summary(id: string) {
+    const order = await this.findOne(id);
+
+    return {
+      total: formatMoney(order.total),
+      refundable: formatMoney(order.status === 'SHIPPED' ? 0 : order.total),
+    };
+  }
+}
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+
+  public async orderTotal(_: unknown, args: { id: string }) {
+    const order = await this.orderProvider.findOne(args.id);
+
+    return formatMoney(order.total);
+  }
+}
+
+@expected src/domain/order/order.resolver.ts
+import { formatMoney } from '@shared/money';
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+
+  public async orderTotal(_: unknown, args: { id: string }) {
+    const order = await this.orderProvider.findOne(args.id);
+
+    return formatMoney(order.total);
+  }
+}
+
+@start src/domain/payment/payment.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { PaymentRepository } from './payment.repository';
+import { PaymentProducer } from './payment.producer';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class PaymentProvider {
+  constructor(
+    @inject(PaymentRepository) protected paymentRepository: PaymentRepository,
+    @inject(PaymentProducer) protected paymentProducer: PaymentProducer,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async reverse(id: string) {
+    const payment = await this.paymentRepository.findOne({ where: { id } });
+
+    if (!payment) {
+      throw exception('PAYMENT_NOT_FOUND');
+    }
+
+    const receipt = await this.paymentService.sendRefund(payment.orderId);
+
+    await this.paymentProducer.refundIssued({ paymentId: id, receipt });
+
+    return receipt;
+  }
+
+  public async receipt(id: string) {
+    const payment = await this.paymentRepository.findOne({ where: { id } });
+
+    if (!payment) {
+      throw exception('PAYMENT_NOT_FOUND');
+    }
+
+    return {
+      charged: formatMoney(payment.amount),
+      refunded: formatMoney(payment.refundedAmount ?? 0),
+    };
+  }
+}
+
+@expected src/domain/payment/payment.provider.ts
+import { formatMoney } from '@shared/money';
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { PaymentRepository } from './payment.repository';
+import { PaymentProducer } from './payment.producer';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class PaymentProvider {
+  constructor(
+    @inject(PaymentRepository) protected paymentRepository: PaymentRepository,
+    @inject(PaymentProducer) protected paymentProducer: PaymentProducer,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async reverse(id: string) {
+    const payment = await this.paymentRepository.findOne({ where: { id } });
+
+    if (!payment) {
+      throw exception('PAYMENT_NOT_FOUND');
+    }
+
+    const receipt = await this.paymentService.sendRefund(payment.orderId);
+
+    await this.paymentProducer.refundIssued({ paymentId: id, receipt });
+
+    return receipt;
+  }
+
+  public async receipt(id: string) {
+    const payment = await this.paymentRepository.findOne({ where: { id } });
+
+    if (!payment) {
+      throw exception('PAYMENT_NOT_FOUND');
+    }
+
+    return {
+      charged: formatMoney(payment.amount),
+      refunded: formatMoney(payment.refundedAmount ?? 0),
+    };
+  }
+}
+
+@start src/infrastructure/services/payment.service.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { HttpClient } from '../http/http.client';
+
+@injectable()
+export class PaymentService {
+  constructor(@inject(HttpClient) protected http: HttpClient) {}
+
+  public async sendRefund(orderId: string) {
+    const response = await this.http.post('/sendRefund', { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}

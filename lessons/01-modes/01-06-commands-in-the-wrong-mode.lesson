@@ -1,0 +1,76 @@
+@meta
+id: 01-06
+title: When a command lands in your file
+chapter: 01
+type: lesson
+skills: mode-awareness, insert-a, esc, survival-motion
+par: 18
+minutes: 4
+vscode: nothing — there is only one mode to be in
+vimrc: set backspace=indent,eol,start
+open: refund.entity.ts
+
+@brief
+Every vim user does this in their first week. You think you are in normal
+mode, you are not, and a command you meant to run lands in the file as
+text. Someone did exactly that to refund.entity.ts: they pressed `dd`
+intending to delete a line, while still in insert mode, and got two
+letters.
+
+Nothing is broken. The debris is just characters, and characters come out
+the way they went in — from insert mode, with Backspace.
+
+Get rid of the stray `dd` at the end of the `orderId` line. Leave the rest
+of the file exactly as it is.
+
+@keys
+| `a` | append after the cursor, so Backspace eats what is to the left |
+| `Backspace` | in insert mode, delete the character before the cursor |
+| `Esc` | out |
+| `$` | end of the line |
+
+@hints
+The junk is at the end of line three. Get the cursor onto that line and
+then to the end of it.
+--
+If you are sitting on the final character, `a` puts you in insert mode
+just past it — which is where Backspace does what you want.
+--
+`$a` then Backspace twice, then `Esc`, then save and quit.
+
+@solution
+    j j $ a <BS> <BS> <Esc> :wq<Enter>
+
+The useful habit here is not the keys, it is the diagnosis. When letters
+appear in your file that you did not mean to type, you were in insert
+mode. When nothing appears at all and the file starts jumping about, you
+were in normal mode. Neither is a fault in the editor and neither is
+serious.
+
+Look at the bottom left before you accuse vim of anything. `-- INSERT --`
+means your keys are text. A blank there means your keys are commands.
+
+One oddity of the dojo itself: Backspace is a special key, and the
+keystroke log records it the way it records an arrow key. This is the one
+lesson where the "arrow keys detected" note at the end is lying to you.
+
+Later chapters give you `x` to delete a character from normal mode and `u`
+to undo the last change, and both are better tools than Backspace for this
+job. Today you only have the modes themselves, and the point is that the
+modes are already enough to dig yourself out.
+
+@start refund.entity.ts
+export type Refund = {
+  id: string;
+  orderId: string;dd
+  amount: number;
+  status: RefundStatus;
+};
+
+@expected refund.entity.ts
+export type Refund = {
+  id: string;
+  orderId: string;
+  amount: number;
+  status: RefundStatus;
+};

@@ -1,0 +1,91 @@
+@meta
+id: 17-14
+title: Delete to the character, not the line
+chapter: 17
+type: lesson
+skills: marks-set, mark-backtick
+par: 28
+minutes: 5
+vscode: click before LATE, shift-click before OTHER, Delete
+open: refund.reasons.ts
+
+@brief
+Seven refund reasons are being retired: everything from `'LATE'` up to
+and including `'NOT_AS_DESCRIBED'`. `'DAMAGED'`, `'WRONG_ITEM'`,
+`'MISSING_PART'` and `'OTHER'` stay, and the labels below them stay
+too.
+
+The run you are deleting starts in the middle of one line and ends in
+the middle of another, two lines later, so it is not a set of whole
+lines and no text object describes it. It is a span between two
+characters. Mark one end, go to the other, delete to the mark, and
+make sure you use the form of the mark that means the character.
+
+The result should be one line:
+
+    'DAMAGED', 'WRONG_ITEM', 'MISSING_PART', 'OTHER',
+
+@keys
+| `ma` | mark the character under the cursor |
+| `` d`a `` | delete from here to the marked character, not including it |
+| `d'a` | delete whole lines from here to the marked line; wrong here |
+| `?text` | search backwards |
+
+@hints
+Search for `'OTHER` and the cursor lands on the quote before it. Mark
+that. Then search back to the quote before `LATE`.
+--
+`` d`a `` is charwise and exclusive: it deletes everything from the
+cursor up to but not including the mark. That is exactly why marking
+the quote before `OTHER` keeps `'OTHER'` intact.
+--
+`/'OTHER` Enter, `ma`, `?'LATE` Enter, `` d`a ``.
+
+@solution
+    /'OTHER<Enter> ma ?'LATE<Enter> d`a :wq<Enter>
+
+This is the one situation where the backtick is not a convenience but
+the whole answer. `d'a` would delete three complete lines, taking
+`'DAMAGED'` and `'OTHER'` with them. `` d`a `` deletes a span of
+characters that happens to cross two line breaks, and leaves both ends
+of the lines alone.
+
+The exclusive rule is the thing to internalise: a charwise motion to a
+mark stops just before the mark. So put the mark on the first thing
+you want to *keep*, and delete up to it. It is the same rule as `dt)`
+and `d/pattern`, and once you see it as the same rule it stops being a
+surprise.
+
+Everything here generalises: `` y`a `` yanks the span, `` c`a ``
+replaces it, `` >`a `` indents the lines it touches. The mark is just a
+motion, and a charwise one when you spell it with a backtick.
+
+@start refund.reasons.ts
+export const REFUND_REASONS = [
+  'DAMAGED', 'WRONG_ITEM', 'MISSING_PART', 'LATE',
+  'DUPLICATE_ORDER', 'CHANGED_MIND', 'PRICE_MATCH',
+  'FRAUD_SUSPECTED', 'NOT_AS_DESCRIBED', 'OTHER',
+] as const;
+
+export type RefundReason = (typeof REFUND_REASONS)[number];
+
+export const refundReasonLabels: Record<string, string> = {
+  DAMAGED: 'Arrived damaged',
+  WRONG_ITEM: 'Wrong item sent',
+  MISSING_PART: 'Part missing from the box',
+  OTHER: 'Other',
+};
+
+@expected refund.reasons.ts
+export const REFUND_REASONS = [
+  'DAMAGED', 'WRONG_ITEM', 'MISSING_PART', 'OTHER',
+] as const;
+
+export type RefundReason = (typeof REFUND_REASONS)[number];
+
+export const refundReasonLabels: Record<string, string> = {
+  DAMAGED: 'Arrived damaged',
+  WRONG_ITEM: 'Wrong item sent',
+  MISSING_PART: 'Part missing from the box',
+  OTHER: 'Other',
+};

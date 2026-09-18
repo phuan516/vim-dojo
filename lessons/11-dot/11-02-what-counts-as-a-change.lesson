@@ -1,0 +1,79 @@
+@meta
+id: 11-02
+title: What counts as a change
+chapter: 11
+type: lesson
+skills: dot-repeat
+par: 19
+minutes: 4
+vscode: four separate double-click-and-delete trips
+open: CHANGELOG.md
+
+@brief
+Four entries in this changelog still carry the `WIP ` prefix they were
+drafted with. The release is cut, so the prefixes go. The other lines are
+finished entries and must not move.
+
+The four are not next to each other, so between one deletion and the next
+you have to travel. The question this lesson answers is whether travelling
+costs you the repeat.
+
+It does not. `.` remembers the last *change* — the last thing that
+altered the text. Cursor movement is not a change. Neither is writing the
+file. You can wander as far as you like and `.` is still loaded with the
+same edit.
+
+@keys
+| `dw` | delete a word, including the space after it |
+| `.` | repeat the last change |
+| `3j` | down three lines |
+| `u` | undo — itself a change to the buffer, but never what `.` repeats |
+
+@hints
+Delete the first `WIP ` with a single operator. Then move to the next one
+and ask for the same thing again rather than retyping it.
+--
+`dw` takes a word and its trailing space in two keys. After that, every
+remaining prefix costs you a move and a `.`.
+--
+Count the gaps: the prefixed lines are two apart, then adjacent, then
+three apart. `2j.`, `j.`, `3j.` after the first `dw`.
+
+@solution
+    2j  dw  2j.  j.  3j.
+
+Four identical deletions, one of them typed.
+
+What makes this work is vim's definition of a change: anything that
+modifies the buffer. Moving, scrolling, searching, `:w`, entering and
+leaving a mode without typing — none of those touch the dot register, so
+none of them cost you the repeat. That is why `.` is usable in real work
+and not just on tidy adjacent lines. You can go and look at something
+else, come back, and `.` is still holding your edit.
+
+Two things do overwrite it, and both are fair: making any other change,
+and undoing. `u` undoes the change, and if you then press `.` you repeat
+the original edit, not the undo. Try it — undo one of the deletions and
+press `.` to put it back through the front door.
+
+@start CHANGELOG.md
+## Unreleased
+
+WIP refund window now capped at 30 days
+Cancelling an order records a reason
+WIP receipt email uses the new template
+WIP payment retries backed off to three attempts
+Customer lookup no longer calls the API twice
+Batch reconciliation runs at 02:00
+WIP refund webhook verifies its signature
+
+@expected CHANGELOG.md
+## Unreleased
+
+refund window now capped at 30 days
+Cancelling an order records a reason
+receipt email uses the new template
+payment retries backed off to three attempts
+Customer lookup no longer calls the API twice
+Batch reconciliation runs at 02:00
+refund webhook verifies its signature

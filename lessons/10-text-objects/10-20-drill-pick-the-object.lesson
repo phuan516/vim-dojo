@@ -1,0 +1,58 @@
+@meta
+id: 10-20
+title: Drill — pick the right delimiter
+chapter: 10
+type: drill
+skills: obj-paren, obj-brace, obj-quote
+par: 58
+minutes: 6
+reps: 6
+vscode: three selections, three chances to catch a bracket
+open: notify.ts
+
+@brief
+Six times: every one of these three lines now takes the whole `payload`
+instead of what it currently holds. Same edit, three different
+delimiters — round, curly, square.
+
+Nothing to work out. The drill is the half-second where you look at the
+line and your hand already knows which bracket it is.
+
+@keys
+| `ci(` | inside the round brackets |
+| `ci{` | inside the curly braces — keep the padding spaces |
+| `ci[` | inside the square brackets |
+
+@hints
+Get onto the bracket first with `f`, then the object.
+--
+`f( ci(`, `f{ ci{`, `f[ ci[`. The curly one wants a space either side of
+`payload` to match the file's style.
+
+@solution
+    j f( ci( payload <Esc>
+    j 0 f{ ci{  payload  <Esc>
+    j 0 f[ ci[ payload <Esc>
+    :wq<Enter>
+
+Fifty keystrokes for three edits, and the only thing that changed between
+them was one character of the command.
+
+That is the payoff for learning the family rather than the members. There
+is no separate technique for arrays; there is one technique and four
+delimiters. By the end of the reps you should not be deciding which object
+to use, only reading which bracket is on the screen.
+
+@start notify.ts
+export function enqueue(payload: NotifyPayload) {
+  queue.push(customer.email, 'order-shipped');
+  track({ locale: 'en-GB', currency: 'GBP' });
+  return retryable['REFUND_FAILED'];
+}
+
+@expected notify.ts
+export function enqueue(payload: NotifyPayload) {
+  queue.push(payload);
+  track({ payload });
+  return retryable[payload];
+}

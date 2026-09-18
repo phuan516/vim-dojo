@@ -1,0 +1,146 @@
+@meta
+id: 04-16
+title: Three jobs, one file, no scrolling
+chapter: 04
+type: lesson
+skills: count-prefix, relativenumber, hjkl
+par: 148
+minutes: 8
+vscode: scroll, click, type, scroll, select, copy, paste, paste
+open: payout.fixture.ts
+vimrc: set relativenumber number
+
+@brief
+Everything in this chapter, used together, on one file of test fixtures.
+Three jobs:
+
+  1. The last entry in the array, `PAY-4127`, has no trailing comma.
+     Add one.
+
+  2. Exactly one entry has `status: 'PENDING'`. Append
+     ` // TODO settle before the next export` to the end of that line —
+     a space, two slashes, a space, then the text.
+
+  3. The load test needs four more placeholder entries, after the last
+     real one and before the closing `];`, each reading exactly:
+
+         { id: 'PAY-0000', merchantId: 'MER-00', amount: 0, status: 'PENDING' },
+
+     They are indented two spaces like every other entry. Vim will supply
+     that indent for you when it opens the lines, so type the text from
+     the brace onwards and let it.
+
+Job three is a count on an insert command, not four trips through the same
+typing. Job two is above job one, so one of your jumps goes upward.
+
+Plan the order before you touch the keyboard. There is a route through
+this that never reads a margin number twice and never presses a motion
+key without a count in front of it.
+
+@keys
+| `30j` | down thirty lines |
+| `6k` | up six lines |
+| `4o` | open four lines, repeating what you type on each |
+| `A` | append at the end of the line |
+
+@hints
+Comma first, then the TODO above it, then the new entries — or top down,
+the TODO first. Either works. Bouncing between them does not.
+--
+The comma is on the last entry, one line above `];`. Read its distance
+off the margin.
+--
+After the comma, the `PENDING` entry is six lines up: `6k`, then `A`, then
+the comment. Then back down to the last entry and `4o`, the placeholder
+typed once, `Esc`.
+
+@solution
+    30j A , <Esc>
+    6k A  // TODO settle before the next export <Esc>
+    6j 4o { id: 'PAY-0000', merchantId: 'MER-00', amount: 0, status: 'PENDING' }, <Esc>
+    :wq<Enter>
+
+Around a hundred and thirty keystrokes, a hundred and fifteen of which
+are text you had to type anyway. The navigation cost eleven.
+
+Count the alternative honestly. In an editor with a mouse this is two
+scrolls, four clicks, a selection, a copy and three pastes, and the pastes
+are the part most likely to go wrong — paste three times, check you got
+four, find you have five. `4o` cannot produce five.
+
+That is the whole argument for this chapter. Not that `30j` is faster than
+thirty taps of an arrow key, though it is. It is that a count is a
+statement of intent that either lands where you said or does not happen at
+all, and holding a key down is a guess you have to check afterwards.
+
+@start payout.fixture.ts
+import { Payout } from './payout.entity';
+
+export const payoutFixtures: Payout[] = [
+  { id: 'PAY-4100', merchantId: 'MER-50', amount: 1999, status: 'SETTLED' },
+  { id: 'PAY-4101', merchantId: 'MER-51', amount: 4750, status: 'SETTLED' },
+  { id: 'PAY-4102', merchantId: 'MER-52', amount: 899, status: 'SETTLED' },
+  { id: 'PAY-4103', merchantId: 'MER-53', amount: 12500, status: 'SETTLED' },
+  { id: 'PAY-4104', merchantId: 'MER-54', amount: 2399, status: 'SETTLED' },
+  { id: 'PAY-4105', merchantId: 'MER-55', amount: 640, status: 'SETTLED' },
+  { id: 'PAY-4106', merchantId: 'MER-56', amount: 8899, status: 'SETTLED' },
+  { id: 'PAY-4107', merchantId: 'MER-57', amount: 1550, status: 'SETTLED' },
+  { id: 'PAY-4108', merchantId: 'MER-58', amount: 3300, status: 'SETTLED' },
+  { id: 'PAY-4109', merchantId: 'MER-59', amount: 975, status: 'SETTLED' },
+  { id: 'PAY-4110', merchantId: 'MER-60', amount: 2199, status: 'SETTLED' },
+  { id: 'PAY-4111', merchantId: 'MER-61', amount: 760, status: 'SETTLED' },
+  { id: 'PAY-4112', merchantId: 'MER-62', amount: 5400, status: 'SETTLED' },
+  { id: 'PAY-4113', merchantId: 'MER-50', amount: 1899, status: 'SETTLED' },
+  { id: 'PAY-4114', merchantId: 'MER-51', amount: 2750, status: 'SETTLED' },
+  { id: 'PAY-4115', merchantId: 'MER-52', amount: 410, status: 'SETTLED' },
+  { id: 'PAY-4116', merchantId: 'MER-53', amount: 6620, status: 'SETTLED' },
+  { id: 'PAY-4117', merchantId: 'MER-54', amount: 1180, status: 'SETTLED' },
+  { id: 'PAY-4118', merchantId: 'MER-55', amount: 2050, status: 'SETTLED' },
+  { id: 'PAY-4119', merchantId: 'MER-56', amount: 735, status: 'SETTLED' },
+  { id: 'PAY-4120', merchantId: 'MER-57', amount: 9900, status: 'SETTLED' },
+  { id: 'PAY-4121', merchantId: 'MER-58', amount: 1425, status: 'PENDING' },
+  { id: 'PAY-4122', merchantId: 'MER-59', amount: 3875, status: 'SETTLED' },
+  { id: 'PAY-4123', merchantId: 'MER-60', amount: 2640, status: 'SETTLED' },
+  { id: 'PAY-4124', merchantId: 'MER-61', amount: 518, status: 'SETTLED' },
+  { id: 'PAY-4125', merchantId: 'MER-62', amount: 7310, status: 'SETTLED' },
+  { id: 'PAY-4126', merchantId: 'MER-50', amount: 1240, status: 'SETTLED' },
+  { id: 'PAY-4127', merchantId: 'MER-51', amount: 3990, status: 'SETTLED' }
+];
+
+@expected payout.fixture.ts
+import { Payout } from './payout.entity';
+
+export const payoutFixtures: Payout[] = [
+  { id: 'PAY-4100', merchantId: 'MER-50', amount: 1999, status: 'SETTLED' },
+  { id: 'PAY-4101', merchantId: 'MER-51', amount: 4750, status: 'SETTLED' },
+  { id: 'PAY-4102', merchantId: 'MER-52', amount: 899, status: 'SETTLED' },
+  { id: 'PAY-4103', merchantId: 'MER-53', amount: 12500, status: 'SETTLED' },
+  { id: 'PAY-4104', merchantId: 'MER-54', amount: 2399, status: 'SETTLED' },
+  { id: 'PAY-4105', merchantId: 'MER-55', amount: 640, status: 'SETTLED' },
+  { id: 'PAY-4106', merchantId: 'MER-56', amount: 8899, status: 'SETTLED' },
+  { id: 'PAY-4107', merchantId: 'MER-57', amount: 1550, status: 'SETTLED' },
+  { id: 'PAY-4108', merchantId: 'MER-58', amount: 3300, status: 'SETTLED' },
+  { id: 'PAY-4109', merchantId: 'MER-59', amount: 975, status: 'SETTLED' },
+  { id: 'PAY-4110', merchantId: 'MER-60', amount: 2199, status: 'SETTLED' },
+  { id: 'PAY-4111', merchantId: 'MER-61', amount: 760, status: 'SETTLED' },
+  { id: 'PAY-4112', merchantId: 'MER-62', amount: 5400, status: 'SETTLED' },
+  { id: 'PAY-4113', merchantId: 'MER-50', amount: 1899, status: 'SETTLED' },
+  { id: 'PAY-4114', merchantId: 'MER-51', amount: 2750, status: 'SETTLED' },
+  { id: 'PAY-4115', merchantId: 'MER-52', amount: 410, status: 'SETTLED' },
+  { id: 'PAY-4116', merchantId: 'MER-53', amount: 6620, status: 'SETTLED' },
+  { id: 'PAY-4117', merchantId: 'MER-54', amount: 1180, status: 'SETTLED' },
+  { id: 'PAY-4118', merchantId: 'MER-55', amount: 2050, status: 'SETTLED' },
+  { id: 'PAY-4119', merchantId: 'MER-56', amount: 735, status: 'SETTLED' },
+  { id: 'PAY-4120', merchantId: 'MER-57', amount: 9900, status: 'SETTLED' },
+  { id: 'PAY-4121', merchantId: 'MER-58', amount: 1425, status: 'PENDING' }, // TODO settle before the next export
+  { id: 'PAY-4122', merchantId: 'MER-59', amount: 3875, status: 'SETTLED' },
+  { id: 'PAY-4123', merchantId: 'MER-60', amount: 2640, status: 'SETTLED' },
+  { id: 'PAY-4124', merchantId: 'MER-61', amount: 518, status: 'SETTLED' },
+  { id: 'PAY-4125', merchantId: 'MER-62', amount: 7310, status: 'SETTLED' },
+  { id: 'PAY-4126', merchantId: 'MER-50', amount: 1240, status: 'SETTLED' },
+  { id: 'PAY-4127', merchantId: 'MER-51', amount: 3990, status: 'SETTLED' },
+  { id: 'PAY-0000', merchantId: 'MER-00', amount: 0, status: 'PENDING' },
+  { id: 'PAY-0000', merchantId: 'MER-00', amount: 0, status: 'PENDING' },
+  { id: 'PAY-0000', merchantId: 'MER-00', amount: 0, status: 'PENDING' },
+  { id: 'PAY-0000', merchantId: 'MER-00', amount: 0, status: 'PENDING' },
+];

@@ -1,0 +1,54 @@
+@meta
+id: 27-04
+title: Drill — flip it with a bang
+chapter: 27
+type: drill
+skills: set-option
+par: 28
+minutes: 4
+reps: 8
+vscode: nothing — there is no toggle, only a settings page
+open: query.sql
+
+@brief
+Eight times: turn `expandtab` off with a toggle rather than by typing
+`noexpandtab`, then indent the `WHERE` line so it gets one real tab
+character. Save, quit, go again.
+
+The point is the `!`. Appending it to a boolean option flips whatever the
+option currently is, which is what you want on a key you press all day —
+`:set list!`, `:set wrap!`, `:set spell!`.
+
+@keys
+| `:set expandtab!` | flip the option to the other thing |
+| `:set invexpandtab` | the same, spelled out |
+| `:set expandtab?` | check which way it ended up |
+
+@hints
+`!` goes on the end of the option name, with no space.
+--
+`:set expandtab!` then Enter, then `2G>>`.
+
+@solution
+    :set expandtab!<Enter>  2G  >>  :wq<Enter>
+
+Twenty-four keystrokes.
+
+`:set opt!` is the form you reach for interactively, and the form you put
+on the right-hand side of a mapping. `:set opt` and `:set noopt` are what
+you write in a config file, where there is no "current value" to flip and
+you want the file to say what it means.
+
+There is a wrinkle worth knowing before it bites you. `!` on a boolean
+toggles it. `!` on a *number* or *string* option is not a toggle at all —
+`:set shiftwidth!` is simply an error. And `:set opt!` on an option vim
+does not have is an error too, which is how you find out you spelled
+`expandtab` wrong.
+
+@start query.sql
+SELECT id, total_pence FROM orders
+WHERE status = 'CANCELLED'
+
+@expected query.sql
+SELECT id, total_pence FROM orders
+	WHERE status = 'CANCELLED'

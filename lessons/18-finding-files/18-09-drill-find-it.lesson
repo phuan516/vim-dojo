@@ -1,0 +1,138 @@
+@meta
+id: 18-09
+title: Drill — find it
+chapter: 18
+type: drill
+skills: find-path, wildmenu
+par: 36
+minutes: 5
+reps: 8
+vscode: Ctrl+P "ordres"
+vimrc: set path=.,** wildmenu wildmode=longest:full,full
+open: README.md
+
+@brief
+Eight times: from the README, `:find` the order resolver by a fragment
+of its name, rename the `order` query method to `orderById`, save, quit.
+
+Four files start with `order.`. Pick a fragment that lands on the
+resolver in one Tab.
+
+@keys
+| `:find *frag` `Tab` | any file with `frag` in its name |
+| `:find order.res` `Tab` | or a prefix that is already unique |
+
+@hints
+`*res` is unique: nothing else in the tree has `res` in its name. So
+is `order.res`. Either way, one Tab, Enter.
+--
+In the file, `/order(` puts you on the method. `ea` appends after it.
+
+@solution
+    :find *res<Tab><Enter> /order(<Enter> eaById <Esc> :wq<Enter>
+
+The fragment you choose is the skill. `res` is unique here; `order`
+is not. After a week in a codebase you know which three letters are
+distinctive for each file you care about, and `:find` plus those three
+letters plus Tab is as fast as any fuzzy finder.
+
+@start README.md
+# Orders service
+
+    src/domain/<name>/<name>.entity.ts       the shape of a record
+    src/domain/<name>/<name>.repository.ts   how it is loaded and saved
+    src/domain/<name>/<name>.provider.ts     the business rules
+    src/domain/<name>/<name>.resolver.ts     GraphQL in, provider out
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@expected src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async orderById(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@start src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+    };
+  }
+}

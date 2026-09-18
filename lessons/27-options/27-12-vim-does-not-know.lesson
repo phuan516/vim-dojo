@@ -1,0 +1,76 @@
+@meta
+id: 27-12
+title: When vim does not know what it is
+chapter: 27
+type: lesson
+skills: filetype
+par: 27
+minutes: 5
+vscode: the language picker in the bottom-right corner
+open: reconcile.py.20260917
+
+@brief
+This is the finance reconciliation script, restored from a dated backup
+after last week's incident. Python, four-space indent, as Python always is.
+
+The two lines of the body are flat against the margin and need one level
+of indent. `>>` will give you two spaces, because two is what this repo's
+TypeScript wants and vim has no reason to think otherwise: the file is
+called `reconcile.py.20260917`, and there is no rule anywhere that says a
+name ending in eight digits is Python.
+
+Tell vim what it is looking at. The indent settings follow from that, and
+so does everything else vim knows about Python.
+
+@keys
+| `:set ft?` | what vim currently thinks this buffer is |
+| `:setf python` | set the filetype — the detection entry point |
+| `:set filetype=python` | the same thing, and it re-runs even if already set |
+| `:filetype detect` | make vim run its detection again from scratch |
+
+@hints
+Ask vim what filetype this buffer has before you change anything. The
+answer is nothing at all, and every per-language setting follows from it.
+--
+`:setf python` and then indent as usual.
+--
+`:setf python` `Enter`, `2G`, `2>>`, `:wq` `Enter`.
+
+@solution
+    :setf python<Enter>  2G  2>>  :wq<Enter>
+
+Twenty-two keystrokes, and you never set `shiftwidth` at all.
+
+That is the point. Setting the filetype fired vim's `FileType` event, which
+loaded `ftplugin/python.vim`, which did this:
+
+    setlocal shiftwidth=4 tabstop=4 expandtab softtabstop=4
+
+along with the right `comments`, the right `formatoptions`, `%` jumping
+between `if`/`elif`/`else`, and `[[`/`]]` moving by function. One command,
+a dozen behaviours. This is why "vim indents my Python at four and my
+TypeScript at two" is not something anyone configured — it is shipped, and
+it happens the moment vim recognises the file.
+
+`:setf` and `:set ft=` differ in one way worth knowing: `:setf` does
+nothing if the filetype is already set, which is exactly what you want in
+a detection rule, and `:set ft=` always applies, which is what you want
+when you are overriding by hand.
+
+If you hit this file often, the permanent fix is a detection rule rather
+than a habit:
+
+    au BufRead,BufNewFile *.py.* setf python
+
+in `~/.vim/ftdetect/python.vim`. Same idea as chapter 27's other files:
+vim already has a slot for it.
+
+@start reconcile.py.20260917
+def reconcile(payments, orders):
+matched = [p for p in payments if p.order_id in orders]
+return matched
+
+@expected reconcile.py.20260917
+def reconcile(payments, orders):
+    matched = [p for p in payments if p.order_id in orders]
+    return matched

@@ -1,0 +1,79 @@
+@meta
+id: 27-01
+title: Flip a switch
+chapter: 27
+type: lesson
+skills: set-option
+par: 28
+minutes: 4
+vscode: Settings, search for "insert spaces", untick a box
+open: config.ts
+vimrc: set noexpandtab
+
+@brief
+Every lesson so far has handed you a vim that behaves. This chapter is
+where you take the controls.
+
+Vim's behaviour lives in options: a few hundred named switches, dials and
+lists. Most of them are booleans, and a boolean option is on or off.
+
+This session has the Tab key set to insert a real tab character. The house
+style for this repo is two spaces, and the three fields in `config.ts` are
+flat against the left margin where they should be indented one level.
+Indent them the way you always have and you will get tab characters, and
+the file will not match.
+
+So change the option first, then indent.
+
+The option is called `expandtab`: when it is on, anything that would insert
+a tab inserts spaces instead.
+
+@keys
+| `:set expandtab` | turn the option on |
+| `:set noexpandtab` | turn it off — the `no` prefix is how you say off |
+| `:set expandtab?` | ask what it is right now |
+| `:set et` | every option has a short name too |
+
+@hints
+`>>` is doing exactly what you asked. The problem is what vim thinks a
+unit of indent is made of. Change that, then indent.
+--
+The option is `expandtab`. Turning an option on is `:set` and its name.
+--
+`:set expandtab` then Enter, then indent the three fields as usual:
+`2G` to the first one, `3>>` for three lines.
+
+@solution
+    :set expandtab<Enter>  2G  3>>  :wq<Enter>
+
+Twenty-four keystrokes, and fourteen of them are the option.
+
+Three things worth keeping:
+
+`:set name` turns a boolean on. `:set noname` turns it off. There is no
+`=true`, no quotes, no punctuation — the presence or absence of `no` is
+the whole syntax.
+
+Every option has a long name and a short one. `expandtab` is `et`,
+`shiftwidth` is `sw`, `ignorecase` is `ic`. Type the short one when you
+are poking around in a live session; write the long one in a config file,
+where somebody else has to read it in a year's time.
+
+And `:set expandtab?` with a question mark *asks* instead of setting. That
+matters more than it looks: `:set expandtab` and `:set expandtab?` are
+different commands, and typing the first when you meant the second is how
+people silently change the thing they were trying to inspect.
+
+@start config.ts
+export const database = {
+host: 'localhost',
+port: 5432,
+poolSize: 10,
+};
+
+@expected config.ts
+export const database = {
+  host: 'localhost',
+  port: 5432,
+  poolSize: 10,
+};

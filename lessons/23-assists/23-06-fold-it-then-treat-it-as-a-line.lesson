@@ -1,0 +1,173 @@
+@meta
+id: 23-06
+title: A closed fold is one line
+chapter: 23
+type: lesson
+skills: folds
+par: 30
+minutes: 5
+vscode: click the chevron in the gutter, then select and delete
+open: order.provider.ts
+
+@brief
+`legacyRefund` has been dead since the payment service was rewritten.
+Remove the whole method and the blank line after it, so `cancel` is
+followed directly by `ship`.
+
+It is a trap for the tools you have. `dap` stops at the blank line in
+the middle of the method. `d%` from the brace is characterwise and
+leaves the signature behind. Counting lines for `dd` is how you end up
+off by one.
+
+Fold the method first. A fold is a range of lines vim displays as one,
+and — this is the useful part — every linewise command treats a closed
+fold as a single line.
+
+@keys
+| `zf{motion}` | create a fold over the lines the motion covers |
+| `zo` `zc` | open, close the fold under the cursor |
+| `za` | toggle it |
+| `zd` | delete the fold (the text stays) |
+| `dd` `yy` `>>` on a closed fold | act on every line inside it |
+
+@hints
+`/legacyRefund` puts you on the signature. `$` puts you on its opening
+brace, and `%` is the matching close brace.
+--
+`zf%` from the brace folds the whole method into one line. `zo` to
+check it is the right one, `zc` to close it again.
+--
+With the fold closed, `dd` deletes the whole method. One more `dd`
+takes the blank line it leaves behind.
+
+@solution
+    /legacyRefund<Enter> $zf% dd dd :wq<Enter>
+
+Twenty-six keystrokes and no counting.
+
+`zf` is an operator like `d` or `y`: it takes a motion or a text
+object and folds those lines. `zf%` from a brace is the reliable way to
+fold a method or block, because `%` does not care about blank lines
+inside it. `zfap` folds a paragraph, `zfip` the same without the
+trailing blank, `zf3j` four lines.
+
+A fold you have created is closed, and a closed fold is one line to
+`dd`, `yy`, `p`, `>>`, `J`, `j` and `k`. That is what makes folds an
+editing tool rather than just a display setting. Yank a closed fold
+and paste it somewhere else: the whole block moves. Press `j` over a
+closed fold: you skip it.
+
+`zo` opens, `zc` closes, `za` toggles. `zd` removes the fold itself
+and leaves the text. Manual folds vanish when you close the file;
+the next two lessons show vim building them for you.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async legacyRefund(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'CANCELLED') {
+      throw exception('ORDER_NOT_CANCELLED');
+    }
+
+    const receipt = await this.paymentService.refundLegacy(order.id, order.total);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { refundReceipt: receipt.id },
+    });
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+}

@@ -1,0 +1,90 @@
+@meta
+id: 08-08
+title: The rename you were promised
+chapter: 08
+type: lesson
+skills: change-c
+par: 44
+minutes: 5
+vscode: double-click the identifier and type over it
+open: customer.provider.ts
+
+@brief
+Chapter five gave you a way to rename an identifier with no delete
+command at all: land on the end of the word with `e`, press `a`, and let
+insert-mode `Ctrl-W` rub the word out backwards. It worked, and it made
+you count word-ends to get there.
+
+This is the replacement that was promised. `c` is the change operator:
+it deletes something and leaves you in insert mode where it was — `d` and
+`i` fused, the same way `s` fused `x` and `i`. Doubled with a word motion,
+`cw` takes the word from the cursor to its end and hands you the cursor.
+
+Two names in this provider are wrong. `findFirst` should be `findOne`,
+and the error code should be `CUSTOMER_NOT_FOUND`. Neither the
+surrounding chain nor the quotes may be touched.
+
+@keys
+| `cw` | change from the cursor to the end of the word |
+| `f.` and `;` | forward to a `.`, then to the next one |
+| `f_` | forward to the underscore |
+| `0` | column zero |
+
+@hints
+`c` is delete-and-insert. It takes a motion, and `w` is a motion you have
+had since chapter five.
+--
+`cw` from the *start* of a word replaces the whole word. From the middle
+of one it replaces the rest of it — which is exactly what the error code
+needs, since only the second half is wrong.
+--
+`2j` `f.` `;` `l` lands on the `f` of `findFirst`. For the error code,
+`0` then `f_` then `l` lands on the `M` of `MISSING`, and `cw` from
+there takes only `MISSING`.
+
+@solution
+    2j f.;l cwfindOne<Esc>  3j 0f_l cwNOT_FOUND<Esc>  :wq<Enter>
+
+Compare it with the chapter five version. That one was `9e`, `a`,
+`Ctrl-W` — and the `9` came from counting nine word-ends along the line
+without getting it wrong. Here you land anywhere inside the word and
+press two keys. The count is gone, and with it the chance of being off by
+one.
+
+Three things about `cw` are worth holding on to.
+
+It respects the same word boundary `w` and `e` do, so on
+`orderRepository.findFirst` it stops at the dot. It does *not* eat the
+trailing space, even though `w` would move over one — vim quietly treats
+`cw` as "change to the end of this word" because changing the space is
+never what anyone means. And from mid-word it changes only the tail,
+which makes `CUSTOMER_MISSING` into `CUSTOMER_NOT_FOUND` without
+retyping `CUSTOMER_`.
+
+`c` takes every motion you know, not just `w`. That is chapter 9.
+
+@start customer.provider.ts
+export class CustomerProvider {
+  public async findOne(id: string) {
+    const customer = await this.customerRepository.findFirst({ where: { id } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_MISSING');
+    }
+
+    return customer;
+  }
+}
+
+@expected customer.provider.ts
+export class CustomerProvider {
+  public async findOne(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return customer;
+  }
+}

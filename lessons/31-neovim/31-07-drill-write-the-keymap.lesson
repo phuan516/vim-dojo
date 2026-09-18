@@ -1,0 +1,54 @@
+@meta
+id: 31-07
+title: Drill — write the keymap, with a desc
+chapter: 31
+type: drill
+skills: lua-config
+par: 92
+minutes: 6
+reps: 8
+vscode: nothing — JSON has no description field you would ever fill in
+open: init.lua
+
+@brief
+Eight times: port this mapping to the end of the file and save.
+
+    nnoremap <leader>q :bd<CR>          desc: Close the buffer
+
+The description is part of the drill. Write it every rep, even when it
+feels like noise, until leaving it out feels wrong.
+
+Graded in vim. The Lua is written, not run.
+
+@keys
+| `G` `o` | open a line at the bottom |
+| `vim.keymap.set('n', lhs, rhs, { desc = '...' })` | the shape |
+
+@hints
+Mode, left side, right side, options table. Four arguments, in that order.
+--
+`:bd<CR>` goes inside quotes exactly as written — vim reads `<CR>`, you do
+not press Enter.
+
+@solution
+    G o vim.keymap.set('n', '<leader>q', ':bd<CR>', { desc = 'Close the buffer' }) <Esc> :wq<Enter>
+
+Seventy-eight keystrokes, most of it punctuation, which is precisely why
+it is worth drilling. The commas, the quote pairs and the braces are where
+every hand-written Lua config breaks, and a syntax error in `init.lua`
+means Neovim starts with none of your settings and a stack trace instead.
+
+If you never want to type it again: `vim.keymap.set` is what snippets and
+`:h lua-guide-mappings` are for, and most people end up with a local
+helper of their own — `local map = vim.keymap.set` at the top of the file
+turns every line below it into `map('n', ...)`. Earn the shortcut by
+drilling the long form first.
+
+@start init.lua
+-- Mappings
+vim.keymap.set('n', '<leader>h', ':nohlsearch<CR>', { desc = 'Clear search highlight' })
+
+@expected init.lua
+-- Mappings
+vim.keymap.set('n', '<leader>h', ':nohlsearch<CR>', { desc = 'Clear search highlight' })
+vim.keymap.set('n', '<leader>q', ':bd<CR>', { desc = 'Close the buffer' })

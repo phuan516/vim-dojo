@@ -1,0 +1,157 @@
+@meta
+id: 20-10
+title: The delete history
+chapter: 20
+type: lesson
+skills: register-named
+par: 40
+minutes: 6
+vscode: undo three times, copy, redo three times, paste
+open: order.provider.ts
+
+@brief
+Every time you delete a line or more, vim files it in a numbered
+register. The newest is `"1`; what was in `"1` shifts to `"2`, and so on
+down to `"9`, where it falls off. That is nine deletes of history you
+did not know you had, and it means "I deleted that a while ago and I
+want it back" does not need undo.
+
+Logging is moving out of this provider. Delete all three
+`this.logger.debug` lines, top to bottom. Then — the ticket changed
+under you — the one in `findOne` has to stay after all. Put it back
+exactly where it was, from the history, without retyping it and without
+undoing the other two deletes.
+
+@keys
+| `"1p` | put the most recent delete |
+| `"2p` `"3p` | the one before, and the one before that |
+| `"-` | the small-delete register: deletes of less than a line |
+| `:reg 123` | see the last three deletes |
+
+@hints
+Three deletes, top to bottom: the `findOne` line is the oldest, so it
+has been shifted furthest down the history.
+--
+`/debug` Enter, `dd`, `n` `dd`, `n` `dd`. Now the `findOne` line is in
+`"3`.
+--
+`/tory.find` Enter puts you on the repository call it used to follow.
+`"3p`.
+
+@solution
+    /debug<Enter> dd n dd n dd  /tory.find<Enter> "3p  :wq<Enter>
+
+As a rule the numbered registers are filled by deletes of a line or
+more — `dd`, `dj`, `d}`, `dap`. A smaller delete like `dw` or `di'` goes into
+`"-` instead, the small-delete register, so it does not push your line
+history around. And nothing you yank ever enters the numbers; yanks go
+to `"0`, which is why `"0` is stable.
+
+Between `"0`, `"-` and `"1` to `"9`, vim is keeping eleven things for
+you at all times without being asked. `:reg` shows them. Most people
+only ever use `"1` and `"2`, but knowing the shelf is there changes how
+freely you delete.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+    this.logger.debug('findOne', id);
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+    this.logger.debug('cancel', id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async settle(id: string, total: number) {
+    const order = await this.findOne(id);
+    this.logger.debug('settle', id);
+
+    await this.paymentService.capture(order.id, total);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SETTLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+    this.logger.debug('findOne', id);
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async settle(id: string, total: number) {
+    const order = await this.findOne(id);
+
+    await this.paymentService.capture(order.id, total);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SETTLED' },
+    });
+  }
+}

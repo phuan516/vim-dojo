@@ -1,0 +1,152 @@
+@meta
+id: 29-03
+title: Build the tags, read the manual
+chapter: 29
+type: lesson
+skills: packadd
+par: 66
+minutes: 6
+vscode: open the extension's marketplace page and scroll
+open: retry.config.ts
+vimrc: set packpath^=. | packloadall!
+
+@brief
+The dojo has shipped a third package with this lesson, `backoff`, and this
+one comes with documentation:
+
+    pack/dojo/start/backoff/doc/backoff.txt
+
+That file is written in vim's help format — the one you have been reading
+since chapter 1 every time you typed `:h`. It is not indexed yet, though.
+Help topics are found through a `tags` file that sits next to the help
+file, and nobody ships one, because it has to be generated on the machine
+that reads it. `:helptags` generates it. Until you run it, `:h backoff`
+finds nothing.
+
+Two jobs:
+
+  1. Generate the tags for the packages on your `runtimepath`, so
+     `pack/dojo/start/backoff/doc/tags` exists.
+  2. `retry.config.ts` sets `attempts: 3`, which somebody guessed. The
+     plugin's help documents the right default for a payment retry. Look
+     it up in the help and put that number in the config.
+
+Change nothing in the help file itself.
+
+@keys
+| `:helptags {dir}` | build the tags file for one doc directory |
+| `:helptags ALL` | do it for every doc directory on `runtimepath` |
+| `:h {topic}` | open the help at a topic, once it is indexed |
+| `Ctrl-]` | follow the `\|tag\|` under the cursor |
+| `:q` | close the help window |
+
+@hints
+`:helptags` needs a directory. There is a form of it that finds all of
+them for you, and it is spelled in capitals.
+--
+`:helptags ALL`. Then `:h backoff` and follow the contents, or jump
+straight to the tag for the option.
+--
+`:helptags ALL` `Enter`, `:h g:backoff_attempts` `Enter`, read the
+default, `:q` `Enter`, then fix the number in the config.
+
+@solution
+    :helptags ALL<Enter>
+    :h g:backoff_attempts<Enter>   (read it)   :q<Enter>
+    /attempts<Enter>  f3  r7  :wq<Enter>
+
+`:helptags ALL` walks every `doc` directory on `runtimepath` and writes a
+`tags` file into each. Look at the one it just made:
+
+    backoff-commands	backoff.txt	/*backoff-commands*
+    g:backoff_attempts	backoff.txt	/*g:backoff_attempts*
+
+Three columns: the topic, the file, and a search command to find it. That
+is the same format `ctags` produces for source code, and the same one
+`Ctrl-]` uses to jump to a definition — chapter 30 leans on it. Vim has
+exactly one idea of "jump to a name", and help is just another consumer
+of it.
+
+Run `:helptags ALL` after every plugin you install. Plugin managers do it
+for you on update, and that is genuinely most of what they do for you.
+
+The habit worth forming is the other half of this lesson: **read the
+plugin's help before you use it.** A vim plugin with a `doc/` directory is
+documented to a standard almost nothing else in your toolchain reaches —
+every option, every mapping, every command, in one file, offline, in the
+editor, in a format that is the same for all of them. `:h` then the plugin
+name, then `Ctrl-]` down through the contents. It takes four minutes and
+saves you from three months of using a quarter of a plugin.
+
+@start pack/dojo/start/backoff/doc/backoff.txt
+*backoff.txt*  Retry a failing job with exponential backoff
+
+==============================================================================
+CONTENTS                                                    *backoff-contents*
+
+    1. Introduction ..................... |backoff-intro|
+    2. Commands ......................... |backoff-commands|
+    3. Options .......................... |backoff-options|
+
+==============================================================================
+1. INTRODUCTION                                                *backoff-intro*
+
+Wraps a shell command in a retry loop with exponential backoff and jitter,
+so a flaky deploy step or a rate-limited API call stops failing the build.
+
+==============================================================================
+2. COMMANDS                                                 *backoff-commands*
+
+                                                                    *:Backoff*
+:Backoff {cmd}          Run {cmd}, retrying on a non-zero exit status.
+
+==============================================================================
+3. OPTIONS                                                   *backoff-options*
+
+                                                          *g:backoff_attempts*
+g:backoff_attempts      number  (default 4)
+
+                        How many times to try before giving up. Four is the
+                        right number for a build step: with the default delay
+                        it gives up after about thirty seconds.
+
+                        Payment providers are the exception. Their advice is
+                        universally seven attempts, because their own outages
+                        are measured in minutes rather than seconds, and a
+                        card authorisation that is abandoned early has to be
+                        re-authorised by the customer.
+
+                                                             *g:backoff_delay*
+g:backoff_delay         number  (default 250)
+
+                        Milliseconds before the first retry. Every subsequent
+                        delay is double the last, plus a random jitter of up
+                        to half the delay.
+
+vim:tw=78:ts=8:ft=help:norl:
+
+@start retry.config.ts
+export const retryConfig = {
+  payments: {
+    attempts: 3,
+    delayMs: 250,
+  },
+};
+
+@expected retry.config.ts
+export const retryConfig = {
+  payments: {
+    attempts: 7,
+    delayMs: 250,
+  },
+};
+
+@expected pack/dojo/start/backoff/doc/tags
+:Backoff	backoff.txt	/*:Backoff*
+backoff-commands	backoff.txt	/*backoff-commands*
+backoff-contents	backoff.txt	/*backoff-contents*
+backoff-intro	backoff.txt	/*backoff-intro*
+backoff-options	backoff.txt	/*backoff-options*
+backoff.txt	backoff.txt	/*backoff.txt*
+g:backoff_attempts	backoff.txt	/*g:backoff_attempts*
+g:backoff_delay	backoff.txt	/*g:backoff_delay*

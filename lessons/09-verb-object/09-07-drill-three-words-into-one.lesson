@@ -1,0 +1,44 @@
+@meta
+id: 09-07
+title: Drill — three words into one
+chapter: 09
+type: drill
+skills: op-counts
+par: 14
+minutes: 4
+reps: 8
+vscode: select the phrase, type over it
+open: status.md
+
+@brief
+Eight times: replace `three failed attempts` with `5`, save, quit.
+
+The point is the count landing in the right place without you thinking
+about it.
+
+@keys
+| `4w` | four words forward |
+| `c3w` | change three words |
+
+@hints
+Get to `three` first, then change the three words that follow the cursor.
+--
+`4w` then `c3w`, type `5`, `Esc`.
+
+@solution
+    4w c3w 5 <Esc> :wq<Enter>
+
+Eleven keystrokes. Notice that the final `w` of `c3w` stops at the full
+stop rather than swallowing it: the third `w` motion lands on the `.`,
+which is where the change ends. You did not have to think about the
+punctuation, and you should not start.
+
+By the last rep you want `c3w` to be one unit in your head, the way `c`
+and `w` already are. That is how the grammar pays off — not by giving you
+clever edits, but by making ordinary ones cost nothing to compose.
+
+@start status.md
+The retry limit is three failed attempts.
+
+@expected status.md
+The retry limit is 5.

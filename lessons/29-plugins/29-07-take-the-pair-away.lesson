@@ -1,0 +1,173 @@
+@meta
+id: 29-07
+title: Taking a pair away
+chapter: 29
+type: lesson
+skills: surround
+par: 20
+minutes: 4
+vscode: two clicks and two backspaces, five times
+open: selectors.ts
+vimrc: set packpath^=. | packloadall!
+
+@brief
+The surround plugin is shipped with this lesson, in
+`pack/dojo/start/surround/plugin/surround.vim`. Third and last of its
+verbs: *delete surround*. Take the pair off, leave what is inside exactly
+where it was.
+
+Prettier has been reconfigured with `arrowParens: "avoid"`, so a
+single-argument arrow function is written without brackets around the
+argument. `selectors.ts` has five of them, all still bracketed. Strip the
+brackets.
+
+Deleting two characters that are twenty columns apart is exactly the kind
+of job that feels too small to think about and then costs you four moves
+and a mistake.
+
+@keys
+| `ds{char}` | delete the pair of `{char}` surrounding the cursor |
+| `ds(` | drop the brackets, keep what is inside |
+| `ds"` `ds'` | drop the quotes |
+| `f(` | you still have to be inside the pair — brackets do not search |
+
+@hints
+`ds` and then the character of the pair you want gone.
+--
+Unlike the quote objects, a bracket object will not go looking down the
+line for you: the cursor has to be on the bracket or inside it. Get there
+with `f(` first.
+--
+`f(` `ds(` on the first line, recorded as a macro with `j0` on the end,
+then replayed four times.
+
+@solution
+    qq f( ds( j0 q  4@q  :wq<Enter>
+
+Seventeen keystrokes, five functions.
+
+The `f(` is the interesting half. Quote text objects search forward along
+the line, so `cs'"` worked from column zero last lesson. Bracket objects
+do not — `i(` means "inside the brackets I am in", and if you are in none,
+nothing happens. That asymmetry is vim's, not the plugin's, and it catches
+everyone once.
+
+Read the plugin now that you have used all three verbs. `ds`, `cs` and
+`ys` are one short function each and one mapping each, and `ds` reads in
+full: yank what is inside the pair, then select the pair and everything
+in it and paste the inside back over the selection. Every plugin you will ever
+install is that — vimscript standing on the same commands you type by
+hand. Nothing in a plugin is available to the plugin and not to you.
+
+@start pack/dojo/start/surround/plugin/surround.vim
+" dojo-surround.vim - a small, honest surround plugin.
+" Shipped inside this lesson. You did not install it; the dojo did.
+"
+"   ds{char}           delete the surrounding pair
+"   cs{old}{new}       change one surrounding pair into another
+"   ys{motion}{char}   surround the text the motion covers
+"   {Visual}S{char}    surround the selection
+"
+" Brackets come in pairs: ( [ { < all give you the matching closer.
+" Anything else is used on both sides, so " gives "..." and ` gives `...`.
+
+if exists('g:loaded_dojo_surround')
+  finish
+endif
+let g:loaded_dojo_surround = 1
+
+let s:pairs = {
+      \ '(': '()', ')': '()',
+      \ '[': '[]', ']': '[]',
+      \ '{': '{}', '}': '{}',
+      \ '<': '<>', '>': '<>',
+      \ }
+
+function! s:delims(char) abort
+  return get(s:pairs, a:char, a:char . a:char)
+endfunction
+
+" The text between the pair, without the pair itself.
+function! s:inner(char) abort
+  let save = @z
+  let @z = ''
+  silent execute 'normal! "zyi' . a:char
+  let text = @z
+  let @z = save
+  return text
+endfunction
+
+" A visual selection covering the pair AND what is between it. vi" selects
+" the inside; o h o l then walks each end out by one character onto the
+" delimiters. Doing it this way rather than with va" matters: va" also
+" swallows the whitespace next to the string.
+function! s:select(char) abort
+  return 'vi' . a:char . 'ohol'
+endfunction
+
+function! s:replace(char, text) abort
+  let save = @z
+  let @z = a:text
+  silent execute 'normal! ' . s:select(a:char) . '"zp'
+  let @z = save
+endfunction
+
+function! s:ds(char) abort
+  let inner = s:inner(a:char)
+  if inner ==# ''
+    return
+  endif
+  call s:replace(a:char, inner)
+endfunction
+
+function! s:cs(old, new) abort
+  let inner = s:inner(a:old)
+  if inner ==# ''
+    return
+  endif
+  let d = s:delims(a:new)
+  call s:replace(a:old, d[0] . inner . d[1])
+endfunction
+
+function! s:ys(type) abort
+  let d = s:delims(nr2char(getchar()))
+  let save = @z
+  if a:type ==# 'line'
+    silent execute "normal! '[V']\"zy"
+    call setreg('z', d[0] . "\n" . @z . d[1], 'V')
+    silent execute "normal! '[V']\"zp"
+  else
+    silent execute "normal! `[v`]\"zy"
+    let @z = d[0] . @z . d[1]
+    silent execute "normal! `[v`]\"zp"
+  endif
+  let @z = save
+endfunction
+
+function! s:vs(char) abort
+  let d = s:delims(a:char)
+  let save = @z
+  silent execute 'normal! gv"zy'
+  let @z = d[0] . @z . d[1]
+  silent execute 'normal! gv"zp'
+  let @z = save
+endfunction
+
+nnoremap <silent> ds :<C-u>call <SID>ds(nr2char(getchar()))<CR>
+nnoremap <silent> cs :<C-u>call <SID>cs(nr2char(getchar()), nr2char(getchar()))<CR>
+nnoremap <silent> ys :<C-u>set operatorfunc=<SID>ys<CR>g@
+xnoremap <silent> S :<C-u>call <SID>vs(nr2char(getchar()))<CR>
+
+@start selectors.ts
+export const orderId = (order) => order.id;
+export const orderTotal = (order) => order.total;
+export const orderCustomer = (order) => order.customerId;
+export const isCancelled = (order) => order.status === 'CANCELLED';
+export const isRefundable = (payment) => payment.capturedAt !== null;
+
+@expected selectors.ts
+export const orderId = order => order.id;
+export const orderTotal = order => order.total;
+export const orderCustomer = order => order.customerId;
+export const isCancelled = order => order.status === 'CANCELLED';
+export const isRefundable = payment => payment.capturedAt !== null;

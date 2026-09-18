@@ -1,0 +1,66 @@
+@meta
+id: 01-02
+title: Insert before, append after
+chapter: 01
+type: lesson
+skills: insert-i, insert-a, survival-motion, esc
+par: 14
+minutes: 4
+vscode: clicking to put the caret exactly where you want it
+open: standup.md
+
+@brief
+`i` puts you in insert mode to the *left* of the cursor. Sooner or later
+you need the other side, and the last character of a line has no right
+hand side to click on. That is what `a` is for: append, to the right.
+
+One character is missing from the end of the Yesterday line. It should read:
+
+    Yesterday: shipped the checkout fix
+
+Move down to that line, get to its end, and add the missing letter.
+
+Move with `j` for now. `h j k l` are left, down, up, right — chapter 4
+makes you fast with them, today they just have to get you there.
+
+@keys
+| `j` `k` | down a line, up a line |
+| `h` `l` | left a character, right a character |
+| `$` | jump to the last character of the line |
+| `0` | jump to the first column |
+| `a` | append — insert mode, to the right of the cursor |
+
+@hints
+Two lines down from the title is a blank line; the Yesterday line is
+below that. `j` moves down one line at a time.
+--
+`$` takes you straight to the last character on the line, no matter how
+long it is. You land *on* the final character, not past it.
+--
+Sitting on the last character, `i` would type before it. You want `a`.
+Then the letter, then `Esc`, then `:wq`.
+
+@solution
+    jj $ a x <Esc> :wq<Enter>
+
+`$` is doing the real work. The instinct from VS Code is to aim the mouse
+at the end of the line, or hold the right arrow key. `$` is one key and it
+is exact, whether the line is nine characters or ninety.
+
+`i` and `a` are the first pair of many in vim where a lower-case key and
+its variant sit on either side of the cursor. Once you notice the pattern
+you stop memorising keys one at a time and start guessing correctly.
+
+@start standup.md
+Daily notes for Tuesday standup
+
+Yesterday: shipped the checkout fi
+Today: reviewing the payments PR
+Blocked: nothing
+
+@expected standup.md
+Daily notes for Tuesday standup
+
+Yesterday: shipped the checkout fix
+Today: reviewing the payments PR
+Blocked: nothing

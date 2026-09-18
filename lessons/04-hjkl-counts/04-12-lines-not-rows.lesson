@@ -1,0 +1,85 @@
+@meta
+id: 04-12
+title: Lines are not rows
+chapter: 04
+type: lesson
+skills: count-prefix, relativenumber, gj-gk
+par: 35
+minutes: 5
+vscode: the arrow keys move by row here, which is why this surprises people
+open: refunds.md
+
+@brief
+This document is written the way a lot of markdown is: one paragraph is
+one very long line, and your terminal folds it over several rows of the
+screen. Vim calls what you see a *screen row* and what is in the file a
+*line*, and it is careful about the difference.
+
+`j` moves a line. If the cursor is in a paragraph that occupies five rows
+of your screen, one `j` skips the whole thing. That is not a bug, and the
+margin proves it: the numbers count lines, so they count paragraphs here.
+
+The last line of the file is missing its ending. It should read:
+
+    Anything a support agent cannot resolve inside these rules goes to
+    the payments on-call rota, not to engineering.
+
+Append `, not to engineering.` to it. Resize your terminal narrower
+before you start, watch the rows re-fold, and notice that the margin
+numbers do not change at all.
+
+@keys
+| `j` `k` | down and up one *line*, however many rows it occupies |
+| `10j` | down ten lines |
+| `A` | append at the end of the line |
+
+@hints
+Do not count the rows you can see. Read the margin.
+--
+It says 10 next to the last paragraph no matter how wide your window is.
+--
+`10j`, then `A`, then the missing text, then `Esc` and `:wq`.
+
+@solution
+    10j A , not to engineering. <Esc> :wq<Enter>
+
+Thirty keystrokes, and the only interesting one is that the count
+was 10 and not the twenty-something rows your eyes could see.
+
+This is the first place where a habit from other editors actively misleads
+you. An arrow key in VS Code moves by row, so in wrapped prose your
+instinct is to count rows. Vim's `j` moves by line, the margin counts
+lines, and the two agree with each other. Trust the margin and ignore the
+folding.
+
+In code, lines and rows are usually the same thing, and this distinction
+never comes up. In prose, markdown, commit messages and CSV exports with
+a fat description column, it comes up constantly — and sometimes you
+genuinely do want to move by row, one screen row at a time. That is the
+next lesson.
+
+@start refunds.md
+# Refund policy
+
+Customers can cancel an order at any time before it ships, and cancelling an unshipped order always refunds the full amount to the original payment method within five working days, regardless of how the order was placed or which member of staff processed it.
+
+Orders that have already shipped are handled by the returns process instead, which is slower on purpose: the warehouse has to receive the goods and confirm their condition before finance will release any money, and that inspection step is where most of the disputes we see actually start.
+
+Refunds on orders older than ninety days cannot be issued to the original card because the payment provider has already closed the transaction, so those are paid out as account credit and the customer is told so at the point they ask rather than afterwards.
+
+Partial refunds are possible but are not exposed in the admin panel, and every one of them has to go through the payments team with a written reason attached, which is the main source of the backlog that finance complain about every month.
+
+Anything a support agent cannot resolve inside these rules goes to the payments on-call rota
+
+@expected refunds.md
+# Refund policy
+
+Customers can cancel an order at any time before it ships, and cancelling an unshipped order always refunds the full amount to the original payment method within five working days, regardless of how the order was placed or which member of staff processed it.
+
+Orders that have already shipped are handled by the returns process instead, which is slower on purpose: the warehouse has to receive the goods and confirm their condition before finance will release any money, and that inspection step is where most of the disputes we see actually start.
+
+Refunds on orders older than ninety days cannot be issued to the original card because the payment provider has already closed the transaction, so those are paid out as account credit and the customer is told so at the point they ask rather than afterwards.
+
+Partial refunds are possible but are not exposed in the admin panel, and every one of them has to go through the payments team with a written reason attached, which is the main source of the backlog that finance complain about every month.
+
+Anything a support agent cannot resolve inside these rules goes to the payments on-call rota, not to engineering.

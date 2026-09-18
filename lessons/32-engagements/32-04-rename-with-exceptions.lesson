@@ -1,0 +1,251 @@
+@meta
+id: 32-04
+title: Rename — everything except three things
+chapter: 32
+type: scenario
+skills: multi-file-refactor, vimgrep, cfdo, regex-zs-ze, sub-case
+par: 125
+minutes: 12
+vscode: Rename Symbol, then explain to review why the email changed
+open: src/domain/billing/billing.entity.ts src/domain/billing/billing.provider.ts src/domain/billing/billing.resolver.ts src/infrastructure/services/billing.service.ts src/infrastructure/services/email.service.ts
+vimrc: set hidden
+
+@brief
+    BIL-233  We stopped calling them subscribers two years ago. The
+             billing domain never got the memo. Rename the identifiers
+             to `customer` so new starters stop asking which is which.
+
+             Three things do NOT change, and the reviewer will check:
+
+             - the outbound payload in billing.service.ts. `subscriberId`
+               is the gateway's field name, not ours. Rename it and
+               billing silently stops working in production.
+             - the copy in email.service.ts. `{{subscriber}}` is the
+               placeholder our template ships with, and marketing own it.
+             - the migration under prisma/. Migrations are immutable.
+
+             There is also a comment in the provider explaining where
+             subscriber numbers come from. It is history and it is
+             accurate. Leave the prose alone.
+
+Only `src/domain/billing/` changes: an entity, a provider and a resolver.
+Everything in that directory that is an identifier becomes `customer`.
+
+Build the list before you edit it. A rename you cannot see the extent of
+is a rename you are guessing at.
+
+@keys
+| `:vimgrep /pat/gj src/domain/billing/*.ts` | build the list without jumping |
+| `:copen` `:cclose` | read the list, then get rid of it |
+| `:cfdo %s/old/new/g` | run a substitution on every file in the list |
+| `\C` | this pattern is case sensitive whatever `ignorecase` says |
+| `sub\ze[A-Z]` | match `sub` only where a capital follows |
+
+@hints
+Scope first, pattern second. The scope is one directory, and `:vimgrep`
+takes a glob. Everything outside that glob is safe by construction, which
+is a much better defence than remembering not to type `y`.
+--
+Inside the glob there is still the comment. Look at what separates the
+occurrences you want from the one you do not: every identifier is
+`subscriberSomething`, and the comment is the bare word.
+--
+`:vimgrep /subscriber/gj src/domain/billing/*.ts`, `:copen` to read the
+fourteen hits and find the comment among them, `:cclose`, then
+`:cfdo %s/\Csubscriber\ze[A-Z]/customer/g` and `:wqa`.
+
+@solution
+A route that measures 109 keystrokes, including reading the list.
+
+    :vimgrep /subscriber/gj src/domain/billing/*.ts
+    :copen
+    (read it — fourteen hits, one of them the comment)
+    :cclose
+    :cfdo %s/\Csubscriber\ze[A-Z]/customer/g
+    :wqa
+
+Three decisions are doing the work here, and none of them is a keystroke.
+
+**The glob is the safety.** `src/domain/billing/*.ts` cannot reach the
+service, the template or the migration. Compare the alternative, a
+`:%s` you run in each file you happen to remember to open: the defence
+there is your memory, and your memory is worse than a glob.
+
+**`gj` builds the list without moving you.** `j` means "do not jump to the
+first match" and `g` means "every match on a line, not just the first".
+Leaving off `g` is the classic way to miss the second `subscriberId` on a
+line that has two, and this file has one of those.
+
+**`\ze` describes the identifiers, not the word.** `subscriber\ze[A-Z]`
+matches the point just before a capital letter, so the match ends there
+and the replacement leaves `Id` and `Email` alone. `subscriberId` becomes
+`customerId`; the comment's bare `subscriber` is never a match at all.
+`\C` makes it case sensitive regardless of the player's `ignorecase`,
+which matters the day somebody writes `Subscriber` in this directory.
+
+The instinct to fight is "rename first, check after". Renames are cheap to
+run and expensive to audit. The two minutes in `:copen` reading the hits
+is not overhead — it is the part of the job where you find out that one
+of the fourteen is a comment and one of the other files is an API contract.
+
+Afterwards, prove it: `:vimgrep /subscriber/gj src/**/*.ts` `:copen`
+again. Three hits should remain, in two files, and you should be able to
+say why each one is still there.
+
+@start src/domain/billing/billing.entity.ts
+export type Invoice = {
+  id: string;
+  subscriberId: string;
+  subscriberEmail: string;
+  total: number;
+  paid: boolean;
+};
+
+@expected src/domain/billing/billing.entity.ts
+export type Invoice = {
+  id: string;
+  customerId: string;
+  customerEmail: string;
+  total: number;
+  paid: boolean;
+};
+
+@start src/domain/billing/billing.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { BillingService } from '../../infrastructure/services/billing.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class BillingProvider {
+  constructor(
+    @inject(BillingService) protected billingService: BillingService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  // subscriber numbers are issued by the billing gateway, never by us
+  public async findInvoices(args: { subscriberId: string }) {
+    return this.billingService.listInvoices(args.subscriberId);
+  }
+
+  public async resend(args: { subscriberId: string; subscriberEmail: string }) {
+    const invoices = await this.findInvoices({ subscriberId: args.subscriberId });
+
+    if (!invoices.length) {
+      throw exception('INVOICE_NOT_FOUND');
+    }
+
+    return this.emailService.send({ to: args.subscriberEmail, template: 'invoice' });
+  }
+}
+
+@expected src/domain/billing/billing.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { BillingService } from '../../infrastructure/services/billing.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class BillingProvider {
+  constructor(
+    @inject(BillingService) protected billingService: BillingService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  // subscriber numbers are issued by the billing gateway, never by us
+  public async findInvoices(args: { customerId: string }) {
+    return this.billingService.listInvoices(args.customerId);
+  }
+
+  public async resend(args: { customerId: string; customerEmail: string }) {
+    const invoices = await this.findInvoices({ customerId: args.customerId });
+
+    if (!invoices.length) {
+      throw exception('INVOICE_NOT_FOUND');
+    }
+
+    return this.emailService.send({ to: args.customerEmail, template: 'invoice' });
+  }
+}
+
+@start src/domain/billing/billing.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { BillingProvider } from './billing.provider';
+
+@injectable()
+export class BillingResolver {
+  constructor(@inject(BillingProvider) protected billingProvider: BillingProvider) {}
+
+  public async invoices(_: unknown, args: { subscriberId: string }) {
+    return this.billingProvider.findInvoices({ subscriberId: args.subscriberId });
+  }
+
+  public async resendInvoice(_: unknown, args: { subscriberId: string }) {
+    return this.billingProvider.resend(args);
+  }
+}
+
+@expected src/domain/billing/billing.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { BillingProvider } from './billing.provider';
+
+@injectable()
+export class BillingResolver {
+  constructor(@inject(BillingProvider) protected billingProvider: BillingProvider) {}
+
+  public async invoices(_: unknown, args: { customerId: string }) {
+    return this.billingProvider.findInvoices({ customerId: args.customerId });
+  }
+
+  public async resendInvoice(_: unknown, args: { customerId: string }) {
+    return this.billingProvider.resend(args);
+  }
+}
+
+@start src/infrastructure/services/billing.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class BillingService {
+  public async listInvoices(customerId: string) {
+    const response = await this.http.post(`/invoices/search`, {
+      subscriberId: customerId,
+      includeVoid: false,
+    });
+
+    if (response.status !== 200) {
+      throw exception('BILLING_UNAVAILABLE');
+    }
+
+    return response.data;
+  }
+}
+
+@start src/infrastructure/services/email.service.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class EmailService {
+  public async send(args: { to: string; template: string }) {
+    return this.http.post(`/send`, args);
+  }
+
+  public templates() {
+    return {
+      invoice: 'Hello {{subscriber}}, your invoice is ready to view.',
+      reminder: 'Hello {{subscriber}}, your invoice is due on {{dueDate}}.',
+    };
+  }
+}
+
+@start prisma/migrations/20240211_billing/migration.sql
+CREATE TABLE invoice (
+  id VARCHAR(36) NOT NULL PRIMARY KEY,
+  subscriber_id VARCHAR(36) NOT NULL,
+  subscriber_email VARCHAR(255) NOT NULL,
+  total INT NOT NULL,
+  paid TINYINT(1) NOT NULL DEFAULT 0
+);
+
+CREATE INDEX invoice_subscriber_id ON invoice (subscriber_id);

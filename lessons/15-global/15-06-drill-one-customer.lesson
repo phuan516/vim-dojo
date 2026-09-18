@@ -1,0 +1,59 @@
+@meta
+id: 15-06
+title: Drill — keep one customer's rows
+chapter: 15
+type: drill
+skills: global-invert, global-delete
+par: 24
+minutes: 4
+reps: 8
+vscode: sort by customer, select the others, delete, fix the header you took with them
+open: orders.csv
+
+@brief
+Eight times: support want the export cut down to customer `cust_44`.
+Keep the header row and every `cust_44` row. Everything else goes.
+
+The header does not contain `cust_44`. Say where the filtering starts.
+
+@keys
+| `:2,$v/pattern/d` | from line 2 to the end, delete every line not matching |
+
+@hints
+`:v` would take the header too. Start it on line 2.
+--
+`:2,$v/cust_44/d` and Enter.
+
+@solution
+    :2,$v/cust_44/d<Enter>  :wq<Enter>
+
+Twenty-one keystrokes. The range and the inverse are one idea now: name
+the lines to keep, and name where the keeping starts.
+
+CSV exports with a header are the everyday shape of this. Logs with a
+banner line, SQL dumps with a preamble, markdown with a title: anything
+where line 1 is special and the rest is data. `2,$` is the range you
+will type for all of them.
+
+@start orders.csv
+id,customer_id,status,total
+ord_4001,cust_10,PENDING,4999
+ord_4002,cust_44,SHIPPED,12000
+ord_4003,cust_11,PENDING,100
+ord_4004,cust_44,CANCELLED,2599
+ord_4005,cust_12,SHIPPED,7800
+ord_4006,cust_44,SHIPPED,3100
+ord_4007,cust_10,SHIPPED,4999
+ord_4008,cust_13,PENDING,650
+ord_4009,cust_44,PENDING,9900
+ord_4010,cust_11,CANCELLED,100
+ord_4011,cust_44,SHIPPED,1250
+ord_4012,cust_12,SHIPPED,7800
+
+@expected orders.csv
+id,customer_id,status,total
+ord_4002,cust_44,SHIPPED,12000
+ord_4004,cust_44,CANCELLED,2599
+ord_4006,cust_44,SHIPPED,3100
+ord_4009,cust_44,PENDING,9900
+ord_4011,cust_44,SHIPPED,1250

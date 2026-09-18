@@ -1,0 +1,82 @@
+@meta
+id: 22-13
+title: Insert on every line at once
+chapter: 22
+type: lesson
+skills: visual-block, block-insert
+par: 27
+minutes: 5
+vscode: Alt+click ten times, type export, hope you did not miss one
+open: constants.ts
+
+@brief
+This is the lesson the chapter is named for.
+
+With a block selected, `I` opens insert mode at the block's left edge
+on the *first* line only. You type, and nothing happens on the other
+lines. Then you press `Esc`, and whatever you typed appears on every
+line of the block, in the same column. It looks broken until the `Esc`.
+It is not.
+
+The constants in `constants.ts` are needed by the resolver now. Export
+all ten of them: every `const` line gets `export ` in front of it. The
+comment at the top and the blank line are not part of it.
+
+This is what Alt+click multi-cursor does in VS Code, except that it
+needs no mouse, it does not care whether the lines are on screen, and
+it works the same on ten lines and on a thousand.
+
+@keys
+| `Ctrl-V` | start a block |
+| `I` | insert at the left edge of the block, on every line |
+| `Esc` | the moment the text is copied to the other lines |
+
+@hints
+Get to the first `const`. `Ctrl-V` and nine `j` — the block only needs
+to be one column wide, because `I` only cares about the left edge.
+--
+`I`, type `export ` with its trailing space, and watch only the first
+line change. Then `Esc`.
+--
+`/const` `Enter`, `Ctrl-V`, `9j`, `Iexport `, `Esc`.
+
+@solution
+    /const<Enter> Ctrl-V 9 j I export<Space> <Esc> :wq<Enter>
+
+Twenty-three keystrokes, eight of them the word. `:'<,'>normal Iexport `
+from chapter 15 does this too, and `:s/^/export /` does as well. Block
+`I` is the one people actually use, because the block is visible
+before you commit, and because the same block takes `A`, `c`, `r` and
+`d` too — the next lessons.
+
+The one-line-until-`Esc` behaviour catches everyone once. If you leave
+insert mode with `Ctrl-C` instead of `Esc`, the text stays on
+the first line only.
+
+@start constants.ts
+// Money is stored in pence. Windows are in days.
+
+const REFUND_WINDOW_DAYS = 30;
+const REFUND_MINIMUM_PENCE = 100;
+const REFUND_MAXIMUM_PENCE = 500_000;
+const ORDER_CUTOFF_HOUR = 14;
+const ORDER_MAX_LINES = 50;
+const PAYMENT_RETRY_LIMIT = 3;
+const PAYMENT_RETRY_BACKOFF_MS = 10_000;
+const PAYMENT_CAPTURE_TIMEOUT_MS = 30_000;
+const EMAIL_RETRY_LIMIT = 5;
+const EMAIL_FROM = 'orders@example.com';
+
+@expected constants.ts
+// Money is stored in pence. Windows are in days.
+
+export const REFUND_WINDOW_DAYS = 30;
+export const REFUND_MINIMUM_PENCE = 100;
+export const REFUND_MAXIMUM_PENCE = 500_000;
+export const ORDER_CUTOFF_HOUR = 14;
+export const ORDER_MAX_LINES = 50;
+export const PAYMENT_RETRY_LIMIT = 3;
+export const PAYMENT_RETRY_BACKOFF_MS = 10_000;
+export const PAYMENT_CAPTURE_TIMEOUT_MS = 30_000;
+export const EMAIL_RETRY_LIMIT = 5;
+export const EMAIL_FROM = 'orders@example.com';

@@ -1,0 +1,375 @@
+@meta
+id: 17-18
+title: Scenario — the cancellation window
+chapter: 17
+type: scenario
+skills: jumplist, changelist, marks-set, marks-jump, mark-backtick, search-slash, open-o
+par: 320
+minutes: 18
+vscode: five tabs and a lot of scrolling
+open: order.provider.ts order.entity.ts order.repository.ts registry.ts default.json
+vimrc: set hidden
+
+@brief
+A ticket, not an exercise.
+
+    ORD-522  Orders must record when they were placed, and cancelling
+             one more than 30 days after that must be refused with
+             REFUND_WINDOW_EXPIRED.
+
+Five buffers. Three change. Two are open so that you can check things
+in them, and they must be left exactly as they are.
+
+  1. order.entity.ts — `Order` gains `placedAt: Date;` directly under
+     `customerId`.
+
+  2. order.repository.ts — `toEntity` gains `placedAt: record.placedAt,`
+     directly under `customerId: record.customerId,`. Careful: the word
+     `customerId` appears earlier in that file too.
+
+  3. order.provider.ts — two edits, far apart.
+
+     In `create`, the values passed to the repository gain
+     `placedAt: new Date(), ` inserted just before `status: 'PENDING'`.
+
+     In `cancel`, after the `ORDER_ALREADY_SHIPPED` check and its
+     closing brace, a blank line, then this block, then another blank
+     line before the refund call:
+
+         const days = (Date.now() - order.placedAt.getTime()) / 86_400_000;
+
+         if (days > 30) {
+           throw exception('REFUND_WINDOW_EXPIRED');
+         }
+
+  4. default.json — check that `REFUND_WINDOW_EXPIRED` exists. It does.
+
+  5. registry.ts — nothing changes. It is a decoy.
+
+Suggested order, because it is the order that makes the navigation
+interesting: start in the provider on the `create` line and mark it,
+write the `cancel` block, do the entity, do the repository, then
+return to the mark for the last insert. Three graded files.
+
+@keys
+| `mA` `` `A `` | global mark, and back to it from any file |
+| `g;` | back to the last change |
+| `Ctrl-O` | back through the jumplist |
+| `:b name` | switch buffer by partial name |
+| `o` | open a line below and type |
+| `:wqa` | write everything, quit |
+
+@hints
+`/status: 'P` lands on the `s` where the insert goes. Mark it globally
+before you go anywhere.
+--
+For the `cancel` block, `/ALREADY` then `j` puts you on the closing
+brace of the check. `o` from there, and type the block with its blank
+lines; autoindent handles the depth, so type no leading spaces.
+--
+In the repository, search for `record.customerId` rather than
+`customerId`, or you will land in `findByCustomer`.
+--
+Par assumes each line is typed once. About two hundred and eighty
+keystrokes, most of them the `days` block.
+
+@solution
+One route.
+
+**order.provider.ts** — `/status: 'P` Enter, `mA`. Then `/ALREADY`
+Enter, `j`, `o`, and type:
+
+    <Enter>
+    const days = (Date.now() - order.placedAt.getTime()) / 86_400_000;<Enter>
+    <Enter>
+    if (days > 30) {<Enter>
+    throw exception('REFUND_WINDOW_EXPIRED');<Enter>
+    }
+
+then Esc.
+
+**order.entity.ts** — `:b entity`. `/customerId` Enter,
+`oplacedAt: Date;` Esc.
+
+**order.repository.ts** — `:b repo`. `/record.customerId` Enter,
+`oplacedAt: record.placedAt,` Esc.
+
+**order.provider.ts again** — `` `A ``. `iplacedAt: new Date(), ` Esc.
+
+`:wqa`.
+
+Every navigation key in this chapter had a turn. The global mark held
+the one spot you knew you would need again before you knew how many
+files you would visit first. `Ctrl-O` would have brought you back too,
+six presses deep, and `g;` would have taken you to the `days` block
+rather than the `create` line, because that was the last thing you
+changed in the provider. Knowing which of the three you mean is the
+skill; the keys are trivial once you do.
+
+Two of the five buffers were never edited and one was never even
+opened on screen. That is normal. A ticket touches the files it
+touches, and the ones you open to check something should be left
+exactly as you found them, which the grader confirmed.
+
+If you found yourself typing `:b provider` and searching for the
+`create` line again, that is the habit this chapter exists to
+replace. It works. It is just slower than one key, every time, for
+the rest of your career.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { CustomerProvider } from '../customer/customer.provider';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerProvider) protected customerProvider: CustomerProvider,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(customerId: string) {
+    await this.customerProvider.findOne(customerId);
+
+    return this.orderRepository.findByCustomer({ customerId });
+  }
+
+  public async create(args: { customerId: string; total: number }) {
+    const customer = await this.customerProvider.findOne(args.customerId);
+
+    const order = await this.orderRepository.create({
+      values: { customerId: customer.id, total: args.total, status: 'PENDING' },
+    });
+
+    await this.emailService.send({ orderId: order.id, template: 'order_confirmation' });
+
+    return order;
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_NOT_PENDING');
+    }
+
+    await this.orderRepository.update({ where: { id }, values: { status: 'SHIPPED' } });
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { CustomerProvider } from '../customer/customer.provider';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerProvider) protected customerProvider: CustomerProvider,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(customerId: string) {
+    await this.customerProvider.findOne(customerId);
+
+    return this.orderRepository.findByCustomer({ customerId });
+  }
+
+  public async create(args: { customerId: string; total: number }) {
+    const customer = await this.customerProvider.findOne(args.customerId);
+
+    const order = await this.orderRepository.create({
+      values: { customerId: customer.id, total: args.total, placedAt: new Date(), status: 'PENDING' },
+    });
+
+    await this.emailService.send({ orderId: order.id, template: 'order_confirmation' });
+
+    return order;
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_NOT_PENDING');
+    }
+
+    await this.orderRepository.update({ where: { id }, values: { status: 'SHIPPED' } });
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    const days = (Date.now() - order.placedAt.getTime()) / 86_400_000;
+
+    if (days > 30) {
+      throw exception('REFUND_WINDOW_EXPIRED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@expected order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  placedAt: Date;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}
+
+@expected order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      placedAt: record.placedAt,
+      status: record.status,
+      total: record.total,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}
+
+@start registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderResolver } from '../domain/order/order.resolver';
+import { CustomerRepository } from '../domain/customer/customer.repository';
+import { CustomerProvider } from '../domain/customer/customer.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+import { EmailService } from '../infrastructure/services/email.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('CustomerRepository', { useClass: CustomerRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('PaymentService', { useClass: PaymentService });
+container.register('EmailService', { useClass: EmailService });
+container.register('OrderResolver', { useClass: OrderResolver });
+
+@start default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_NOT_PENDING": { "statusCode": 409, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "REFUND_WINDOW_EXPIRED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}

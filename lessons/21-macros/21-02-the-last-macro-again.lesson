@@ -1,0 +1,81 @@
+@meta
+id: 21-02
+title: The last macro, again
+chapter: 21
+type: lesson
+skills: macro-play
+par: 52
+minutes: 5
+vscode: ten cursors, Home, type, End, type
+open: customers.fixture.ts
+
+@brief
+The seed script needs customer records and someone pasted the email
+column straight out of the spreadsheet. Every address in the array
+becomes an object:
+
+    { email: 'alice.anderson@example.com' },
+
+Ten lines. Record the edit on the first, then play it on the rest.
+
+The one new thing: `@a` is two keys and you are about to press it nine
+times. Vim remembers which macro you last played, and `@@` plays that
+one again. It is to `@a` what `;` is to `f`.
+
+@keys
+| `qa` … `q` | record into `a` |
+| `@a` | play `a` |
+| `@@` | play whichever macro you played last |
+
+@hints
+The edit is an insert at the front of the line and an append at the
+end, with `Esc` between them. Both are in the recording.
+--
+`^i{ email: '` then `Esc`, then `A' },` and `Esc`, then `j`.
+--
+`j`, record with `qa^i{ email: '<Esc>A' },<Esc>jq`, then `@a` once
+and `@@` eight times.
+
+@solution
+    j  qa ^i{ email: ' <Esc> A' }, <Esc> j q   @a   @@ × 8   :wq<Enter>
+
+Thirty-six keystrokes for ten lines.
+
+`@@` is a small thing and you will use it constantly, because the
+rhythm of macro work is: record, play once, look, and if it did what
+you wanted, play it again and again. `@@` is the "again". It also
+survives switching files, so a macro recorded in one buffer can be
+replayed in another with the same two keys.
+
+The next lesson replaces the eight presses with one count. But `@@` is
+still the right tool when you want to watch each replay land before
+committing to the next, which is most of the time on a file you have
+not read carefully.
+
+@start customers.fixture.ts
+export const customers = [
+  alice.anderson@example.com
+  ben.okafor@example.com
+  chloe.martin@example.com
+  dev.patel@example.com
+  emma.walsh@example.com
+  farid.haddad@example.com
+  grace.lin@example.com
+  hugo.silva@example.com
+  isla.murray@example.com
+  jonas.weber@example.com
+];
+
+@expected customers.fixture.ts
+export const customers = [
+  { email: 'alice.anderson@example.com' },
+  { email: 'ben.okafor@example.com' },
+  { email: 'chloe.martin@example.com' },
+  { email: 'dev.patel@example.com' },
+  { email: 'emma.walsh@example.com' },
+  { email: 'farid.haddad@example.com' },
+  { email: 'grace.lin@example.com' },
+  { email: 'hugo.silva@example.com' },
+  { email: 'isla.murray@example.com' },
+  { email: 'jonas.weber@example.com' },
+];

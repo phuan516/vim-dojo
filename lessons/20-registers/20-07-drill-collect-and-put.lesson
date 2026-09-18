@@ -1,0 +1,52 @@
+@meta
+id: 20-07
+title: Drill — collect and put
+chapter: 20
+type: drill
+skills: register-append
+par: 30
+minutes: 5
+reps: 8
+vscode: cut a row, scroll, paste, scroll back, cut the other row, scroll, paste
+open: orders.csv
+
+@brief
+Eight times: the two `FAILED` rows belong at the bottom of the file,
+in their current order. Collect them into one register as you find
+them and put them once.
+
+@keys
+| `"Add` | delete the line and append it to `a` |
+| `n` | next match |
+| `"ap` | put the collection |
+
+@hints
+`/FAILED` Enter, `"Add`, `n`, `"Add`. Then `G` and put.
+--
+The second delete leaves you on the last row already, so `G` is only
+there in case the file was longer.
+
+@solution
+    /FAILED<Enter> "Add n"Add G"ap :wq<Enter>
+
+Search, append-delete, next, append-delete, put. The pattern scales to
+fifty rows without changing shape, and the register empties itself the
+moment you start the next collection with a lowercase letter.
+
+@start orders.csv
+id,status
+ord_001,PENDING
+ord_002,FAILED
+ord_003,SHIPPED
+ord_004,FAILED
+ord_005,PENDING
+ord_006,SHIPPED
+
+@expected orders.csv
+id,status
+ord_001,PENDING
+ord_003,SHIPPED
+ord_005,PENDING
+ord_006,SHIPPED
+ord_002,FAILED
+ord_004,FAILED

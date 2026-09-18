@@ -1,0 +1,201 @@
+@meta
+id: 13-16
+title: Brackets that group
+chapter: 13
+type: lesson
+skills: regex-groups, regex-verymagic
+par: 54
+minutes: 7
+vscode: rename symbol twice, and it would also rename getPaymentById
+open: lookup.provider.ts
+
+@brief
+The `ById` suffix is coming off two of the lookup methods. `getOrderById`
+becomes `getOrder` and `getCustomerById` becomes `getCustomer` — the
+definitions and every call, six places altogether. `getPaymentById`
+keeps its name; the payments team own that one.
+
+You could write `getOrderById|getCustomerById`. It works, and it repeats
+`get` and `ById` for no reason. The alternation only needs to cover the
+middle. Round brackets fence off the part of a pattern an operator
+applies to, the same as they do in arithmetic.
+
+The other half of the job is landing. A search lands at the start of
+its match, on the `g`, and you want to delete four characters at the
+*end* of it. Chapter 12's offsets can put you there.
+
+@keys
+| `(...)` | under `\v`, a group — alternation and quantifiers apply to the whole of it |
+| `\(...\)` | the same group in the default dialect |
+| `\vget(Order\|Customer)ById` | the suffix, on either of two names |
+| `/pattern/e-3` | land three characters before the end of the match |
+| `de` | delete to the end of the word |
+
+@hints
+Say `get`, then either name, then `ById`. The "either" needs brackets
+so it does not swallow the `get` and the `ById`.
+--
+A search offset of `e-3` lands on the fourth character from the end of
+the match — the `B` of `ById`. From there `de` deletes to the end of
+the word, and `n` keeps the offset.
+--
+`/\vget(Order|Customer)ById/e-3` `Enter`, `de`, then `n.` five times.
+
+@solution
+/\vget(Order|Customer)ById/e-3<Enter>  de  n.  n.  n.  n.  n.  :wq<Enter>
+
+Forty-seven keystrokes for six renames, and `getPaymentById` was never
+in danger.
+
+A group does two jobs. The first is scoping: `get(Order|Customer)ById`
+means what you would expect, while `getOrder|CustomerById` means
+something else entirely. The second is repetition: a quantifier after a
+group repeats the whole group, so `(\d+\.){2}\d+` is "a number and a
+dot, twice, then a number" — a three-part version in eleven characters.
+`(ab)+` is one or more `ab`s, where `ab+` is an `a` and then one or
+more `b`s.
+
+The dialect difference is the usual one. Under `\v` the brackets are
+bare and a literal bracket is `\(`; in the default dialect a group is
+`\(...\)` and a literal bracket is bare, which is why `/)$` worked
+without an escape in the drill.
+
+The `/e-3` is worth a second look. The match is `getOrderById` or
+`getCustomerById` — two different lengths — and yet `e-3` lands on the
+`B` in both, because it counts from the end of whatever matched. An
+offset from the *start* could not have done that. Landing where the
+edit is, rather than where the match starts, is the theme of the last
+part of this chapter, and vim has a far cleaner way to say it than
+counting backwards.
+
+@start lookup.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from '../order/order.repository';
+import { CustomerRepository } from '../customer/customer.repository';
+import { PaymentRepository } from '../payment/payment.repository';
+
+@injectable()
+export class LookupProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+    @inject(PaymentRepository) protected paymentRepository: PaymentRepository,
+  ) {}
+
+  public async getOrderById(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async getCustomerById(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return customer;
+  }
+
+  public async getPaymentById(id: string) {
+    const payment = await this.paymentRepository.findOne({ where: { id } });
+
+    if (!payment) {
+      throw exception('PAYMENT_NOT_FOUND');
+    }
+
+    return payment;
+  }
+
+  public async orderSummary(orderId: string) {
+    const order = await this.getOrderById(orderId);
+    const customer = await this.getCustomerById(order.customerId);
+    const payment = await this.getPaymentById(order.paymentId);
+
+    return { order, customer, payment };
+  }
+
+  public async customerOrders(customerId: string) {
+    const customer = await this.getCustomerById(customerId);
+
+    return this.orderRepository.findMany({ where: { customerId: customer.id } });
+  }
+
+  public async paymentOrder(paymentId: string) {
+    const payment = await this.getPaymentById(paymentId);
+
+    return this.getOrderById(payment.orderId);
+  }
+}
+
+@expected lookup.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from '../order/order.repository';
+import { CustomerRepository } from '../customer/customer.repository';
+import { PaymentRepository } from '../payment/payment.repository';
+
+@injectable()
+export class LookupProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+    @inject(PaymentRepository) protected paymentRepository: PaymentRepository,
+  ) {}
+
+  public async getOrder(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async getCustomer(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return customer;
+  }
+
+  public async getPaymentById(id: string) {
+    const payment = await this.paymentRepository.findOne({ where: { id } });
+
+    if (!payment) {
+      throw exception('PAYMENT_NOT_FOUND');
+    }
+
+    return payment;
+  }
+
+  public async orderSummary(orderId: string) {
+    const order = await this.getOrder(orderId);
+    const customer = await this.getCustomer(order.customerId);
+    const payment = await this.getPaymentById(order.paymentId);
+
+    return { order, customer, payment };
+  }
+
+  public async customerOrders(customerId: string) {
+    const customer = await this.getCustomer(customerId);
+
+    return this.orderRepository.findMany({ where: { customerId: customer.id } });
+  }
+
+  public async paymentOrder(paymentId: string) {
+    const payment = await this.getPaymentById(paymentId);
+
+    return this.getOrder(payment.orderId);
+  }
+}

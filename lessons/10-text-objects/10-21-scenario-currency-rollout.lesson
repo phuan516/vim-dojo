@@ -1,0 +1,176 @@
+@meta
+id: 10-21
+title: Scenario — the currency rollout
+chapter: 10
+type: scenario
+skills: obj-paren, obj-quote, obj-brace, obj-paragraph, inner-vs-around, op-linewise
+par: 106
+minutes: 12
+vscode: two tabs, six selections, one accidental bracket
+open: order.provider.ts checkout.json errors.json
+
+@brief
+A ticket.
+
+    ORD-552  Checkout is going live in Ireland on Monday. Orders carry
+             their own currency now. Charge in the order's currency and
+             stop refusing refunds on anything that is not sterling.
+
+Three files are open. `:wn` writes the current one and moves to the next;
+`:wqa` writes everything and quits. You will not need to come back to a
+file once you have left it, so work in order.
+
+  1. order.provider.ts
+
+     - `charge` takes the currency as its second argument. It should be
+       the order's own currency, not the hard-coded `'GBP'`.
+     - the currency guard in `refund` goes: the block, the `if` and the
+       blank line after it. Every currency is refundable now.
+     - with the guard gone nothing in this file throws, so the
+       `exception` import is dead. Remove the line.
+
+  2. checkout.json
+
+     - the template becomes `checkout-multi`
+     - the supported currency list becomes `["GBP", "EUR"]`
+
+  3. errors.json
+
+     Leave it alone. `REFUND_CURRENCY_UNSUPPORTED` is still raised by the
+     reconciliation job, so the code stays in the registry. Change this
+     file and the check fails.
+
+@keys
+| `ci(` | change an argument list |
+| `ci"` | change a string |
+| `ci[` | change what is inside the square brackets |
+| `dap` | delete a paragraph — a fenced block with a blank line after it |
+| `dd` | delete a line |
+| `:wn` | write this file and move to the next |
+| `:wqa` | write everything and quit |
+
+@hints
+Everything in this ticket is an object you have already met. The only new
+decision is which one each edit wants, and the shape of the text tells
+you.
+--
+The guard is three lines with a blank line after it and nothing blank
+inside it. That is a paragraph.
+--
+Do the dead import first while you can still count lines from the top of
+the file, then the charge call, then the guard. In the JSON, land on a letter
+inside the value itself — the colon between the key and the value is
+not inside either string.
+
+@solution
+    j dd
+    15j f( ci( order.id, order.currency <Esc>
+    8j dap
+    :wn<Enter>
+    2j fc ci" checkout-multi <Esc>
+    j 0 f[ ci[ "GBP", "EUR" <Esc>
+    :wqa<Enter>
+
+Ninety-two keystrokes for five edits in two files, and every one of the
+five was an object plus an operator.
+
+The part worth reviewing is the guard. It is an `if` with a body, a
+condition and a blank line under it, and none of that mattered: it was
+also a block of non-blank lines surrounded by blank ones, which is a
+paragraph, and `dap` took it and its trailing blank line in three keys.
+Reading code as paragraphs is a habit worth building — in a conventionally
+formatted TypeScript file, one paragraph is usually one thought, and
+whole-thought edits are exactly the ones that leave the blank lines right.
+
+The other habit is the one the decoy is testing. Three files were open
+and only two were yours. The temptation with `:wqa` is to treat every open
+buffer as fair game; a real branch is reviewed by someone who will ask why
+an unrelated file is in the diff.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async checkout(basket: Basket) {
+    const order = await this.orderRepository.create({
+      values: { customerId: basket.customerId, total: basket.total },
+    });
+
+    await this.paymentService.charge(order.id, 'GBP');
+
+    return order;
+  }
+
+  public async refund(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.currency !== 'GBP') {
+      throw exception('REFUND_CURRENCY_UNSUPPORTED');
+    }
+
+    return this.paymentService.refund(order.id);
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async checkout(basket: Basket) {
+    const order = await this.orderRepository.create({
+      values: { customerId: basket.customerId, total: basket.total },
+    });
+
+    await this.paymentService.charge(order.id, order.currency);
+
+    return order;
+  }
+
+  public async refund(id: string) {
+    const order = await this.findOne(id);
+
+    return this.paymentService.refund(order.id);
+  }
+}
+
+@start checkout.json
+{
+  "checkout": {
+    "template": "checkout-gbp",
+    "supportedCurrencies": ["GBP"],
+    "maxBasketValue": 250000
+  }
+}
+
+@expected checkout.json
+{
+  "checkout": {
+    "template": "checkout-multi",
+    "supportedCurrencies": ["GBP", "EUR"],
+    "maxBasketValue": 250000
+  }
+}
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_CURRENCY_UNSUPPORTED": { "statusCode": 409, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}

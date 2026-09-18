@@ -1,0 +1,65 @@
+@meta
+id: 08-04
+title: Drill — tick every box
+chapter: 08
+type: drill
+skills: replace-r
+par: 29
+minutes: 5
+reps: 8
+vscode: click between the brackets, type x, six times
+open: release.md
+
+@brief
+Six checkboxes, all of them done. Put an `x` in each one.
+
+Nothing to work out. The rep is: land on the space inside the brackets,
+replace it, drop a line. The column does not move, so after the first one
+you only ever press two keys.
+
+@keys
+| `r` | replace the character under the cursor |
+| `3l` | three characters right |
+| `j` | down a line — keeps the column |
+
+@hints
+`2j` gets you off the heading. `3l` from the start of a checkbox line
+puts you inside the brackets, and `rx` fills the box.
+--
+`j` keeps the column you were in, so the next box is directly below the
+cursor. Do not re-aim.
+
+@solution
+    2j 3l rx  then five times: j rx  :wq<Enter>
+
+Twenty-one keystrokes for six edits, and after the first one your fingers
+only know `jrx`.
+
+The thing being drilled is not `r`, it is the pairing of a cheap motion
+with a cheap verb. `j` preserving the column is what makes a vertical run
+of identical edits nearly free, and vertical runs of identical edits are
+most of what you do to config files, tables and checklists.
+
+Chapter 11 turns this into one keystroke per line with `.`, and chapter
+21 turns it into one keystroke for the whole file. The hand movement you
+are building now is what those chapters compress.
+
+@start release.md
+# Release 2.4.0
+
+- [ ] refund window capped at 30 days
+- [ ] webhook retries backed off
+- [ ] duplicate delivery guarded
+- [ ] audit log for cancellations
+- [ ] gateway timeout lowered
+- [ ] runbook updated
+
+@expected release.md
+# Release 2.4.0
+
+- [x] refund window capped at 30 days
+- [x] webhook retries backed off
+- [x] duplicate delivery guarded
+- [x] audit log for cancellations
+- [x] gateway timeout lowered
+- [x] runbook updated

@@ -1,0 +1,111 @@
+@meta
+id: 18-01
+title: Open a file by its path
+chapter: 18
+type: lesson
+skills: edit-file
+par: 63
+minutes: 4
+vscode: Ctrl+P, type the name, Enter
+open: README.md
+
+@brief
+You are in the README. It says the order statuses are `PENDING`,
+`SHIPPED` and `CANCELLED`. The entity file disagrees: it spells the last
+one `CANCELED`, with one L, and the GraphQL schema has been rejecting it
+since Tuesday.
+
+The README also tells you where entities live. Open the order entity from
+inside vim, fix the spelling, and save. Do not touch the README.
+
+Paths are relative to the directory vim was started in, which is the
+project root here. `:pwd` shows it if you are ever unsure.
+
+Type the path in full this time. It will feel long. That is the point of
+the next lesson.
+
+@keys
+| `:e path` | edit a file — open it, creating it if it does not exist |
+| `:pwd` | the directory relative paths are resolved from |
+| `:e!` | throw away changes and reload the current file |
+
+@hints
+The README's layout section gives the path. Read it, then `:e` it.
+--
+`:e src/domain/order/order.entity.ts` and Enter. Then search for the
+misspelling rather than scrolling to it.
+--
+`/CANCELED` puts you on the word. `fL` finds the L, `aL` adds a second
+one, `Esc`, `:wq`.
+
+@solution
+    :e src/domain/order/order.entity.ts<Enter>
+    /CANCELED<Enter> fL aL <Esc> :wq<Enter>
+
+`:e` is the whole of this lesson. It takes a path, relative to `:pwd`,
+and makes that file the current buffer. If the file does not exist you
+get an empty buffer with that name, and it becomes real the first time
+you write it. Everything chapter 16 taught about buffers applies: the
+README is still loaded, `:ls` lists both, `:bp` goes back.
+
+Thirty-six keystrokes of path is a lot, and you will not do it this way
+for long. The next four lessons are about never typing a full path again.
+
+@start README.md
+# Orders service
+
+Handles orders, customers and refunds for the storefront.
+
+## Layout
+
+    src/domain/<name>/<name>.entity.ts       the shape of a record
+    src/domain/<name>/<name>.repository.ts   how it is loaded and saved
+    src/domain/<name>/<name>.provider.ts     the business rules
+    src/infrastructure/services/             calls to other systems
+    src/configuration/errors/default.json    every error code we can throw
+
+## Order statuses
+
+An order is `PENDING` until it ships, `SHIPPED` once the carrier has it,
+and `CANCELLED` if the customer or an operator stops it first.
+
+@start src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELED';
+
+@expected src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}

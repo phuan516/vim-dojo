@@ -1,0 +1,113 @@
+@meta
+id: 26-15
+title: A terminal in a window
+chapter: 26
+type: lesson
+skills: terminal
+par: 45
+minutes: 7
+vscode: the integrated terminal, which is the only way you have ever done this
+open: ops-notes.md
+
+@brief
+The ops note wants the number of lines in `orders.csv` written after the
+colon on the last line.
+
+Do it the long way first, deliberately, because the long way is the thing
+being taught: open a terminal inside vim with `:term`, run the count in
+it, read the number, close the terminal, and write the number down.
+
+A terminal buffer is a real shell running in a vim window. It is an
+ordinary window — `Ctrl-W` moves between it and your file, `:q` will not
+close it while the job runs, and `exit` ends the shell and the buffer with
+it. While the job has the keyboard, every key you press goes to the shell,
+including `Ctrl-W` and `Esc`, so there is one key that gets you out:
+`Ctrl-W N` puts the terminal into normal mode, where the scrollback is
+just text you can search, yank and read with `/`, `G` and `y`.
+
+Do not change `orders.csv`.
+
+@keys
+| `:term` | open a shell in a new window |
+| `Ctrl-W N` | terminal into normal mode — scroll, search, yank its output |
+| `i` | back to talking to the shell, from terminal normal mode |
+| `exit` | end the shell and close the buffer |
+| `Ctrl-W w` | move to the other window |
+
+@hints
+`:term` splits the window and drops you in a shell, in the same directory
+as the file. Run the count there.
+--
+`wc -l orders.csv` in the terminal prints the number. Then `exit` closes
+the shell and puts you back in the note.
+--
+`:term` Enter, `wc -l orders.csv` Enter, `exit` Enter, then `G`,
+`A` space `12`, `Esc`, `:wq`.
+
+@solution
+    :term<Enter>  wc -l orders.csv<Enter>  exit<Enter>  G  A 12<Esc>  :wq<Enter>
+
+Around forty keystrokes, a window that opened and closed, and a number
+you carried across in your head.
+
+Now the short way:
+
+    :$s/$/ 12/     — if you already knew the number
+    :r !wc -l < orders.csv   — read the answer straight into the file
+    :w !wc -l      — ask about the buffer you are in, without a terminal
+
+That comparison is the lesson. `:term` exists, it is genuinely useful,
+and it is almost never the right tool for a question about text. Anything
+of the form "what does this command say about my file" is `:r !` or
+`:w !` or a filter, and those are one command with no window management
+and no retyping of an answer you read off a screen.
+
+What `:term` is actually for is the things that are not questions:
+watching a test suite run while you edit, an interactive `git rebase -i`,
+a REPL you keep alive across an afternoon, an `ssh` session. Long-running
+and interactive — anything where you need the program to still be there
+in a minute.
+
+Two facts worth carrying. `Ctrl-W N` is the way out: in terminal-job mode
+the shell owns every key, and `N` is what hands the window back to vim so
+you can scroll the output, search it, and yank a stack trace straight
+into a commit message. And `:term cmd` skips the shell entirely —
+`:term npm test` runs the suite in a window and leaves the output there
+when it finishes.
+
+Neovim's version is `:terminal` with `Ctrl-\ Ctrl-N` to leave job mode
+rather than `Ctrl-W N`. Chapter 31 covers the differences that matter.
+
+@start ops-notes.md
+# Ops notes
+
+Everything here is written down by hand after the fact, which is why it
+disagrees with reality about half the time.
+
+## Line counts
+
+orders.csv:
+
+@expected ops-notes.md
+# Ops notes
+
+Everything here is written down by hand after the fact, which is why it
+disagrees with reality about half the time.
+
+## Line counts
+
+orders.csv: 12
+
+@start orders.csv
+id,store,total,status
+ord_1001,aberdeen,42.50,SHIPPED
+ord_1002,bristol,7.00,PENDING
+ord_1003,cardiff,129.99,CANCELLED
+ord_1004,dundee,8.25,REFUNDED
+ord_1005,exeter,64.00,SHIPPED
+ord_1006,glasgow,19.99,SHIPPED
+ord_1007,leeds,5.50,PENDING
+ord_1008,manchester,88.10,SHIPPED
+ord_1009,norwich,12.75,CANCELLED
+ord_1010,oxford,31.40,SHIPPED
+ord_1011,plymouth,7.99,PENDING

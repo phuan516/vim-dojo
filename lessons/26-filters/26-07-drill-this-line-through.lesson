@@ -1,0 +1,41 @@
+@meta
+id: 26-07
+title: Drill — this line, through a command
+chapter: 26
+type: drill
+skills: filter-bang
+par: 21
+minutes: 5
+reps: 8
+vscode: select the line, retype it in capitals
+open: error-code.txt
+
+@brief
+Eight times: put line 2 through `tr a-z A-Z` so the error code is in
+upper case. Line 1 is a comment and stays as it is.
+
+@keys
+| `!!` | filter this line |
+| `tr a-z A-Z` | upper case |
+
+@hints
+One `j` to get onto the line, then double the bang.
+--
+`j` then `!!tr a-z A-Z` and Enter.
+
+@solution
+    j  !!tr a-z A-Z<Enter>  :wq<Enter>
+
+`!!` is the filter you will use most often, because most of the time the
+thing you want to run a command on is the line you are already looking
+at: a base64 blob to decode, a JSON line to pretty-print, a path to
+expand, a number to convert. The command changes every time and the two
+keys in front of it never do.
+
+@start error-code.txt
+# the constant below must match the key in default.json
+refund_window_expired
+
+@expected error-code.txt
+# the constant below must match the key in default.json
+REFUND_WINDOW_EXPIRED

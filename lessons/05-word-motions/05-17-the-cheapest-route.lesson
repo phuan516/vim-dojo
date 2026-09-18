@@ -1,0 +1,91 @@
+@meta
+id: 05-17
+title: Three targets, three different motions
+chapter: 05
+type: lesson
+skills: word-counts, WORD-motions, word-e
+par: 57
+minutes: 8
+vscode: three clicks, and a hunt for the right one
+open: invoice.provider.ts
+
+@brief
+You now have twelve ways to move by word: six motions, each with a
+capital, all of them countable. Having twelve is only useful if choosing
+between them is fast, and choosing is what this lesson grades. Par is set
+to the cheapest route, not a comfortable one.
+
+`issue` needs to take the customer's locale and pass it to the renderer,
+and the subtotal reference is stale. When you are done:
+
+  - the signature is `issue(invoice: Invoice, customer: Customer, locale: string)`
+  - the total is built from `invoice.subtotalNet`
+  - the render payload is `{ locale, total }`
+
+Three insertion points, one per line. Before you move, decide for each
+one: which end of the line is closer, do you want a start or an end, and
+is the punctuation on the way worth counting?
+
+@keys
+| `w` `b` `e` `ge` | by word |
+| `W` `B` `E` `gE` | by WORD, whitespace only |
+| `3w` `2e` … | any of them, counted |
+| `0` `$` | the ends of the line |
+
+@hints
+The parameter goes in front of the closing paren, which is one word back
+from the end of that line. The payload key goes in front of `total`,
+which is a long way from the start of its line if you count dots and no
+distance at all if you do not.
+--
+Line by line: `$ge` then `i` for the signature; a counted `e` from column
+zero for `subtotalNet`; a counted `W` for the payload.
+--
+`j$ge` `i, locale: string` `Esc`. Then `j0` `6e` `aNet` `Esc`. Then
+`2j0` `5W` `i` `locale, ` `Esc` `:wq`.
+
+@solution
+    j $ ge   i, locale: string<Esc>
+    j 0 6e   aNet<Esc>
+    2j 0 5W  ilocale, <Esc>
+    :wq<Enter>
+
+Three targets, three different answers, and none of them was `w` pressed
+repeatedly.
+
+The first is a start-of-word target sitting behind punctuation at the end
+of a line, so `$ge` — two keys, no counting. The second is an end-of-word
+target near the start of its line, so a counted `e` going forwards. The
+third is deep inside an argument list full of dots and parens, which is
+what `W` is for: five stops instead of the nineteen `w` would have taken.
+
+If you want one rule out of this chapter, it is this order of questions.
+Which end of the line is nearer? Do I want the front or the back of the
+target? Is there punctuation in between that I care about? Three answers,
+and the motion picks itself.
+
+The counting will fade. After a few weeks you stop deriving `5W` and
+start seeing it, in the same way you stopped deriving `5j` from the
+relative line numbers and just read it off the gutter.
+
+@start invoice.provider.ts
+export class InvoiceProvider {
+  public async issue(invoice: Invoice, customer: Customer) {
+    const total = invoice.subtotal + invoice.tax;
+
+    await this.pdfService.render(invoice.id, customer.email, { total });
+
+    return total;
+  }
+}
+
+@expected invoice.provider.ts
+export class InvoiceProvider {
+  public async issue(invoice: Invoice, customer: Customer, locale: string) {
+    const total = invoice.subtotalNet + invoice.tax;
+
+    await this.pdfService.render(invoice.id, customer.email, { locale, total });
+
+    return total;
+  }
+}

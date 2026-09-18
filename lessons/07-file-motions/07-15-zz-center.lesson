@@ -1,0 +1,351 @@
+@meta
+id: 07-15
+title: Put the work where your eyes are
+chapter: 07
+type: lesson
+skills: zz-center, goto-line
+par: 108
+minutes: 8
+vscode: scroll a little after every jump so you can see what you are doing
+open: refund.provider.ts
+
+@brief
+Three review fixes in a 131 line provider. Each one is at a line number you
+have been given, and each one needs you to be able to see something other
+than the line itself.
+
+  1. Line 48, in `withinWindow`. A negative number of days means the clock
+     went backwards and must not count as inside the window. The return
+     becomes `return days >= 0 && days <= REFUND_WINDOW_DAYS;`. You want the
+     whole three line method visible.
+
+  2. Line 97, in the middle of `settle`. The update needs to record the
+     attempt: `values: { status: 'SETTLED', settledAt: new Date(), attempts: 1 },`.
+     You want to see what is above and below it.
+
+  3. Line 120, in `reconcile`. Only pending refunds count as missing:
+     `const missing = local.filter((refund) => !remote.includes(refund.id) && refund.status === 'PENDING');`
+     You want to see the query above it, not the loop below it.
+
+A jump lands you wherever the file happens to leave you — the top of the
+screen, the bottom, half a line from the edge. There are three keys that fix
+that, and choosing between them is the lesson.
+
+@keys
+| `zt` | scroll so the cursor line is at the top of the screen |
+| `zz` | scroll so the cursor line is in the middle |
+| `zb` | scroll so the cursor line is at the bottom |
+| `45G` | line 45 |
+| `^` | first non-blank |
+| `F)` | back to the previous closing paren |
+| `a` `i` | append after, insert before |
+
+@hints
+All three are `z` followed by one letter, and the letter says where on the
+screen the line you are on should end up. Top, middle, bottom.
+--
+`zz` centres. It is the one you want by default, and it is worth pressing
+after every long jump without even thinking about it. `zt` puts the line at
+the top, which is what you want when you have just landed on a function
+signature and care about the body underneath. `zb` puts it at the bottom,
+which is what you want when the context you need is above.
+--
+For the first fix, `45G` lands on the method, `zt` pulls the body into view,
+and `3j` `^` `w` puts you on `days`. For the other two, jump, set the view,
+then `$` `F)` finds the paren you need to write next to.
+
+@solution
+    45G zt 3j ^ w i days >= 0 &&  <Esc>
+    97G zz $ F ) a , attempts: 1 <Esc>
+    120G zb $ F ) i  && refund.status === 'PENDING' <Esc>
+    :wq<Enter>
+
+Around ninety-five keystrokes, sixty of them the three fixes.
+
+The grader cannot see the scrolling, and that is worth saying out loud: you
+could pass this lesson without pressing `z` once, and you would have learned
+nothing. The two keystrokes are for you, not for the file.
+
+Here is why they matter. A jump puts the line you asked for somewhere
+arbitrary on the screen. If it lands on the last row, everything you are
+about to edit is off-screen and you will scroll by hand, lose your place,
+and start clicking. `zz` after a jump costs two keystrokes and means the
+line you care about is always in the same place on the screen, with context
+on both sides. Fluent vim users press `zz` so often it stops being a
+decision — `nGzz` is effectively one motion.
+
+`zt` and `zb` are the same idea sharpened. `zt` is "this is the start of
+something, show me the rest of it", which is the right key on a function
+signature, a heading, the top of a stanza. `zb` is "this is the end of
+something, show me what led to it", which is the right key on a failure, a
+closing brace, the last line of a block.
+
+One more, for free: `zz` has a relative you will meet in chapter 17. After
+a long jump, `` `` `` takes you back where you came from. Landing, looking
+and returning is most of what navigating a codebase actually is.
+
+@start refund.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { RefundRepository } from './refund.repository';
+import { OrderRepository } from '../order/order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+import { RefundProducer } from './refund.producer';
+import {
+  CreateRefundArgs,
+  FindRefundsArgs,
+  ReconcileRefundsArgs,
+} from './refund.types';
+
+const REFUND_WINDOW_DAYS = 30;
+const MAX_ATTEMPTS = 3;
+const MINOR_UNITS = 100;
+
+@injectable()
+export class RefundProvider {
+  constructor(
+    @inject(RefundRepository) protected refundRepository: RefundRepository,
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+    @inject(RefundProducer) protected refundProducer: RefundProducer,
+  ) {}
+
+  public async findOne(args: FindRefundsArgs) {
+    const refund = await this.refundRepository.findOne({ where: args.where });
+
+    if (!refund) {
+      throw exception('REFUND_NOT_FOUND');
+    }
+
+    return refund;
+  }
+
+  public async findMany(args: FindRefundsArgs) {
+    return this.refundRepository.findMany({
+      where: args.where,
+      take: args.take ?? 50,
+    });
+  }
+
+  public withinWindow(placedAt: Date) {
+    const days = (Date.now() - placedAt.getTime()) / 86_400_000;
+
+    return days <= REFUND_WINDOW_DAYS;
+  }
+
+  public toMinorUnits(amount: number) {
+    return Math.round(amount * MINOR_UNITS);
+  }
+
+  public async create(args: CreateRefundArgs) {
+    const order = await this.orderRepository.findOne({
+      where: { id: args.orderId },
+    });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    if (!this.withinWindow(order.placedAt)) {
+      throw exception('REFUND_WINDOW_EXPIRED');
+    }
+
+    if (args.amount > order.amount) {
+      throw exception('REFUND_AMOUNT_EXCEEDS_ORDER');
+    }
+
+    const refund = await this.refundRepository.create({
+      orderId: order.id,
+      customerId: order.customerId,
+      amount: args.amount,
+      reason: args.reason,
+      status: 'PENDING',
+    });
+
+    return refund;
+  }
+
+  public async settle(refundId: string) {
+    const refund = await this.findOne({ where: { id: refundId } });
+    const response = await this.paymentService.refund(
+      refund.orderId,
+      refund.amount,
+      refund.id,
+    );
+
+    if (response.status !== 'ok') {
+      throw exception('REFUND_FAILED');
+    }
+
+    await this.refundRepository.update({
+      where: { id: refund.id },
+      values: { status: 'SETTLED', settledAt: new Date() },
+    });
+
+    await this.refundProducer.settled({ refundId: refund.id });
+
+    return this.emailService.sendReceipt(refund.customerId, refund.id);
+  }
+
+  public async retry(refundId: string, attempt: number) {
+    if (attempt >= MAX_ATTEMPTS) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return this.settle(refundId);
+  }
+
+  public async reconcile(args: ReconcileRefundsArgs) {
+    const local = await this.refundRepository.findMany({
+      where: { created: { gte: args.from } },
+      take: 1000,
+    });
+
+    const remote = await this.paymentService.listRefunds(args.from);
+    const missing = local.filter((refund) => !remote.includes(refund.id));
+
+    for (const refund of missing) {
+      await this.refundRepository.update({
+        where: { id: refund.id },
+        values: { status: 'UNRECONCILED' },
+      });
+    }
+
+    return missing.length;
+  }
+}
+
+@expected refund.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { RefundRepository } from './refund.repository';
+import { OrderRepository } from '../order/order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+import { RefundProducer } from './refund.producer';
+import {
+  CreateRefundArgs,
+  FindRefundsArgs,
+  ReconcileRefundsArgs,
+} from './refund.types';
+
+const REFUND_WINDOW_DAYS = 30;
+const MAX_ATTEMPTS = 3;
+const MINOR_UNITS = 100;
+
+@injectable()
+export class RefundProvider {
+  constructor(
+    @inject(RefundRepository) protected refundRepository: RefundRepository,
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+    @inject(RefundProducer) protected refundProducer: RefundProducer,
+  ) {}
+
+  public async findOne(args: FindRefundsArgs) {
+    const refund = await this.refundRepository.findOne({ where: args.where });
+
+    if (!refund) {
+      throw exception('REFUND_NOT_FOUND');
+    }
+
+    return refund;
+  }
+
+  public async findMany(args: FindRefundsArgs) {
+    return this.refundRepository.findMany({
+      where: args.where,
+      take: args.take ?? 50,
+    });
+  }
+
+  public withinWindow(placedAt: Date) {
+    const days = (Date.now() - placedAt.getTime()) / 86_400_000;
+
+    return days >= 0 && days <= REFUND_WINDOW_DAYS;
+  }
+
+  public toMinorUnits(amount: number) {
+    return Math.round(amount * MINOR_UNITS);
+  }
+
+  public async create(args: CreateRefundArgs) {
+    const order = await this.orderRepository.findOne({
+      where: { id: args.orderId },
+    });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    if (!this.withinWindow(order.placedAt)) {
+      throw exception('REFUND_WINDOW_EXPIRED');
+    }
+
+    if (args.amount > order.amount) {
+      throw exception('REFUND_AMOUNT_EXCEEDS_ORDER');
+    }
+
+    const refund = await this.refundRepository.create({
+      orderId: order.id,
+      customerId: order.customerId,
+      amount: args.amount,
+      reason: args.reason,
+      status: 'PENDING',
+    });
+
+    return refund;
+  }
+
+  public async settle(refundId: string) {
+    const refund = await this.findOne({ where: { id: refundId } });
+    const response = await this.paymentService.refund(
+      refund.orderId,
+      refund.amount,
+      refund.id,
+    );
+
+    if (response.status !== 'ok') {
+      throw exception('REFUND_FAILED');
+    }
+
+    await this.refundRepository.update({
+      where: { id: refund.id },
+      values: { status: 'SETTLED', settledAt: new Date(), attempts: 1 },
+    });
+
+    await this.refundProducer.settled({ refundId: refund.id });
+
+    return this.emailService.sendReceipt(refund.customerId, refund.id);
+  }
+
+  public async retry(refundId: string, attempt: number) {
+    if (attempt >= MAX_ATTEMPTS) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return this.settle(refundId);
+  }
+
+  public async reconcile(args: ReconcileRefundsArgs) {
+    const local = await this.refundRepository.findMany({
+      where: { created: { gte: args.from } },
+      take: 1000,
+    });
+
+    const remote = await this.paymentService.listRefunds(args.from);
+    const missing = local.filter((refund) => !remote.includes(refund.id) && refund.status === 'PENDING');
+
+    for (const refund of missing) {
+      await this.refundRepository.update({
+        where: { id: refund.id },
+        values: { status: 'UNRECONCILED' },
+      });
+    }
+
+    return missing.length;
+  }
+}

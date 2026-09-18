@@ -1,0 +1,108 @@
+@meta
+id: 11-14
+title: Skip the ones that stay
+chapter: 11
+type: lesson
+skills: cgn, dot-design
+par: 34
+minutes: 7
+vscode: replace all, then go back and undo the two it ruined
+open: money.ts
+
+@brief
+`pence` is being renamed to `minorUnits` across the service. In this file
+the word appears eight times, and two of those are not the variable — one
+is a comment written in English and one is a sentence shown to a customer.
+Both of those say `pence` because that is the English word for it, and
+both must stay exactly as they are.
+
+Rename the six that are code. Leave the two that are prose.
+
+A replace-all would take all eight and hand the customer a message about
+minorUnits. This is the case that justifies changing matches one at a
+time: you look at each one before you commit, and when a match is not
+meant to change you step over it instead of changing it.
+
+@keys
+| `*` | search for the word under the cursor |
+| `cgn` | change this match, or the next one if you are not on one |
+| `.` | change the next match |
+| `n` | step over a match without touching it |
+| `u` | undo the one you should not have changed |
+
+@hints
+The keys are the same as the last lesson. What is new is that you are
+choosing, match by match, between two of them.
+--
+`.` means "change the next match". `n` means "leave this one and show me
+the next". Pressing `n` does not disturb the dot, so `.` still works
+afterwards.
+--
+Land on the first `pence`, `*`, and read what it puts you on — the comment
+on line six. `n` past it, change the next one, then dot your way down,
+skipping the string with `n` when you reach it and remembering the match
+you started on is still waiting for you after the wrap.
+
+@solution
+    jw  *  n  cgn minorUnits <Esc>  . . . .  n  n  .
+
+Read that as a sentence. `*` picks up the word and lands on the comment;
+`n` steps over it; `cgn` renames the function parameter; four dots take
+the four matches after it; `n` steps over the customer-facing string; `n`
+wraps to the top, back to the field declaration you started on; `.`
+renames it.
+
+Twelve decisions in the same number of keystrokes as a replace-all, and
+none of them blind.
+
+There is a real habit in here. Search-and-replace across a file asks you
+to be certain up front, which on code you did not write is a thing you
+cannot be. `cgn` with `.` and `n` inverts it: you are certain one match at
+a time, and each match is its own undo step, so being wrong costs a single
+`u` rather than a rethink of the whole file.
+
+The tell that you are on the wrong tool is hesitating before pressing
+Enter on a replace-all. If you are hesitating, the pattern is not tight
+enough to be trusted, and you should be stepping instead.
+
+@start money.ts
+export type Money = {
+  pence: number;
+  currency: string;
+};
+
+// gateway amounts always arrive in pence
+export function formatMoney(pence: number) {
+  return `£${(pence / 100).toFixed(2)}`;
+}
+
+export function refundSummary(order: Order) {
+  const pence = order.total;
+
+  return {
+    pence,
+    label: `We refunded ${formatMoney(pence)} to your card.`,
+    note: 'Refunds are calculated in pence and rounded down.',
+  };
+}
+
+@expected money.ts
+export type Money = {
+  minorUnits: number;
+  currency: string;
+};
+
+// gateway amounts always arrive in pence
+export function formatMoney(minorUnits: number) {
+  return `£${(minorUnits / 100).toFixed(2)}`;
+}
+
+export function refundSummary(order: Order) {
+  const minorUnits = order.total;
+
+  return {
+    minorUnits,
+    label: `We refunded ${formatMoney(minorUnits)} to your card.`,
+    note: 'Refunds are calculated in pence and rounded down.',
+  };
+}

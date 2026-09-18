@@ -1,0 +1,248 @@
+@meta
+id: 17-06
+title: The jumplist crosses files
+chapter: 17
+type: lesson
+skills: jumplist
+par: 100
+minutes: 7
+vscode: Go to Definition into another file, edit, Alt+Left
+open: order.provider.ts payment.service.ts
+vimrc: set hidden
+
+@brief
+`PaymentService.refund` is going to need the amount as well as the
+order id. `refundPartial` in the provider already passes one; `cancel`
+does not.
+
+Search for `refund(` in the provider and you are on the call in
+`cancel`. That is the line you will finish on. First, switch to the
+payment service, find its `refund(` signature, and add
+`amount: number` to it. On the line below, the request body
+`{ orderId }` becomes `{ orderId, amount }`.
+
+Then come back to the provider, to the exact line you left, and pass
+`order.total` as the second argument. Do not search for it again, and
+do not switch buffers by name. The jumplist knows which file you came
+from.
+
+Both files are open as buffers. Both are graded.
+
+@keys
+| `:b payment` | switch to the buffer whose name contains `payment` |
+| `Ctrl-O` | back one jump, even if that jump was into another file |
+| `t}` | up to just before the closing brace |
+| `:wqa` | write everything and quit |
+
+@hints
+Switching buffers is a jump. So is the search you do inside the service
+to find the signature. Count them.
+--
+Two `Ctrl-O`. The first undoes the search inside the service and puts
+you at the top of it; the second crosses back into the provider. Watch
+the file name in the status line change.
+--
+`/refund(` Enter, `:b payment` Enter, `/refund(` Enter,
+`f)i, amount: number` Esc, `j` `t}i, amount` Esc, `Ctrl-O` `Ctrl-O`,
+`f)i, order.total` Esc, `:wqa`.
+
+@solution
+    /refund(<Enter> :b payment<Enter> /refund(<Enter>
+    f)i, amount: number<Esc> jt}i, amount<Esc>
+    Ctrl-O Ctrl-O f)i, order.total<Esc> :wqa<Enter>
+
+The jumplist belongs to the window, not to the file, so it records
+positions in every buffer you have visited from it. `:jumps` shows a
+file name against each entry. `Ctrl-O` steps through them without
+caring which file they are in, and when the next entry is in a
+different buffer it switches for you.
+
+This is the Go to Definition workflow from VS Code, done with a search
+and a buffer switch instead of a language server. Chapter 18 gives you
+better ways to open the other file; the way *back* will still be
+`Ctrl-O`, and it will still be exact to the character.
+
+Why two presses. The search you did inside the service was a jump from
+line 1 of that file, so the list holds three positions: the provider
+line, the top of the service, and the signature. Going back one lands
+on the top of the service; going back two lands home. If that feels
+like counting, the next lesson gives you a way that does not need it.
+
+This lesson set `hidden` for you so that leaving the service with
+unsaved changes is allowed. Without it vim refuses to switch away from
+a modified buffer, and `Ctrl-O` silently stays put. Most people set it
+in their vimrc on day one; chapter 28 covers why.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { CustomerProvider } from '../customer/customer.provider';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerProvider) protected customerProvider: CustomerProvider,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async create(args: { customerId: string; total: number }) {
+    const customer = await this.customerProvider.findOne(args.customerId);
+
+    const order = await this.orderRepository.create({
+      values: { customerId: customer.id, total: args.total, status: 'PENDING' },
+    });
+
+    await this.emailService.send({ orderId: order.id, template: 'order_confirmation' });
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async refundPartial(id: string, amount: number) {
+    const order = await this.findOne(id);
+
+    if (amount > order.total) {
+      throw exception('REFUND_EXCEEDS_TOTAL');
+    }
+
+    await this.paymentService.refund(order.id, amount);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { refundedAmount: amount },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { CustomerProvider } from '../customer/customer.provider';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerProvider) protected customerProvider: CustomerProvider,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async create(args: { customerId: string; total: number }) {
+    const customer = await this.customerProvider.findOne(args.customerId);
+
+    const order = await this.orderRepository.create({
+      values: { customerId: customer.id, total: args.total, status: 'PENDING' },
+    });
+
+    await this.emailService.send({ orderId: order.id, template: 'order_confirmation' });
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id, order.total);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async refundPartial(id: string, amount: number) {
+    const order = await this.findOne(id);
+
+    if (amount > order.total) {
+      throw exception('REFUND_EXCEEDS_TOTAL');
+    }
+
+    await this.paymentService.refund(order.id, amount);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { refundedAmount: amount },
+    });
+  }
+}
+
+@start payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string) {
+    const response = await this.http.post(`/refunds`, { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@expected payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string, amount: number) {
+    const response = await this.http.post(`/refunds`, { orderId, amount });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}

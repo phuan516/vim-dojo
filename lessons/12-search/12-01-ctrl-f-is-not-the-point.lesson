@@ -1,0 +1,331 @@
+@meta
+id: 12-01
+title: The key you already use, done properly
+chapter: 12
+type: lesson
+skills: search-slash
+par: 21
+minutes: 4
+vscode: Ctrl+F, type it, Enter, click back into the file
+open: order.provider.ts
+
+@brief
+A hundred and thirty lines of provider, and one error code in it is
+spelled wrong. Sentry has been swallowing it for a month because the code
+does not exist in the registry.
+
+    ORDER_NOT_FUND   should be   ORDER_NOT_FOUND
+
+It is in `cancel`, near the bottom. You could scroll. You could work out
+the line number. Both are slower than saying what you are looking for.
+
+This is the first idea of the chapter and it is a small one: vim can jump
+straight to text. The second idea, which arrives in a few lessons, is the
+one that matters — in vim, searching is not just looking, it is moving,
+and anything that moves can be attached to an edit.
+
+Fix the spelling and save.
+
+@keys
+| `/text` `Enter` | jump forward to the next match of `text` |
+| `Esc` | while typing a search, abandon it and stay where you were |
+| `u` | undo, as always, if the jump lands you somewhere surprising |
+
+@hints
+Do not move the cursor by hand at all. Ask vim for the text instead —
+there is a key that opens a search prompt at the bottom of the screen.
+--
+`/` starts a forward search. Type what you want and press Enter. The
+cursor lands on the first character of the match.
+--
+You do not have to search for the whole word. `/FUND` is enough to be
+unique in this file, and the cursor lands on the `F`. From there it is
+one change-word away: `cw`, type the right spelling, `Esc`.
+
+@solution
+/FUND<Enter>  cwFOUND<Esc>  :wq<Enter>
+
+Eighteen keystrokes, and eleven of them are the two words involved.
+
+Two things worth noticing. First, you searched for `FUND`, not
+`ORDER_NOT_FUND`. A search is not a name you have to get right — it is
+the shortest string that is unique enough, and you can see whether you
+guessed well because the cursor is already sitting on the answer.
+
+Second, the cursor is now *at* the mistake, not near it. That is the
+difference between vim's search and the find box in an editor. Ctrl+F in
+VS Code shows you a match and leaves your cursor where it was; you then
+click, or press Escape and lose the match. In vim the search *is* the
+move. `cw` works immediately because you are already there.
+
+If a search lands you somewhere you did not want, `Ctrl-O` takes you back
+to where you jumped from — that is chapter 17, and searching is the main
+reason you will want it.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { CustomerRepository } from '../customer/customer.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(args: { id: string }) {
+    const order = await this.orderRepository.findOne({ where: { id: args.id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(args: { customerId: string }) {
+    const customer = await this.customerRepository.findOne({
+      where: { id: args.customerId },
+    });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return this.orderRepository.findByCustomer({ customerId: customer.id });
+  }
+
+  public async create(args: { customerId: string; total: number }) {
+    const customer = await this.customerRepository.findOne({
+      where: { id: args.customerId },
+    });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    const order = await this.orderRepository.create({
+      values: {
+        customerId: customer.id,
+        total: args.total,
+        status: 'PENDING',
+      },
+    });
+
+    await this.emailService.sendOrderConfirmation(customer.email, order.id);
+
+    return order;
+  }
+
+  public async addLine(args: { id: string; sku: string; price: number }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_ALREADY_SUBMITTED');
+    }
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { total: order.total + args.price },
+    });
+  }
+
+  public async applyDiscount(args: { id: string; percent: number }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (args.percent < 0 || args.percent > 100) {
+      throw exception('DISCOUNT_OUT_OF_RANGE');
+    }
+
+    const discounted = Math.round(order.total * (1 - args.percent / 100));
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { total: discounted },
+    });
+  }
+
+  public async submit(args: { id: string }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (order.total <= 0) {
+      throw exception('ORDER_EMPTY');
+    }
+
+    await this.paymentService.charge(order.id, order.total);
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { status: 'SUBMITTED' },
+    });
+  }
+
+  public async ship(args: { id: string; carrier: string }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (order.status !== 'SUBMITTED') {
+      throw exception('ORDER_NOT_SUBMITTED');
+    }
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { status: 'SHIPPED', carrier: args.carrier },
+    });
+  }
+
+  public async cancel(args: { id: string }) {
+    const order = await this.orderRepository.findOne({ where: { id: args.id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FUND');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { CustomerRepository } from '../customer/customer.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(args: { id: string }) {
+    const order = await this.orderRepository.findOne({ where: { id: args.id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(args: { customerId: string }) {
+    const customer = await this.customerRepository.findOne({
+      where: { id: args.customerId },
+    });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return this.orderRepository.findByCustomer({ customerId: customer.id });
+  }
+
+  public async create(args: { customerId: string; total: number }) {
+    const customer = await this.customerRepository.findOne({
+      where: { id: args.customerId },
+    });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    const order = await this.orderRepository.create({
+      values: {
+        customerId: customer.id,
+        total: args.total,
+        status: 'PENDING',
+      },
+    });
+
+    await this.emailService.sendOrderConfirmation(customer.email, order.id);
+
+    return order;
+  }
+
+  public async addLine(args: { id: string; sku: string; price: number }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_ALREADY_SUBMITTED');
+    }
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { total: order.total + args.price },
+    });
+  }
+
+  public async applyDiscount(args: { id: string; percent: number }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (args.percent < 0 || args.percent > 100) {
+      throw exception('DISCOUNT_OUT_OF_RANGE');
+    }
+
+    const discounted = Math.round(order.total * (1 - args.percent / 100));
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { total: discounted },
+    });
+  }
+
+  public async submit(args: { id: string }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (order.total <= 0) {
+      throw exception('ORDER_EMPTY');
+    }
+
+    await this.paymentService.charge(order.id, order.total);
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { status: 'SUBMITTED' },
+    });
+  }
+
+  public async ship(args: { id: string; carrier: string }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (order.status !== 'SUBMITTED') {
+      throw exception('ORDER_NOT_SUBMITTED');
+    }
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { status: 'SHIPPED', carrier: args.carrier },
+    });
+  }
+
+  public async cancel(args: { id: string }) {
+    const order = await this.orderRepository.findOne({ where: { id: args.id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}

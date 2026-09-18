@@ -1,0 +1,132 @@
+@meta
+id: 28-07
+title: The settings that stop you losing work
+chapter: 28
+type: lesson
+skills: vimrc-structure
+par: 268
+minutes: 6
+vscode: hot exit and local history, both on by default and invisible
+open: .vimrc
+
+@brief
+Out of the box vim leaves litter beside your files — `order.ts.swp` while
+you are editing, `order.ts~` after you save — and forgets every undo the
+moment you close the buffer. All three are configurable, and the
+interesting one is the third.
+
+Add a section at the end of the config:
+
+    " --- Don't lose work ---
+    set undofile              " undo history survives closing the file
+    set undodir=~/.vim/undo
+    set nobackup              " no file~ next to the original
+    set noswapfile            " no .file.swp either
+
+`undofile` is the one you will be grateful for. Reopen a file tomorrow,
+press `u`, and yesterday's edits come back — including changes you made
+before the last save. `undodir` keeps those history files in one place
+instead of scattering them through your repositories; the directory has
+to exist, so make it once with `mkdir -p ~/.vim/undo`.
+
+`nobackup` and `noswapfile` are a trade. The swap file is what offers you
+recovery after a crash or a lost ssh connection. Most people turn it off
+because their work is in git and a stale swap prompt is more annoying
+than the crash it protects against. The comment beside each line is where
+you record which way you decided.
+
+@keys
+| `G` | last line |
+| `o` | open a line below |
+| `O` | open a line above |
+| `:!mkdir -p ~/.vim/undo` | make the directory from inside vim |
+
+@hints
+The section goes at the bottom, after everything already there. `G` then
+`o` starts you off, and Enter inside insert mode keeps going.
+--
+Type the four settings first and put the header comment on last. Press
+Enter at the end of a comment line and vim starts the next line with a
+`"` as well, which is not what you want when the next line is a setting.
+--
+`G` `o` Enter for the blank line, then the four settings separated by
+Enter, then Esc. Then `3k` back to `set undofile` and `O` to open the
+header line above it.
+
+@solution
+    G o <Enter>
+    set undofile              " undo history survives closing the file<Enter>
+    set undodir=~/.vim/undo<Enter>
+    set nobackup              " no file~ next to the original<Enter>
+    set noswapfile            " no .file.swp either <Esc>
+    3k O " --- Don't lose work --- <Esc> :wq<Enter>
+
+The header goes on last on purpose. `filetype plugin on` loads vim's own
+ftplugin for vim files, and it asks for comment leaders to be continued:
+press Enter at the end of a `"` line and the next line starts with `"`
+too. Convenient when you are writing a paragraph of comment, wrong when
+the next line is a setting. Opening the header separately with `O`, from
+a line that is not a comment, sidesteps it entirely. Your own config is
+the first place you will meet a filetype plugin doing something on your
+behalf. It will not be the last.
+
+Three notes for when you use this for real.
+
+`undodir` takes a list, and a trailing `//` makes vim build the undo
+file's name from the file's full path: `set undodir=~/.vim/undo//`. Worth
+having the day two files called `index.ts` in different directories share
+one history file and you cannot work out why `u` did something strange.
+
+`set undofile` is off by default for a reason — the history files are
+written wherever you point them, for every file you edit, including files
+in `/tmp` and in other people's repositories. That is fine on your
+laptop. On a shared box, think about it.
+
+This section is also the one that breaks first on a server you ssh into,
+because `~/.vim/undo` is not there and vim complains on every write. A
+config meant to travel guards the lines that assume something exists:
+
+    if has('persistent_undo')
+      set undofile
+      set undodir=~/.vim/undo
+    endif
+
+That is the whole portability trick. One file, no plugins, `has()` around
+anything that might be missing, and you can `scp ~/.vimrc` to a box you
+will use once and have your own editor on it. It is the strongest
+argument for a config you can read in one screen: the 500-line one does
+not survive the trip.
+
+And if you keep `swapfile` on, learn what the recovery prompt is telling
+you rather than pressing `d` reflexively. `:recover` on a file after a
+crash has saved more work than `undofile` ever will.
+
+@start .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Indentation ---
+set autoindent
+set expandtab
+set shiftwidth=2
+
+@expected .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Indentation ---
+set autoindent
+set expandtab
+set shiftwidth=2
+
+" --- Don't lose work ---
+set undofile              " undo history survives closing the file
+set undodir=~/.vim/undo
+set nobackup              " no file~ next to the original
+set noswapfile            " no .file.swp either

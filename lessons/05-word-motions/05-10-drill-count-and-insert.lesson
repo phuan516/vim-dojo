@@ -1,0 +1,44 @@
+@meta
+id: 05-10
+title: Drill — count, jump, insert
+chapter: 05
+type: drill
+skills: word-counts, word-w
+par: 15
+minutes: 4
+reps: 8
+vscode: click between two words
+open: invoice.md
+
+@brief
+Eight times: put `tax, ` in front of `shipping`, so the line ends
+`does not include tax, shipping or duty`.
+
+Count first, jump once, insert. No exploratory presses.
+
+@keys
+| `6w` | six words forward |
+| `i` | insert before the cursor |
+
+@hints
+`shipping` is the sixth word after `The`.
+--
+The rep is not over when the text is right — it is over when you counted
+to six without your lips moving.
+
+@solution
+    6w  i tax,  <Esc>  :wq<Enter>
+
+Thirteen keystrokes. What you are drilling is not `w`, which you already
+have. It is the half-second of looking at a line and knowing it is six,
+without walking the cursor along to find out.
+
+That estimate is the skill. Everything from here — counts on operators,
+counts on searches, counts on line jumps — leans on being able to look at
+text and get a small number right.
+
+@start invoice.md
+The order total does not include shipping or duty.
+
+@expected invoice.md
+The order total does not include tax, shipping or duty.

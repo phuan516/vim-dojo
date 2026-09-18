@@ -1,0 +1,66 @@
+@meta
+id: 05-01
+title: One word at a time
+chapter: 05
+type: lesson
+skills: word-w
+par: 26
+minutes: 4
+vscode: Ctrl-Right, or clicking where you want to be
+open: release-notes.md
+
+@brief
+`l` moves one character. On a line of prose that is twelve presses to get
+past a single word, and you have been holding a key down to do it.
+
+Words are the unit you actually think in. Vim has a motion for them, and
+it lands on the first character of the next word every time.
+
+The release note is missing a qualifier. The tax total shown at checkout
+is an estimate, not the final figure, and legal want that said. Make the
+first line read:
+
+    The checkout page now shows the estimated tax total before payment.
+
+Leave the second line alone.
+
+@keys
+| `w` | forward to the start of the next word |
+| `i` | insert to the left of the cursor |
+| `Esc` | back to normal mode |
+| `:wq` | write and quit |
+
+@hints
+The new word goes in front of `tax`, so get the cursor onto the `t` of
+`tax` and insert there. Do not move a character at a time.
+--
+`w` jumps forward one word and lands on its first character. Press it
+repeatedly and watch where the cursor stops.
+--
+Six `w` presses from the start of the line put you on `tax`. Then `i`,
+type `estimated` and a space, `Esc`, `:wq`.
+
+@solution
+    wwwwww  i estimated <Esc>  :wq<Enter>
+
+Notice exactly where `w` puts you: on the *first* character of the word,
+which is where you want to be when something goes in front of it. That
+pairing — `w` then `i` — inserts before a word and it is the most common
+thing you will ever do with a word motion.
+
+The jump ignores how long the words are. `checkout` and `the` cost one
+press each. That is the whole point: you are moving by meaning, not by
+distance, so the effort no longer scales with the size of the identifier
+you are jumping over.
+
+Your VS Code hand wants Ctrl-Right here. It does nearly the same thing,
+but it needs a modifier, and it cannot be given a count. Both of those
+matter within a chapter or two.
+
+@start release-notes.md
+The checkout page now shows the tax total before payment.
+Nothing else on this screen changed.
+
+@expected release-notes.md
+The checkout page now shows the estimated tax total before payment.
+Nothing else on this screen changed.

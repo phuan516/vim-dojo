@@ -1,0 +1,69 @@
+@meta
+id: 02-02
+title: Two keys to write and quit
+chapter: 02
+type: lesson
+skills: write, quit
+par: 14
+minutes: 3
+vscode: Ctrl+S then Ctrl+W
+open: refund.service.ts
+
+@brief
+`:wq` is four keystrokes for something you do hundreds of times a day.
+Normal mode has a two-key version: `ZZ`, capital Z twice. Write the file
+if it changed, then quit.
+
+The refund call is missing its semicolon. Add it, and leave with `ZZ`.
+
+Nothing else in this file needs touching. Adding a character to the end of
+a line and getting out should cost you fewer than a dozen keystrokes.
+
+@keys
+| `ZZ` | write if modified, then quit |
+| `:x` | the same thing, spelled as an ex command |
+| `:wq` | write always, then quit |
+
+@hints
+The line you want is the `return` inside `refund`. It is five rows down.
+--
+`$` then `a` puts you in insert mode past the last character of the line.
+--
+`Esc` first, then two capital Zs. No colon, no Enter — `ZZ` is a normal
+mode command, not a command line one.
+
+@solution
+    jjjjj $ a ; <Esc> ZZ
+
+Eleven keystrokes. `:wq` would have made it thirteen.
+
+`ZZ` and `:x` are the same command: write only if the buffer was modified,
+then quit. `:wq` differs in one small way — it writes unconditionally, so
+an unchanged file gets a new modification time. That matters more than it
+sounds like it should. `make`, `tsc --watch`, nodemon and every file
+watcher key off modification times, so a stray `:wq` on a file you only
+read can kick off a rebuild. Use `ZZ` by default.
+
+The `Z` family is worth knowing as a pair: `ZZ` saves and goes, `ZQ` is
+the opposite — quit and throw the changes away. Reach for `ZQ` only when
+you are certain, because there is no confirmation.
+
+@start refund.service.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class RefundService {
+  public async refund(args: { orderId: string; amount: number }) {
+    return this.paymentGateway.post(`/refunds`, args)
+  }
+}
+
+@expected refund.service.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class RefundService {
+  public async refund(args: { orderId: string; amount: number }) {
+    return this.paymentGateway.post(`/refunds`, args);
+  }
+}

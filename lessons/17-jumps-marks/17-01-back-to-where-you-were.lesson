@@ -1,0 +1,248 @@
+@meta
+id: 17-01
+title: Back to where you were
+chapter: 17
+type: lesson
+skills: jump-back
+par: 80
+minutes: 5
+vscode: Go to Definition, edit, Alt+Left
+open: order.provider.ts
+
+@brief
+Search for `assertCancellable`. The first match is the call inside
+`cancel`, and that is the line you will end up changing. But not yet.
+
+The helper it calls, at the bottom of the class, needs a second
+parameter: `reason: string`. Go there first and add it. Then come back
+to the call and pass `'CUSTOMER_REQUEST'` as the new argument.
+
+In VS Code that is Go to Definition, type, Alt+Left. Vim has the same
+idea built in: every time you jump somewhere, it remembers the line you
+jumped *from*, and there is a two-key way back to it. Searching counts
+as jumping. Pressing `j` forty times does not.
+
+Both edits are graded.
+
+@keys
+| `''` | back to the line you were on before the last jump |
+| `n` | next match of the search, which is itself a jump |
+| `f)` | onto the closing paren, ready to insert before it |
+
+@hints
+Search once to land on the call, then step to the next match to reach
+the definition. That second step is a jump, so vim has remembered the
+call line for you.
+--
+Two apostrophes, `''`, jump to the line you were on before the latest
+jump. It lands on the first non-blank character of that line.
+--
+`/assertCancellable` Enter, `n`, `f)`, insert `, reason: string`, Esc.
+Then `''`, `f)`, insert `, 'CUSTOMER_REQUEST'`, Esc.
+
+@solution
+    /assertCancellable<Enter> n f)i, reason: string<Esc>
+    '' f)i, 'CUSTOMER_REQUEST'<Esc> :wq<Enter>
+
+Vim keeps a *jumplist*: a record of where the cursor was each time you
+made a jump. A jump is any motion that can take you a long way in one
+go: a search, `n` and `N`, `G` and `gg`, `%`, `{` and `}`, switching
+buffers. Small motions like `j`, `w` and `f)` are not jumps and leave
+no trace.
+
+`''` goes to the line of the most recent entry. It is the same reflex
+as Alt+Left, except it works after any jump, not only after Go to
+Definition. Here `N` would have brought you back too, because you got
+there with `n`. But if you had gone to the definition with `G` and a
+few `k`, or with `%`, `N` would be useless and `''` would still work.
+
+Two things to know about `''`. It only remembers one step: press it
+twice and you bounce between the two positions. And it is linewise: it
+lands on the first non-blank of the line, not on the column you left.
+The next few lessons fix both.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { Order } from './order.entity';
+import { OrderRepository } from './order.repository';
+import { CustomerProvider } from '../customer/customer.provider';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerProvider) protected customerProvider: CustomerProvider,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(customerId: string) {
+    await this.customerProvider.findOne(customerId);
+
+    return this.orderRepository.findByCustomer({ customerId });
+  }
+
+  public async create(args: { customerId: string; total: number }) {
+    const customer = await this.customerProvider.findOne(args.customerId);
+
+    const order = await this.orderRepository.create({
+      values: { customerId: customer.id, total: args.total, status: 'PENDING' },
+    });
+
+    await this.emailService.send({ orderId: order.id, template: 'order_confirmation' });
+
+    return order;
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_NOT_PENDING');
+    }
+
+    await this.orderRepository.update({ where: { id }, values: { status: 'SHIPPED' } });
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    this.assertCancellable(order);
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async refundPartial(id: string, amount: number) {
+    const order = await this.findOne(id);
+
+    if (amount > order.total) {
+      throw exception('REFUND_EXCEEDS_TOTAL');
+    }
+
+    await this.paymentService.refund(order.id, amount);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { refundedAmount: amount },
+    });
+  }
+
+  public assertCancellable(order: Order) {
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { Order } from './order.entity';
+import { OrderRepository } from './order.repository';
+import { CustomerProvider } from '../customer/customer.provider';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerProvider) protected customerProvider: CustomerProvider,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(customerId: string) {
+    await this.customerProvider.findOne(customerId);
+
+    return this.orderRepository.findByCustomer({ customerId });
+  }
+
+  public async create(args: { customerId: string; total: number }) {
+    const customer = await this.customerProvider.findOne(args.customerId);
+
+    const order = await this.orderRepository.create({
+      values: { customerId: customer.id, total: args.total, status: 'PENDING' },
+    });
+
+    await this.emailService.send({ orderId: order.id, template: 'order_confirmation' });
+
+    return order;
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_NOT_PENDING');
+    }
+
+    await this.orderRepository.update({ where: { id }, values: { status: 'SHIPPED' } });
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    this.assertCancellable(order, 'CUSTOMER_REQUEST');
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async refundPartial(id: string, amount: number) {
+    const order = await this.findOne(id);
+
+    if (amount > order.total) {
+      throw exception('REFUND_EXCEEDS_TOTAL');
+    }
+
+    await this.paymentService.refund(order.id, amount);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { refundedAmount: amount },
+    });
+  }
+
+  public assertCancellable(order: Order, reason: string) {
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+  }
+}

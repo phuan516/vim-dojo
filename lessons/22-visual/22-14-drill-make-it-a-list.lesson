@@ -1,0 +1,54 @@
+@meta
+id: 22-14
+title: Drill — make it a list
+chapter: 22
+type: drill
+skills: visual-block, block-insert
+par: 16
+minutes: 4
+reps: 8
+vscode: Alt+click six times, type the dash
+open: release.md
+
+@brief
+Eight times: turn the six lines under the heading into a markdown
+bullet list by putting `- ` in front of each one.
+
+Block, `I`, type, `Esc`. Nothing to think about.
+
+@keys
+| `Ctrl-V` | start a block |
+| `I` | insert at the left edge on every line |
+
+@hints
+`2j` from the top puts you on the first item. `Ctrl-V`, `5j`, `I- `,
+`Esc`.
+--
+Do not look at the other lines while typing. They change on `Esc`, not
+before.
+
+@solution
+    2 j Ctrl-V 5 j I -<Space> <Esc> :wq<Enter>
+
+Thirteen keystrokes. By the last rep the `Esc` should feel like the
+key that does the work, because it is.
+
+@start release.md
+# Release 2024.03
+
+Refund window enforced at thirty days
+Order cutoff moved to 14:00 UTC
+Payment capture retries with backoff
+Customer email on refund issued
+Reconcile export includes currency
+Registry split into domain and infrastructure
+
+@expected release.md
+# Release 2024.03
+
+- Refund window enforced at thirty days
+- Order cutoff moved to 14:00 UTC
+- Payment capture retries with backoff
+- Customer email on refund issued
+- Reconcile export includes currency
+- Registry split into domain and infrastructure

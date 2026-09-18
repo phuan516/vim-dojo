@@ -1,0 +1,42 @@
+@meta
+id: 05-13
+title: Drill — ge before the semicolon
+chapter: 05
+type: drill
+skills: word-e, word-b
+par: 13
+minutes: 3
+reps: 10
+vscode: click between the last letter and the semicolon
+open: total.ts
+
+@brief
+Ten times: pluralise `tax` so the line ends `+ order.taxes;`. The
+semicolon is in the way, which is the entire reason `ge` exists.
+
+@keys
+| `$` | end of the line |
+| `ge` | back to the end of the previous word |
+| `a` | append after the cursor |
+
+@hints
+`$` lands you on the semicolon. One `ge` from there is the end of `tax`.
+--
+Three keys of movement, two of typing. If you are using more than that,
+you are travelling forwards from the start of the line.
+
+@solution
+    $ ge  aes<Esc>  :wq<Enter>
+
+Eleven keystrokes, and the shape generalises to every trailing-punctuation
+edit you will ever make: `$ge` is "the last real character on this line",
+as opposed to `$`, which is the last character of any kind.
+
+Closing parens, commas on object properties, semicolons, a trailing
+backtick. Same three keys every time.
+
+@start total.ts
+const total = order.subtotal + order.tax;
+
+@expected total.ts
+const total = order.subtotal + order.taxes;

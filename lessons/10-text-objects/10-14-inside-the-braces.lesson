@@ -1,0 +1,95 @@
+@meta
+id: 10-14
+title: Inside the object literal
+chapter: 10
+type: lesson
+skills: obj-brace, obj-paren
+par: 62
+minutes: 6
+vscode: select between the braces and try not to eat one of them
+open: order.repository.ts
+
+@brief
+`i{` is everything between a matching pair of curly braces, and `a{` takes
+the braces too. They behave exactly like the round-bracket pair, which is
+the point — once you know one delimiter object you know all of them.
+
+In TypeScript curly braces mean an object literal or a block, and the
+first of those is where `ci{` earns its keep: a Prisma `where` clause, a
+set of options, a props object.
+
+The `deleted` column was dropped in the migration that went out on
+Tuesday and both queries in this repository still filter on it. Change
+them:
+
+  - `findForCustomer` filters on the customer id it was given
+  - `findOpen` filters on `status: 'PENDING'`
+
+The outer `{ where: ... }` wrapper stays in both. Only the inner object
+changes, and it keeps its spacing: `{ customerId }`, not `{customerId}`.
+
+@keys
+| `i{` | everything between the braces, spaces included |
+| `ci{` | change it |
+| `iB` `aB` | the same objects without the shift key |
+| `a{` | the braces as well |
+
+@hints
+There are two pairs of braces on each of those lines and you want the
+inner one. Vim picks the innermost pair containing the cursor.
+--
+`ci{` changes what is between the braces. Note what `i{` includes: the
+space after `{` and the space before `}` are part of the object, so type
+them back.
+--
+`2f{` lands on the inner opening brace. Then `ci{` and type a space, the
+filter, and a space.
+
+@solution
+    6j 2f{ ci{  customerId  <Esc>
+    4j 0 2f{ ci{  status: 'PENDING'  <Esc>
+    :wq<Enter>
+
+Fifty-four keystrokes. The two leading and trailing spaces in the typed
+text are not a mistake in the solution listing — `i{` runs from just after
+the opening brace to just before the closing one, so whatever padding the
+file had is yours to retype.
+
+That is worth knowing before it surprises you in a diff. If you want the
+padding handled for you, target the outer object instead and retype more,
+or use `ci{` and start your typing with a space out of habit. Most people
+end up with the habit.
+
+`B` for the shifted version is the same idea as `b` for round brackets:
+`iB` is `i{`, `aB` is `a{`. On a UK or US keyboard `ciB` is three
+unshifted keys, which over a day of editing is a real saving.
+
+@start order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord> {
+  public async findForCustomer(customerId: string) {
+    return this.model.findMany({ where: { deleted: false } });
+  }
+
+  public async findOpen() {
+    return this.model.findMany({ where: { deleted: false } });
+  }
+}
+
+@expected order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord> {
+  public async findForCustomer(customerId: string) {
+    return this.model.findMany({ where: { customerId } });
+  }
+
+  public async findOpen() {
+    return this.model.findMany({ where: { status: 'PENDING' } });
+  }
+}

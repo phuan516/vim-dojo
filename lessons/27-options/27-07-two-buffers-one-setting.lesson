@@ -1,0 +1,96 @@
+@meta
+id: 27-07
+title: Two buffers, one setting
+chapter: 27
+type: lesson
+skills: set-local, buffer-switch
+par: 47
+minutes: 6
+vscode: per-language settings JSON, edited in a third tab
+open: orders.sql order.provider.ts
+
+@brief
+Two files, two indent conventions. The SQL wants four spaces inside a
+statement; the TypeScript wants two, as it always has.
+
+Do it with `:set shiftwidth=4` and you will fix the SQL and break the
+TypeScript, because `:set` on a buffer-local option sets two things at
+once: this buffer's value, and the value every buffer you open from now on
+inherits. The damage does not show up until you switch buffers, which is
+what makes it hard to spot.
+
+`:setlocal` sets only this buffer. That is the one you want here.
+
+Indent the two continuation lines in `orders.sql` by four, switch to
+`order.provider.ts`, and indent its two fields by two. Write both.
+
+@keys
+| `:setlocal shiftwidth=4` | set it for this buffer only |
+| `:set shiftwidth=4` | set it here *and* for everything opened later |
+| `:setglobal shiftwidth=4` | set the inherited value, leave this buffer alone |
+| `:setlocal shiftwidth?` | this buffer's value |
+| `:setglobal shiftwidth?` | the value new buffers will get |
+
+@hints
+You only need to change the option once. The question is which command
+you change it with, and whether the second buffer inherits it.
+--
+`:setlocal` stops at this buffer's edge. `:set` does not.
+--
+`:setlocal shiftwidth=4` `Enter`, `2G2>>`, `:bn` `Enter`, `2G2>>`,
+`:wqa` `Enter`.
+
+@solution
+    :setlocal shiftwidth=4<Enter>  2G  2>>
+    :bn<Enter>  2G  2>>  :wqa<Enter>
+
+Forty-two keystrokes. Swap that first command for `:set shiftwidth=4` and
+everything else is identical — and the TypeScript comes out with four
+spaces.
+
+Every option in vim is one of three kinds:
+
+**Global.** One value for the whole session. `ignorecase`, `hlsearch`,
+`laststatus`, `history`. `:setlocal` on one of these is just `:set`.
+
+**Buffer-local.** One value per file. `shiftwidth`, `expandtab`,
+`textwidth`, `formatoptions`, `filetype`, `comments`, `spelllang`.
+Anything about the content.
+
+**Window-local.** One value per window. `number`, `wrap`, `list`,
+`cursorline`, `foldmethod`. Anything about the view. Split a file in two
+and `:setlocal number` in the top window: the bottom window keeps its old
+setting, on the same buffer. That surprises people, and it is the right
+behaviour — you can have one window showing line numbers and another not,
+because the numbers are a property of looking, not of the file.
+
+The rule for the two local kinds is the same: `:set` writes both the local
+value and the global one, `:setlocal` writes only the local, `:setglobal`
+only the global. Interactively you nearly always mean `:setlocal`. In a
+config file you nearly always mean `:set`, because there is no buffer worth
+talking about yet — except inside a filetype plugin, where `:setlocal` is
+the only correct answer. That is the next lesson.
+
+@start orders.sql
+UPDATE orders
+SET status = 'CANCELLED',
+cancellation_reason = 'REFUND_WINDOW_EXPIRED'
+WHERE id = ?;
+
+@expected orders.sql
+UPDATE orders
+    SET status = 'CANCELLED',
+    cancellation_reason = 'REFUND_WINDOW_EXPIRED'
+WHERE id = ?;
+
+@start order.provider.ts
+export const refundWindow = {
+days: 14,
+graceHours: 12,
+};
+
+@expected order.provider.ts
+export const refundWindow = {
+  days: 14,
+  graceHours: 12,
+};

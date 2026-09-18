@@ -1,0 +1,80 @@
+@meta
+id: 09-13
+title: Yank a block with the bracket motion
+chapter: 09
+type: lesson
+skills: op-motion
+par: 36
+minutes: 5
+vscode: select five lines by eye, copy, paste, fix the name
+open: queues.ts
+
+@brief
+The refund queue needs the same settings as the order queue. Its
+declaration is there, waiting for a value:
+
+    export const refundQueue = ;
+
+Give it an object identical to `orderQueue`'s except that `name` is
+`'refunds'`. Do not retype the object — it is four lines and every one
+of them is already in the file.
+
+@keys
+| `%` | jump to the matching bracket, brace or paren |
+| `y%` | yank from the cursor to the matching bracket, inclusive |
+| `d%` | delete a bracketed block the same way |
+| `f{` | forward onto the opening brace |
+
+@hints
+`%` is a motion, and a very precise one: from a brace it finds its
+partner however many lines away that is. Any operator will take it.
+--
+With the cursor on `{`, `y%` copies the brace, everything inside it, and
+the closing brace. Then put it where the missing value goes.
+--
+`f{` then `y%`. `G` to the last line, `$` to the semicolon, `h` to the
+space before it, then `p`. Then `j0`, `f'`, `l` and `cw` to fix
+the name in the copy.
+
+@solution
+    f{ y% G $ h p    j 0 f' l cw refunds <Esc>    :wq<Enter>
+
+`y%` is the cheapest way to copy a block whose end you cannot see. You do
+not count lines, you do not select, you do not scroll to check where the
+brace closes — `%` already knows, because it is matching brackets rather
+than guessing.
+
+`p` after this yank puts the copied text after the cursor, and because the
+copy spans several lines the result spills onto new lines by itself. That
+is why landing on the space before the semicolon matters: put it after the
+space and the object starts where the value should start, and the
+semicolon ends up neatly after the closing brace.
+
+The same motion with `d` in front deletes a whole call's arguments, a
+whole object or a whole block: `d%` from the `(` of a function's
+parameter list clears it in three keystrokes. Chapter 10 gives you text
+objects, which are better still when the cursor is *inside* the block —
+but `%` works from the outside, and it is the only one of the two that
+also works as a plain jump.
+
+@start queues.ts
+export const orderQueue = {
+  name: 'orders',
+  retries: 3,
+  backoffMs: 500,
+};
+
+export const refundQueue = ;
+
+@expected queues.ts
+export const orderQueue = {
+  name: 'orders',
+  retries: 3,
+  backoffMs: 500,
+};
+
+export const refundQueue = {
+  name: 'refunds',
+  retries: 3,
+  backoffMs: 500,
+};

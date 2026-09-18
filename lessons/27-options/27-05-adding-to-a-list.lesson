@@ -1,0 +1,103 @@
+@meta
+id: 27-05
+title: Adding to a list without losing it
+chapter: 27
+type: lesson
+skills: set-option, find-path
+par: 61
+minutes: 6
+vscode: Ctrl-P, type the file name
+open: TODO.md
+
+@brief
+Some options hold a comma-separated list: `path`, `wildignore`,
+`backupdir`, `complete`, `formatoptions`, `comments`. Vim gave each of
+them a sensible value at startup and a plugin may have added to it since.
+Assigning with plain `=` throws all of that away.
+
+So lists get their own operators. `+=` appends an item, `-=` removes one,
+`^=` puts one at the front.
+
+`path` is the list `:find` searches. Out of the box it is `.,,` — the
+current file's directory and the working directory, and nothing below
+them. That is why `:find` cannot see anything in `src/`.
+
+Add `**` to `path` so `:find` searches the whole tree, then open
+`refund.provider.ts` and change the refund window from 30 days to 14.
+
+`TODO.md` is open so you have somewhere to start from. Leave it alone.
+
+@keys
+| `:set path+=**` | append `**` to the list |
+| `:set path-=.` | remove an item |
+| `:set path^=src` | put an item at the front — searched first |
+| `:set path?` | read the list back |
+| `:find name` | open a file by name from anywhere in `path` |
+
+@hints
+`:find` is not broken. It is looking in exactly two directories, and the
+file is not in either of them.
+--
+`path` needs `**` added to it — added, not assigned. The operator for
+that is `+=`.
+--
+`:set path+=**` then Enter, `:find refund.provider.ts` then Enter, and
+the rename is a search and a `cw`.
+
+@solution
+    :set path+=**<Enter>
+    :find refund.provider.ts<Enter>
+    /30<Enter>  cw14<Esc>  :wqa<Enter>
+
+Fifty-three keystrokes, half of them the file name.
+
+The habit to take from this is `+=` rather than `=`. Written as
+`:set path=.,**` this lesson would also have worked, and it would have
+quietly dropped the empty entry that means "the working directory" — a
+difference you would notice a week later, on a different file, and not
+connect to this.
+
+The same three operators work on every list option, and two of them are
+worth committing to memory now because you will want them in your own
+config:
+
+    set path+=**                   " :find searches the whole project
+    set wildignore+=*/node_modules/*,*/dist/*
+    set formatoptions-=o           " o on a comment line stops adding //
+
+`^=` is the odd one out. It prepends, which for `path` means "search here
+first" and for `complete` means "offer these matches before the others".
+Reach for it when order matters and `+=` when it does not.
+
+Ending on `:wqa` rather than `:wq` is not decoration: two files are open,
+and `:wq` with more than one file in the arglist refuses to quit.
+
+@start TODO.md
+# Carry-over
+
+- ORD-418 shorten the refund window to 14 days
+- ORD-422 gateway schema cache not cleared on deploy
+
+@start src/domain/refund/refund.provider.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class RefundProvider {
+  public readonly windowDays = 30;
+
+  public isInsideWindow(days: number) {
+    return days <= this.windowDays;
+  }
+}
+
+@expected src/domain/refund/refund.provider.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class RefundProvider {
+  public readonly windowDays = 14;
+
+  public isInsideWindow(days: number) {
+    return days <= this.windowDays;
+  }
+}

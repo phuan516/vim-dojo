@@ -1,0 +1,54 @@
+@meta
+id: 01-10
+title: Drill — overwrite without shifting
+chapter: 01
+type: drill
+skills: mode-awareness, esc, survival-motion, cmdline
+par: 16
+minutes: 5
+reps: 8
+vscode: select the three characters, type three more
+open: routes.md
+
+@brief
+Eight times: change the `500` on the refunds row to `422`, leaving the
+column exactly where it is. Get in with `R`, type three characters, get
+out with `Esc`.
+
+Watch `-- REPLACE --` appear and go. The failure you are drilling out is
+staying in replace mode a beat too long.
+
+@keys
+| `R` | replace mode |
+| `Esc` | out |
+| `$` `h` | end of line, one left |
+
+@hints
+The refunds row is two lines down. `$` puts you on the final `0`, and
+two `h` presses put you on the `5` — the first character you overwrite.
+--
+Three characters in, then `Esc` immediately — before you look at the
+result, not after.
+
+@solution
+    j j $ h h R 4 2 2 <Esc> :wq<Enter>
+
+Fourteen keystrokes for a change VS Code would want a double-click and a
+retype for, and the alignment cannot slip because nothing moved.
+
+The cursor-then-type shape is worth noticing now, because it is the shape
+of most vim editing. You spend keys getting the cursor to the exact right
+character, and then the edit itself is tiny. Chapters 4 to 7 are almost
+entirely about the first half of that sentence.
+
+@start routes.md
+METHOD  PATH            STATUS
+POST    /orders         201
+POST    /refunds        500
+GET     /customers      200
+
+@expected routes.md
+METHOD  PATH            STATUS
+POST    /orders         201
+POST    /refunds        422
+GET     /customers      200

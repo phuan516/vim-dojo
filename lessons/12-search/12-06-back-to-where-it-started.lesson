@@ -1,0 +1,163 @@
+@meta
+id: 12-06
+title: Where else does this id appear
+chapter: 12
+type: lesson
+skills: search-star, search-next
+par: 24
+minutes: 4
+vscode: select the id, Ctrl+F, Enter, then the previous-match button
+open: payments.log
+
+@brief
+The last line of this log is the one that paged somebody:
+
+    ERROR charge.duplicate gateway_ref=ch_7T21QK order=ord_8891
+
+That order was charged twice. The first, legitimate charge is somewhere
+above, and the reconciliation job needs to be told to leave it alone.
+
+Find the earlier line that mentions the same order and append ` skip=true`
+to the end of it. Nothing else in the log changes.
+
+You are starting at the bottom of the file with the id already in front
+of you. Neither typing it out nor scrolling up looking for it is the
+move.
+
+@keys
+| `*` | search forward for the word under the cursor |
+| `#` | search backward for the word under the cursor |
+| `G` `$` | last line, end of line |
+| `A` | append at the end of the line |
+
+@hints
+Get the cursor onto the order id on the last line. There is a key that
+searches for the word under the cursor, and it has a backwards twin.
+--
+`*` goes forward, `#` goes backward. Here you want backward, because the
+earlier charge is above you. Both count `ord_8891` as one word —
+underscores and digits are part of a word for this purpose.
+--
+`G` then `$` leaves the cursor on the last character of the id, which is
+inside the word, which is all `#` needs. Then `A` and the text.
+
+@solution
+G  $  #  A skip=true<Esc>  :wq<Enter>
+
+Nineteen keystrokes and you never typed `ord_8891`, which matters more
+than it sounds: ids are exactly the strings people mistype.
+
+`#` is `*` pointed backwards, and in a log that is usually the direction
+you want. Logs are read from the failure upwards — something went wrong
+at 09:19, so what happened to this id before that? `#` answers that
+question one keystroke at a time, and `n` keeps going in the same
+direction because `#` set the search direction to backwards.
+
+Both keys match whole words only. If you want the loose version — the one
+that would match `ord_8891` inside a longer string — that is `g*` and
+`g#`. You will want them for partial identifiers and file paths, and you
+will want the strict ones for everything else.
+
+@start payments.log
+2026-03-11T09:10:02Z INFO  worker.start pool=payments workers=4
+2026-03-11T09:10:02Z INFO  queue.connect host=rabbit-1 vhost=/payments
+2026-03-11T09:10:31Z INFO  charge.requested order=ord_8874 amount=1990 attempt=1
+2026-03-11T09:10:32Z INFO  charge.authorised order=ord_8874 amount=1990 attempt=1
+2026-03-11T09:10:44Z INFO  charge.requested order=ord_8875 amount=12500 attempt=1
+2026-03-11T09:10:45Z WARN  gateway.slow order=ord_8875 ms=4180
+2026-03-11T09:10:49Z INFO  charge.authorised order=ord_8875 amount=12500 attempt=1
+2026-03-11T09:11:03Z INFO  charge.requested order=ord_8876 amount=450 attempt=1
+2026-03-11T09:11:04Z INFO  charge.authorised order=ord_8876 amount=450 attempt=1
+2026-03-11T09:11:17Z INFO  charge.requested order=ord_8880 amount=7600 attempt=1
+2026-03-11T09:11:19Z WARN  gateway.retry order=ord_8880 reason=timeout attempt=2
+2026-03-11T09:11:22Z INFO  charge.authorised order=ord_8880 amount=7600 attempt=2
+2026-03-11T09:11:40Z INFO  charge.requested order=ord_8884 amount=3300 attempt=1
+2026-03-11T09:11:41Z INFO  charge.authorised order=ord_8884 amount=3300 attempt=1
+2026-03-11T09:11:58Z INFO  charge.requested order=ord_8886 amount=990 attempt=1
+2026-03-11T09:11:59Z INFO  charge.declined order=ord_8886 code=insufficient_funds
+2026-03-11T09:12:10Z INFO  charge.requested order=ord_8889 amount=2400 attempt=1
+2026-03-11T09:12:11Z INFO  charge.authorised order=ord_8889 amount=2400 attempt=1
+2026-03-11T09:12:38Z INFO  charge.requested order=ord_8891 amount=4250 attempt=1
+2026-03-11T09:12:44Z INFO  charge.authorised order=ord_8891 amount=4250 attempt=1
+2026-03-11T09:12:58Z INFO  charge.requested order=ord_8893 amount=15000 attempt=1
+2026-03-11T09:13:01Z INFO  charge.authorised order=ord_8893 amount=15000 attempt=1
+2026-03-11T09:13:20Z INFO  reconcile.batch size=64 cursor=2026-03-11T09:00:00Z
+2026-03-11T09:13:21Z INFO  reconcile.matched count=61 unmatched=3
+2026-03-11T09:13:22Z WARN  reconcile.unmatched order=ord_8875 gateway_ref=null
+2026-03-11T09:13:22Z WARN  reconcile.unmatched order=ord_8886 gateway_ref=null
+2026-03-11T09:13:22Z WARN  reconcile.unmatched order=ord_8893 gateway_ref=null
+2026-03-11T09:13:40Z INFO  payout.window opened=2026-03-11T09:00:00Z closes=2026-03-11T17:00:00Z
+2026-03-11T09:13:55Z INFO  email.sent template=order_confirmation to=ada@example.com
+2026-03-11T09:14:02Z INFO  email.sent template=order_confirmation to=raj@example.com
+2026-03-11T09:14:19Z INFO  webhook.received provider=stripe type=charge.succeeded
+2026-03-11T09:14:19Z INFO  webhook.accepted provider=stripe latency_ms=12
+2026-03-11T09:14:37Z INFO  charge.requested order=ord_8901 amount=880 attempt=1
+2026-03-11T09:14:38Z INFO  charge.authorised order=ord_8901 amount=880 attempt=1
+2026-03-11T09:14:52Z INFO  cache.evicted keys=1204 reason=ttl
+2026-03-11T09:15:04Z INFO  charge.requested order=ord_8904 amount=6100 attempt=1
+2026-03-11T09:15:05Z INFO  charge.authorised order=ord_8904 amount=6100 attempt=1
+2026-03-11T09:15:30Z INFO  worker.heartbeat pool=payments inflight=0
+2026-03-11T09:15:58Z INFO  queue.ack messages=42 pool=payments
+2026-03-11T09:16:12Z INFO  charge.requested order=ord_8908 amount=2050 attempt=1
+2026-03-11T09:16:13Z INFO  charge.authorised order=ord_8908 amount=2050 attempt=1
+2026-03-11T09:16:44Z INFO  reconcile.batch size=64 cursor=2026-03-11T09:15:00Z
+2026-03-11T09:16:45Z INFO  reconcile.matched count=64 unmatched=0
+2026-03-11T09:17:02Z INFO  payout.scheduled batch=pyt_311 orders=64 total=284100
+2026-03-11T09:17:30Z INFO  worker.heartbeat pool=payments inflight=0
+2026-03-11T09:18:01Z INFO  webhook.received provider=stripe type=charge.disputed
+2026-03-11T09:18:01Z WARN  dispute.opened order=ord_8884 amount=3300 evidence_due=2026-03-25
+2026-03-11T09:18:22Z INFO  email.sent template=dispute_notice to=ops@example.com
+2026-03-11T09:18:50Z INFO  worker.heartbeat pool=payments inflight=0
+2026-03-11T09:19:11Z ERROR charge.duplicate gateway_ref=ch_7T21QK order=ord_8891
+
+@expected payments.log
+2026-03-11T09:10:02Z INFO  worker.start pool=payments workers=4
+2026-03-11T09:10:02Z INFO  queue.connect host=rabbit-1 vhost=/payments
+2026-03-11T09:10:31Z INFO  charge.requested order=ord_8874 amount=1990 attempt=1
+2026-03-11T09:10:32Z INFO  charge.authorised order=ord_8874 amount=1990 attempt=1
+2026-03-11T09:10:44Z INFO  charge.requested order=ord_8875 amount=12500 attempt=1
+2026-03-11T09:10:45Z WARN  gateway.slow order=ord_8875 ms=4180
+2026-03-11T09:10:49Z INFO  charge.authorised order=ord_8875 amount=12500 attempt=1
+2026-03-11T09:11:03Z INFO  charge.requested order=ord_8876 amount=450 attempt=1
+2026-03-11T09:11:04Z INFO  charge.authorised order=ord_8876 amount=450 attempt=1
+2026-03-11T09:11:17Z INFO  charge.requested order=ord_8880 amount=7600 attempt=1
+2026-03-11T09:11:19Z WARN  gateway.retry order=ord_8880 reason=timeout attempt=2
+2026-03-11T09:11:22Z INFO  charge.authorised order=ord_8880 amount=7600 attempt=2
+2026-03-11T09:11:40Z INFO  charge.requested order=ord_8884 amount=3300 attempt=1
+2026-03-11T09:11:41Z INFO  charge.authorised order=ord_8884 amount=3300 attempt=1
+2026-03-11T09:11:58Z INFO  charge.requested order=ord_8886 amount=990 attempt=1
+2026-03-11T09:11:59Z INFO  charge.declined order=ord_8886 code=insufficient_funds
+2026-03-11T09:12:10Z INFO  charge.requested order=ord_8889 amount=2400 attempt=1
+2026-03-11T09:12:11Z INFO  charge.authorised order=ord_8889 amount=2400 attempt=1
+2026-03-11T09:12:38Z INFO  charge.requested order=ord_8891 amount=4250 attempt=1
+2026-03-11T09:12:44Z INFO  charge.authorised order=ord_8891 amount=4250 attempt=1 skip=true
+2026-03-11T09:12:58Z INFO  charge.requested order=ord_8893 amount=15000 attempt=1
+2026-03-11T09:13:01Z INFO  charge.authorised order=ord_8893 amount=15000 attempt=1
+2026-03-11T09:13:20Z INFO  reconcile.batch size=64 cursor=2026-03-11T09:00:00Z
+2026-03-11T09:13:21Z INFO  reconcile.matched count=61 unmatched=3
+2026-03-11T09:13:22Z WARN  reconcile.unmatched order=ord_8875 gateway_ref=null
+2026-03-11T09:13:22Z WARN  reconcile.unmatched order=ord_8886 gateway_ref=null
+2026-03-11T09:13:22Z WARN  reconcile.unmatched order=ord_8893 gateway_ref=null
+2026-03-11T09:13:40Z INFO  payout.window opened=2026-03-11T09:00:00Z closes=2026-03-11T17:00:00Z
+2026-03-11T09:13:55Z INFO  email.sent template=order_confirmation to=ada@example.com
+2026-03-11T09:14:02Z INFO  email.sent template=order_confirmation to=raj@example.com
+2026-03-11T09:14:19Z INFO  webhook.received provider=stripe type=charge.succeeded
+2026-03-11T09:14:19Z INFO  webhook.accepted provider=stripe latency_ms=12
+2026-03-11T09:14:37Z INFO  charge.requested order=ord_8901 amount=880 attempt=1
+2026-03-11T09:14:38Z INFO  charge.authorised order=ord_8901 amount=880 attempt=1
+2026-03-11T09:14:52Z INFO  cache.evicted keys=1204 reason=ttl
+2026-03-11T09:15:04Z INFO  charge.requested order=ord_8904 amount=6100 attempt=1
+2026-03-11T09:15:05Z INFO  charge.authorised order=ord_8904 amount=6100 attempt=1
+2026-03-11T09:15:30Z INFO  worker.heartbeat pool=payments inflight=0
+2026-03-11T09:15:58Z INFO  queue.ack messages=42 pool=payments
+2026-03-11T09:16:12Z INFO  charge.requested order=ord_8908 amount=2050 attempt=1
+2026-03-11T09:16:13Z INFO  charge.authorised order=ord_8908 amount=2050 attempt=1
+2026-03-11T09:16:44Z INFO  reconcile.batch size=64 cursor=2026-03-11T09:15:00Z
+2026-03-11T09:16:45Z INFO  reconcile.matched count=64 unmatched=0
+2026-03-11T09:17:02Z INFO  payout.scheduled batch=pyt_311 orders=64 total=284100
+2026-03-11T09:17:30Z INFO  worker.heartbeat pool=payments inflight=0
+2026-03-11T09:18:01Z INFO  webhook.received provider=stripe type=charge.disputed
+2026-03-11T09:18:01Z WARN  dispute.opened order=ord_8884 amount=3300 evidence_due=2026-03-25
+2026-03-11T09:18:22Z INFO  email.sent template=dispute_notice to=ops@example.com
+2026-03-11T09:18:50Z INFO  worker.heartbeat pool=payments inflight=0
+2026-03-11T09:19:11Z ERROR charge.duplicate gateway_ref=ch_7T21QK order=ord_8891

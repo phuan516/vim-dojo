@@ -1,0 +1,101 @@
+@meta
+id: 31-13
+title: Eight claims, true or false
+chapter: 31
+type: lesson
+skills: nvim-differences, nvim-lsp, treesitter
+par: 84
+minutes: 9
+vscode: no equivalent — this is the argument you will have with a colleague
+open: claims.txt
+
+@brief
+Every one of these is something you will hear said about Neovim, usually
+with confidence. Four are true and four are not. Work out which, from what
+the chapter has covered, and write `true` or `false` after each `=`.
+
+Read them carefully — several are true of something adjacent to what they
+claim, which is exactly how the confusion spreads.
+
+Graded in vim. Nothing runs; the judgement is the exercise.
+
+@keys
+| `A` | append at the end of the line |
+| `j` | down a line; `A` ignores the column |
+
+@hints
+Two of the false ones are about things Neovim deliberately did not do, and
+two are about things people credit it with that come from somewhere else.
+--
+Ask of each claim: is this about the editing language, the configuration,
+or the tooling? Neovim changed the last two and left the first alone.
+--
+`A`, the answer, `Esc`, `j` — eight times down the file.
+
+@solution
+    /macros<Enter> Atrue<Esc> jAtrue<Esc> jAfalse<Esc> jAfalse<Esc>
+    jAfalse<Esc> jAfalse<Esc> jAtrue<Esc> jAfalse<Esc> :wq<Enter>
+
+Line by line:
+
+1. **Macros and registers are identical.** True, and so is every motion,
+   operator, text object, mark and ex command. Say it once more until it
+   stops needing saying.
+2. **Your vimscript still runs.** True. Neovim kept the vimscript
+   interpreter; `vim.cmd` runs it from Lua, and an `init.vim` runs a vimrc
+   nearly unchanged. The parts that break are the ones that poke at vim
+   internals: `if has('python3')`, some `+clientserver` tricks, and
+   anything using Vim9script.
+3. **Both config files at once.** False. Neovim stops with a conflict
+   error rather than choosing. One or the other.
+4. **Lua is required.** False, and this matters if you are nervous about
+   the migration. `init.vim` is a first-class path, and plenty of people
+   run Neovim for years on a ported vimrc. Lua is how you get the
+   ecosystem, not how you get the editor.
+5. **Neovim ships language servers.** False. It ships the *client*. The
+   server is a separate program you install yourself — `tsserver` via npm,
+   `gopls` via go, and so on. `mason.nvim` exists because this step
+   annoys everybody.
+6. **Treesitter replaces LSP.** False, and they are not even about the
+   same thing. Treesitter parses the buffer in front of you, which gets
+   you highlighting, folds and structural text objects. LSP asks a program
+   that understands your whole project, which gets you types, rename and
+   diagnostics. You want both.
+7. **A distro is someone else's config.** True, and that is the honest
+   frame for LazyVim, AstroNvim and NvChad. They are excellent, they are
+   thousands of lines you did not write, and the first time one breaks you
+   will be debugging a config you have never read. The alternative worth
+   knowing is `kickstart.nvim`: a single commented `init.lua`, about 400
+   lines, meant to be read and then owned. If you have written your own
+   vimrc — and this dojo made you do that in chapter 28 — start there
+   instead of with a framework.
+8. **Vim9script plugins run in Neovim.** False. Vim 9 introduced a new,
+   faster scripting language; Neovim declined to implement it and went
+   further with Lua. This is the real fork in the road, and it is why a
+   plugin written in 2024 may work in exactly one of the two editors.
+
+@start claims.txt
+# Neovim, true or false.
+# Put your answer right after the = with no spaces.
+
+macros_and_registers_work_identically=
+vimscript_from_your_vimrc_still_runs=
+init_vim_and_init_lua_can_both_exist=
+lua_is_required_to_configure_neovim=
+neovim_ships_the_language_servers=
+treesitter_replaces_lsp=
+a_distro_is_someone_elses_config=
+vim9script_plugins_run_in_neovim=
+
+@expected claims.txt
+# Neovim, true or false.
+# Put your answer right after the = with no spaces.
+
+macros_and_registers_work_identically=true
+vimscript_from_your_vimrc_still_runs=true
+init_vim_and_init_lua_can_both_exist=false
+lua_is_required_to_configure_neovim=false
+neovim_ships_the_language_servers=false
+treesitter_replaces_lsp=false
+a_distro_is_someone_elses_config=true
+vim9script_plugins_run_in_neovim=false

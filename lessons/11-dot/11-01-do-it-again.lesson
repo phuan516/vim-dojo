@@ -1,0 +1,76 @@
+@meta
+id: 11-01
+title: The key that does it again
+chapter: 11
+type: lesson
+skills: dot-repeat
+par: 27
+minutes: 4
+vscode: select the column of plus signs with Alt+click, or delete ten times
+open: imports.ts
+
+@brief
+Someone pasted this import block straight out of a diff, so every line
+still carries the `+` that the diff put there. Ten lines, ten stray
+characters, one at the front of each line.
+
+Take all ten `+` characters out. Nothing else on the lines changes.
+
+You already know how to delete a character. The point of this lesson is
+what you press for the second one, and the third, and the tenth.
+
+@keys
+| `x` | delete the character under the cursor |
+| `.` | repeat the last change |
+| `j` | down one line, keeping the column |
+
+@hints
+Delete the first `+` the way you already know. Then look for a way to say
+"that again" instead of typing the same command out a second time.
+--
+`.` — the full stop — repeats the last change you made. Not the last
+motion, the last change. Moving the cursor does not disturb it.
+--
+`x` once on line one. Then `j.` gets you the next line, and `j.` again
+after that. The `.` never needs to be re-aimed; you only ever move.
+
+@solution
+    x  then  j.  nine times
+
+The cursor starts on the `+` on line one. `x` removes it and vim quietly
+remembers that change. `j` moves down a line without changing anything,
+so the memory survives, and `.` replays the delete at the new cursor
+position.
+
+Two keys per line instead of one key plus a fresh decision per line. That
+sounds like a small saving and it is not, because the real cost of an
+edit is not the keystroke — it is the thinking. `j.` is one thought
+repeated. Retyping `x` ten times is ten chances to lose your place.
+
+`.` is the most valuable key in vim and it is almost free to learn. What
+takes skill, and what the rest of this chapter is about, is arranging
+your edits so that `.` is the right answer more often.
+
+@start imports.ts
++import { injectable, inject } from 'tsyringe';
++import { OrderRepository } from './order.repository';
++import { OrderProvider } from './order.provider';
++import { CustomerRepository } from '../customer/customer.repository';
++import { CustomerProvider } from '../customer/customer.provider';
++import { PaymentService } from '../../infrastructure/services/payment.service';
++import { EmailService } from '../../infrastructure/services/email.service';
++import { BaseRepository } from '../../infrastructure/base.repository';
++import { exception } from '../../configuration/errors';
++import { registry } from '../../configuration/registry';
+
+@expected imports.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderRepository } from './order.repository';
+import { OrderProvider } from './order.provider';
+import { CustomerRepository } from '../customer/customer.repository';
+import { CustomerProvider } from '../customer/customer.provider';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { exception } from '../../configuration/errors';
+import { registry } from '../../configuration/registry';

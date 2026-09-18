@@ -1,0 +1,247 @@
+@meta
+id: 32-09
+title: Four changes, four different tools
+chapter: 32
+type: scenario
+skills: multi-file-refactor, sub-basic, global-delete, cgn, macro-record
+par: 130
+minutes: 15
+vscode: find-and-replace for all four, and pray
+open: src/domain/report/price.report.ts test/order.fixtures.ts src/domain/order/order.entity.ts
+vimrc: set hidden
+
+@brief
+    PRC-88  Price list clean-up before the EUR launch. Four changes,
+            two files.
+
+  1. price.report.ts — every `'GBP'` becomes `'EUR'`.
+
+  2. price.report.ts — the three rates marked `// deprecated` go. The
+     rest of the table stays exactly as it is.
+
+  3. price.report.ts — the method `rates` is being renamed to
+     `deliveryRates`. The declaration and both call sites change. The
+     comment at the top of the file is prose and stays; `'rates'` is the
+     cache key other services read and stays.
+
+  4. order.fixtures.ts — every fixture has an empty `reference`. Each
+     one should carry its own id: the fixture with `id: 'ord_1001'` gets
+     `reference: 'ord_1001'`, and so on for all six.
+
+The entity is open for reference and does not change.
+
+Four changes, and each one wants a different tool. Working out which is
+which before you start is the exercise. If you find yourself doing the
+fourth one by hand, you have picked wrong.
+
+@keys
+| `:%s/old/new/g` | the same text, everywhere |
+| `:g/pat/d` | delete the lines that match |
+| `cgn` then `n` and `.` | change this match, skip that one, change the next |
+| `qq` … `q` then `5@q` | record once, replay five times |
+| `Ctrl-R 0` | in insert mode, put the last yank |
+
+@hints
+Name the shape of each change before you choose. One is the same text in
+many places. One is whole lines picked out by a marker. One is a rename
+where some matches must survive. One is a sequence of steps repeated on
+six identical structures, and it has to read a value from one line and
+write it on another.
+--
+Those four shapes are `:%s`, `:g//d`, `cgn` with `.`, and a macro, in
+that order. The only hard one is the rename, because a blanket
+substitution would take the comment and the cache key with it.
+--
+For the fixtures: on an `id` line, `f'` `yi'` takes the id. `2j` `f'`
+`ci'` `Ctrl-R 0` `Esc` writes it into the reference. `3j` `0` lands on
+the next fixture's id line, which is what makes the macro replayable.
+
+@solution
+`:%s/'GBP'/'EUR'/g`, `:g/deprecated/d`,
+`gg` `/\<rates\>` `Enter` `n` `cgndeliveryRates` `Esc` `n` `n` `.` `.`,
+then `:bn` `/ord_1001` `Enter` `0`
+`qqf'yi'2jf'ci'` `Ctrl-R 0` `Esc` `3j0q` `5@q` `:wqa`.
+113 keystrokes.
+
+Why each one, and — more useful — why not the others.
+
+**`:%s` for the currency.** Identical text, no exceptions, and every
+occurrence is in the same file. This is the only one of the four where a
+blind replace-all is the correct answer, and it is the tool most people
+reach for on all four.
+
+**`:g//d` for the deprecated rows.** The three lines have nothing in
+common except the marker, and they are not adjacent. A count-based
+delete needs you to find them first; `:g` finds them and deletes them in
+one pass. Notice the marker is a comment, which is exactly why this works
+— somebody left you a machine-readable note.
+
+**`cgn` and `.` for the rename.** Five matches, three of which change.
+`:%s/rates/deliveryRates/g` breaks the cache key that another service
+reads, which is a production incident, and mangles a comment, which is
+merely embarrassing. `:%s` with `c` would work, but you then answer five
+prompts and cannot undo a wrong answer without starting over. With `cgn`,
+`n` means skip and `.` means change, you can see the file the whole time,
+and `u` puts back exactly one decision.
+
+**A macro for the fixtures.** This is the one a substitution genuinely
+cannot do: the value written on the `reference` line has to be read off
+the `id` line three lines above, and it is different every time. A
+pattern can match text; it cannot carry text between lines. Any time the
+job is "take this from here and put it there, six times", you are
+recording a macro.
+
+One keystroke in there looks like noise and is not: the `gg` before the
+rename. `:g` leaves the cursor on the last line it acted on, which here
+is somewhere in the middle of the table — below the comment and below
+the declaration. A search started from there finds the cache key first
+and your careful count of skips is off by two. After any `:g`, any
+`:cdo`, any command that moves you somewhere you did not watch, go back
+to a position you chose before you start counting matches.
+
+The macro's last two keystrokes are the ones that matter. `3j0` leaves
+the cursor exactly where the macro started, one fixture down, which is
+what makes `5@q` work. A macro that does not end where it started is a
+macro you can only run once.
+
+@start src/domain/report/price.report.ts
+import { injectable } from 'tsyringe';
+
+// rates are cached for an hour by the gateway
+@injectable()
+export class PriceReportProvider {
+  public rates() {
+    return [
+      { code: 'STD', amount: 499, currency: 'GBP' },
+      { code: 'EXP', amount: 899, currency: 'GBP' },
+      { code: 'SAT', amount: 1299, currency: 'GBP' }, // deprecated
+      { code: 'GFT', amount: 350, currency: 'GBP' }, // deprecated
+      { code: 'INT', amount: 1899, currency: 'GBP' },
+      { code: 'NDY', amount: 999, currency: 'GBP' }, // deprecated
+      { code: 'ECO', amount: 299, currency: 'GBP' },
+    ];
+  }
+
+  public cacheKey() {
+    return 'rates';
+  }
+
+  public cheapest() {
+    return this.rates().sort((a, b) => a.amount - b.amount)[0];
+  }
+
+  public forCode(code: string) {
+    return this.rates().find((rate) => rate.code === code);
+  }
+}
+
+@expected src/domain/report/price.report.ts
+import { injectable } from 'tsyringe';
+
+// rates are cached for an hour by the gateway
+@injectable()
+export class PriceReportProvider {
+  public deliveryRates() {
+    return [
+      { code: 'STD', amount: 499, currency: 'EUR' },
+      { code: 'EXP', amount: 899, currency: 'EUR' },
+      { code: 'INT', amount: 1899, currency: 'EUR' },
+      { code: 'ECO', amount: 299, currency: 'EUR' },
+    ];
+  }
+
+  public cacheKey() {
+    return 'rates';
+  }
+
+  public cheapest() {
+    return this.deliveryRates().sort((a, b) => a.amount - b.amount)[0];
+  }
+
+  public forCode(code: string) {
+    return this.deliveryRates().find((rate) => rate.code === code);
+  }
+}
+
+@start test/order.fixtures.ts
+import { Order } from '../src/domain/order/order.entity';
+
+export const orderFixtures: Partial<Order>[] = [
+  {
+    id: 'ord_1001',
+    customerId: 'cus_4410',
+    reference: '',
+  },
+  {
+    id: 'ord_1002',
+    customerId: 'cus_4410',
+    reference: '',
+  },
+  {
+    id: 'ord_1003',
+    customerId: 'cus_8827',
+    reference: '',
+  },
+  {
+    id: 'ord_1004',
+    customerId: 'cus_8827',
+    reference: '',
+  },
+  {
+    id: 'ord_1005',
+    customerId: 'cus_3190',
+    reference: '',
+  },
+  {
+    id: 'ord_1006',
+    customerId: 'cus_3190',
+    reference: '',
+  },
+];
+
+@expected test/order.fixtures.ts
+import { Order } from '../src/domain/order/order.entity';
+
+export const orderFixtures: Partial<Order>[] = [
+  {
+    id: 'ord_1001',
+    customerId: 'cus_4410',
+    reference: 'ord_1001',
+  },
+  {
+    id: 'ord_1002',
+    customerId: 'cus_4410',
+    reference: 'ord_1002',
+  },
+  {
+    id: 'ord_1003',
+    customerId: 'cus_8827',
+    reference: 'ord_1003',
+  },
+  {
+    id: 'ord_1004',
+    customerId: 'cus_8827',
+    reference: 'ord_1004',
+  },
+  {
+    id: 'ord_1005',
+    customerId: 'cus_3190',
+    reference: 'ord_1005',
+  },
+  {
+    id: 'ord_1006',
+    customerId: 'cus_3190',
+    reference: 'ord_1006',
+  },
+];
+
+@start src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  reference: string;
+  status: OrderStatus;
+  total: number;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';

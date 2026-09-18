@@ -1,0 +1,132 @@
+@meta
+id: 14-12
+title: Look first, then replace
+chapter: 14
+type: lesson
+skills: sub-basic, sub-confirm
+par: 36
+minutes: 5
+vscode: Ctrl-F, Enter a few times to look, then switch the box to Replace
+open: payment.service.ts
+
+@brief
+`refundLegacy` is being retired. Its replacement, `refundGateway`,
+has the same signature and the same `.check` helper, so every use in
+this service changes name and nothing else.
+
+You know two ways to be sure a rename is safe: the `c` flag, or
+reading the hits first. This lesson is the second one. Put the cursor
+on the identifier, use the star search from chapter 12 to light up
+every occurrence, and step through them with `n` until you have seen
+them all. Then run the substitute — with an empty pattern.
+
+An empty pattern is not a mistake. It means "the pattern I just
+searched for".
+
+@keys
+| `*` | search for the word under the cursor, whole-word, and set the last search pattern |
+| `n` | next match — look at it |
+| `:%s//new/g` `Enter` | empty pattern: reuse whatever the last search was |
+| `2w` | from `import` onto the identifier |
+
+@hints
+The last search pattern is a thing vim remembers, and `:s` can read it.
+Leave the pattern part of the substitute empty.
+--
+`*` on `refundLegacy` sets the pattern to `\<refundLegacy\>` — anchors
+included, for free. `n` walks the four hits. Then `:%s//refundGateway/g`.
+--
+`2w` puts the cursor on the identifier in the import. `*`, then `n`
+three times to see the rest, then `:%s//refundGateway/g` and Enter.
+
+@solution
+    2w  *  n n n  :%s//refundGateway/g<Enter>  :wq<Enter>
+
+Thirty-one keystrokes, including three spent looking, which is the
+part that matters.
+
+Two things are being taught. The first is the workflow: search, walk
+the hits with `n`, and only then substitute. The `c` flag asks you at
+each match; this asks you once, up front, with the whole file
+available to scroll. They suit different moods. Confirm is better when
+the hits are many and mixed; look-then-replace is better when they
+are few and you want to see the code around each one before deciding
+on the replacement at all.
+
+The second is the empty pattern. `:s//x/` reuses the last search
+pattern, whatever set it: `/`, `?`, `*`, `#`, or a previous `:s`. It
+saves typing, but the real gain is that you substitute exactly what
+you looked at. If you had searched `/refundLeg` to save keystrokes and
+then run `:%s//refundGateway/g`, you would have `refundGatewayacy`
+four times over. What you saw is what you change; make sure what you
+saw was the whole word.
+
+@start payment.service.ts
+import { refundLegacy } from './legacy/refund';
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string, amount: number) {
+    const response = await refundLegacy(orderId, amount);
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+
+  public async refundBatch(orderIds: string[], amount: number) {
+    const responses = await Promise.all(orderIds.map((orderId) => refundLegacy(orderId, amount)));
+    const failed = responses.filter((response) => response.status !== 200);
+
+    if (failed.length > 0) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return responses.map((response) => response.data);
+  }
+
+  public async canRefund(orderId: string) {
+    const eligibility = await refundLegacy.check(orderId);
+
+    return eligibility.allowed;
+  }
+}
+
+@expected payment.service.ts
+import { refundGateway } from './legacy/refund';
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string, amount: number) {
+    const response = await refundGateway(orderId, amount);
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+
+  public async refundBatch(orderIds: string[], amount: number) {
+    const responses = await Promise.all(orderIds.map((orderId) => refundGateway(orderId, amount)));
+    const failed = responses.filter((response) => response.status !== 200);
+
+    if (failed.length > 0) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return responses.map((response) => response.data);
+  }
+
+  public async canRefund(orderId: string) {
+    const eligibility = await refundGateway.check(orderId);
+
+    return eligibility.allowed;
+  }
+}

@@ -1,0 +1,85 @@
+@meta
+id: 23-17
+title: Drill — the reflex after a paste
+chapter: 23
+type: drill
+skills: indent-equals
+par: 10
+minutes: 3
+reps: 6
+vscode: Ctrl-Shift-I to format the document
+open: customer.repository.ts
+
+@brief
+The whole file was pasted in with the indentation stripped. Six times:
+put every line back where it belongs, in one command, without looking
+at any of them.
+
+@keys
+| `gg=G` | re-indent the whole file |
+
+@hints
+`=` is an operator. `gg` takes you to the top; `G` as its motion
+reaches the bottom.
+--
+Four keys. Do not read the file first.
+
+@solution
+    gg=G :wq<Enter>
+
+Eight keystrokes. The drill is not the keys, it is the habit: any time
+a paste lands and the shape looks wrong, `gg=G` before you look at it
+closely. It cannot damage anything except indentation, and on a file
+that was already right it changes nothing.
+
+@start customer.repository.ts
+import { injectable } from 'tsyringe';
+import { Customer as CustomerRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Customer } from './customer.entity';
+
+@injectable()
+export class CustomerRepository extends BaseRepository<CustomerRecord, Customer> {
+public async findByEmail(args: { email: string }) {
+const record = await this.prisma.customer.findFirst({
+where: { email: args.email, deleted: null },
+});
+
+return record ? this.toEntity(record) : undefined;
+}
+
+public toEntity(record: CustomerRecord): Customer {
+return {
+id: record.id,
+email: record.email,
+name: record.name,
+phone: record.phone ?? undefined,
+};
+}
+}
+
+@expected customer.repository.ts
+import { injectable } from 'tsyringe';
+import { Customer as CustomerRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Customer } from './customer.entity';
+
+@injectable()
+export class CustomerRepository extends BaseRepository<CustomerRecord, Customer> {
+  public async findByEmail(args: { email: string }) {
+    const record = await this.prisma.customer.findFirst({
+      where: { email: args.email, deleted: null },
+    });
+
+    return record ? this.toEntity(record) : undefined;
+  }
+
+  public toEntity(record: CustomerRecord): Customer {
+    return {
+      id: record.id,
+      email: record.email,
+      name: record.name,
+      phone: record.phone ?? undefined,
+    };
+  }
+}

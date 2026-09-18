@@ -1,0 +1,64 @@
+@meta
+id: 06-04
+title: The end of the text, not the line
+chapter: 06
+type: lesson
+skills: line-end
+par: 48
+minutes: 4
+vscode: End, then backspace over invisible spaces
+open: refunds.csv
+
+@brief
+Three rows exported out of the finance spreadsheet. Each one has picked up
+stray spaces on the end during the copy, which you cannot see but which are
+really there.
+
+Every row needs a new final column recording who approved it:
+
+    ord_1042,cus_88,4999,GBP,APPROVED,finance
+
+Append `,finance` to all three rows. It has to sit directly against the
+status, not out past the invisible spaces, or the field will be read as
+`APPROVED   ` and no lookup will match it.
+
+@keys
+| `$` | the last character, spaces included |
+| `g_` | the last character that is not a space or tab |
+| `a` | insert to the right of the cursor |
+
+@hints
+`$` and `A` both go past the stray spaces, which is exactly the wrong place.
+You want the mirror image of `^`.
+--
+`g_` — a `g` then an underscore — lands on the last non-blank character of
+the line. Press `a` there and your text goes right after the status.
+--
+`g_`, `a`, type `,finance`, `Esc`, then `j` and the same again for each row.
+
+@solution
+    g_ a ,finance <Esc> j g_ a ,finance <Esc> j g_ a ,finance <Esc> :wq<Enter>
+
+`g_` is `^` seen from the other end: the last character that is actually
+text. On a tidy line it does the same job as `$`, and the two only part
+company when there is trailing whitespace — which, in real files that have
+been through a spreadsheet, an email client or a badly configured editor,
+there often is.
+
+The wider lesson is that `$` is a position on a line and `g_` is a position
+in the content, and the two are not the same claim. When you are appending
+to data you almost always mean the content.
+
+The stray spaces themselves are left alone here. Nothing in this chapter
+deletes text yet; chapter 8 gives you `d`, and `dg_` reads as delete to the
+last real character, which is when this key starts to pay properly.
+
+@start refunds.csv
+ord_1042,cus_88,4999,GBP,APPROVED   
+ord_1043,cus_91,1250,GBP,DECLINED  
+ord_1044,cus_88,899,GBP,APPROVED    
+
+@expected refunds.csv
+ord_1042,cus_88,4999,GBP,APPROVED,finance
+ord_1043,cus_91,1250,GBP,DECLINED,finance
+ord_1044,cus_88,899,GBP,APPROVED,finance

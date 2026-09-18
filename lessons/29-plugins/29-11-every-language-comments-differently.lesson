@@ -1,0 +1,219 @@
+@meta
+id: 29-11
+title: One verb, three comment syntaxes
+chapter: 29
+type: lesson
+skills: commentary, packadd
+par: 86
+minutes: 8
+vscode: it mostly works, and when it does not you have no idea where to look
+open: schema.sql README.md tsconfig.json
+vimrc: set packpath^=. | packloadall! | set hidden
+
+@brief
+The commentary plugin is shipped with this lesson again, in
+`pack/dojo/start/commentary/`. Fifty lines, and not one of them knows
+what SQL is.
+
+It does not have a table of languages. It reads one buffer-local option,
+`commentstring`, which the filetype plugin set when the file was opened.
+For TypeScript that option holds `// %s`, for SQL `-- %s`, for markdown
+`<!-- %s -->`. The plugin puts your line where the `%s` is. That is the
+entire mechanism, and it is why `gcc` does the right thing in a language
+the plugin has never heard of.
+
+Three buffers, one line to comment out in each:
+
+  1. `schema.sql` — the `DROP TABLE` at the bottom already ran in staging
+     and must not run again.
+  2. `README.md` — the sentence about the legacy `/v1/refunds` endpoint is
+     no longer true, and we want it out of the rendered page without
+     losing it.
+  3. `tsconfig.json` — `strictNullChecks` has to come off for one release.
+
+The third one will go wrong, and that is deliberate. Vim ships no
+`commentstring` for JSON, because JSON has no comments — but tsconfig is
+not really JSON and `//` works there. Set the option for that buffer
+before you toggle. Look at what `gcc` gives you if you do not.
+
+@keys
+| `:set commentstring?` | show what this buffer will use |
+| `:setlocal commentstring=//\ %s` | set it for this buffer only |
+| `gcc` | toggle the line |
+| `:bn` | next buffer |
+| `:wqa` | write and quit all three |
+
+@hints
+Two of the three need nothing but `gcc` and a way of getting to the right
+line.
+--
+For the JSON file, `:setlocal commentstring=//\ %s`. The backslash before
+the space is how you put a space in a `:set` value.
+--
+`G` `gcc` `:bn`, `/legacy` `Enter` `gcc` `:bn`,
+`:setlocal commentstring=//\ %s` `Enter`, `/strictNull` `Enter` `gcc`,
+`:wqa`.
+
+@solution
+    G  gcc  :bn<Enter>
+    /legacy<Enter>  gcc  :bn<Enter>
+    :setlocal commentstring=//\ %s<Enter>
+    /strictNull<Enter>  gcc
+    :wqa<Enter>
+
+Same three keystrokes in each buffer, three different results:
+
+    -- DROP TABLE refunds_old;
+    <!-- The legacy /v1/refunds endpoint ... -->
+    // "strictNullChecks": true,
+
+Note the markdown one wrapped the line on both sides. The plugin split
+`commentstring` at the `%s` and used whatever was on each side, so a
+two-sided comment syntax costs it no extra code.
+
+`setlocal` matters here and `set` would have been wrong: `commentstring`
+is buffer-local, so a global `set` would leak the JSON setting into
+whatever you opened next. When a fix is about *this file*, `setlocal` is
+almost always the one you want. And if you find yourself typing it in
+every tsconfig, that is an autocommand for your vimrc:
+
+    autocmd FileType json setlocal commentstring=//\ %s
+
+Which is chapter 27's machinery doing chapter 29's job. Most of what
+people call "configuring a plugin" is this: setting the vim options the
+plugin already reads, rather than options the plugin invented.
+
+@start pack/dojo/start/commentary/plugin/commentary.vim
+" dojo-commentary.vim - a small, honest commenting plugin.
+" Shipped inside this lesson. You did not install it; the dojo did.
+"
+"   gcc          toggle the comment on this line
+"   gc{motion}   toggle the comment on every line the motion covers
+"   {Visual}gc   toggle the comment on the selection
+"
+" It never guesses the comment syntax. It reads 'commentstring', which the
+" filetype plugin already set: // %s for typescript, -- %s for sql,
+" <!-- %s --> for markdown, # %s for yaml.
+
+if exists('g:loaded_dojo_commentary')
+  finish
+endif
+let g:loaded_dojo_commentary = 1
+
+function! s:parts() abort
+  let cms = &commentstring =~# '%s' ? &commentstring : '# %s'
+  let at = stridx(cms, '%s')
+  return [substitute(strpart(cms, 0, at), '\s*$', '', ''),
+        \ substitute(strpart(cms, at + 2), '^\s*', '', '')]
+endfunction
+
+function! s:rx(text) abort
+  return escape(a:text, '\.*$^~[]/')
+endfunction
+
+function! s:toggle(first, last) abort
+  let [open, close] = s:parts()
+  let head = '^\(\s*\)' . s:rx(open) . ' \?'
+  let tail = ' \?' . s:rx(close) . '\s*$'
+  let lines = getline(a:first, a:last)
+  let code = filter(copy(lines), 'v:val =~# "\\S"')
+  if empty(code)
+    return
+  endif
+  " Uncomment only when every non-blank line is already commented.
+  " Otherwise a half-commented block would flip into a mess.
+  let strip = 1
+  let indent = 999
+  for line in code
+    let strip = strip && line =~# head
+    let indent = min([indent, match(line, '\S')])
+  endfor
+  let n = a:first
+  for line in lines
+    if line =~# '\S'
+      if strip
+        let out = substitute(line, head, '\1', '')
+        let out = close ==# '' ? out : substitute(out, tail, '', '')
+      else
+        let body = open . ' ' . strpart(line, indent)
+        let out = strpart(line, 0, indent) . (close ==# '' ? body : body . ' ' . close)
+      endif
+      call setline(n, out)
+    endif
+    let n += 1
+  endfor
+endfunction
+
+function! s:opfunc(type) abort
+  call s:toggle(line("'["), line("']"))
+endfunction
+
+nnoremap <silent> gcc :<C-u>call <SID>toggle(line('.'), line('.'))<CR>
+nnoremap <silent> gc :<C-u>set operatorfunc=<SID>opfunc<CR>g@
+xnoremap <silent> gc :<C-u>call <SID>toggle(line("'<"), line("'>"))<CR>
+
+@start schema.sql
+CREATE TABLE refunds (
+  id CHAR(36) NOT NULL,
+  order_id CHAR(36) NOT NULL,
+  amount_minor INT NOT NULL,
+  settled_at DATETIME NULL,
+  PRIMARY KEY (id)
+);
+
+CREATE INDEX refunds_order_id_idx ON refunds (order_id);
+
+DROP TABLE refunds_old;
+
+@expected schema.sql
+CREATE TABLE refunds (
+  id CHAR(36) NOT NULL,
+  order_id CHAR(36) NOT NULL,
+  amount_minor INT NOT NULL,
+  settled_at DATETIME NULL,
+  PRIMARY KEY (id)
+);
+
+CREATE INDEX refunds_order_id_idx ON refunds (order_id);
+
+-- DROP TABLE refunds_old;
+
+@start README.md
+# Payments service
+
+Run `npm run db:migrate` before starting the service. The seed data is
+for local development only.
+
+The legacy /v1/refunds endpoint is still available for the mobile client.
+
+Webhook signatures are checked against the secret in the environment.
+
+@expected README.md
+# Payments service
+
+Run `npm run db:migrate` before starting the service. The seed data is
+for local development only.
+
+<!-- The legacy /v1/refunds endpoint is still available for the mobile client. -->
+
+Webhook signatures are checked against the secret in the environment.
+
+@start tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "strictNullChecks": true,
+    "outDir": "dist"
+  }
+}
+
+@expected tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    // "strictNullChecks": true,
+    "outDir": "dist"
+  }
+}

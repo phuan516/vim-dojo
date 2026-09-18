@@ -1,0 +1,151 @@
+@meta
+id: 23-08
+title: Blocks that fold themselves
+chapter: 23
+type: lesson
+skills: folds
+par: 60
+minutes: 6
+vscode: fold the object, select it, copy, paste, rename
+open: errors.json
+vimrc: set foldmethod=syntax
+
+@brief
+The error registry. This file opens with syntax folding on, so every
+`{ … }` object is a fold — and unlike indent folding, the fold runs
+from the line with the opening brace to the line with the closing one.
+That makes each entry exactly one closed line.
+
+Two changes. `LEGACY_REFUND_FAILED` is gone from the code; remove the
+entry. And payments need a new `PAYMENT_DECLINED_RETRYABLE` with the
+same status code and sentry flag as `PAYMENT_DECLINED`, placed directly
+after it.
+
+Both jobs are one closed fold and one linewise command.
+
+@keys
+| `zM` `zo` | close everything, then open the root object |
+| `zc` | close the fold the search opened |
+| `dd` on a closed fold | delete the whole entry |
+| `yy` `p` on a closed fold | copy the whole entry, paste after the fold |
+
+@hints
+Search for the entry. The search opens its fold; `zc` closes it again
+so it is one line.
+--
+`dd` on the closed `LEGACY_REFUND_FAILED` fold deletes all four lines.
+`yy` on the closed `PAYMENT_DECLINED` fold yanks all four, and `p`
+pastes them after the fold, not in the middle of it.
+--
+The pasted copy is a closed fold under the cursor. `e` goes to the end
+of `PAYMENT_DECLINED` on its first line, and `a_RETRYABLE` finishes it.
+
+@solution
+    /LEGACY<Enter> zc dd
+    /PAYMENT_DECLINED"<Enter> zc yyp ea_RETRYABLE<Esc>
+    :wq<Enter>
+
+Fifty-three keystrokes.
+
+Syntax folding asks the syntax file where the blocks are, and vim's
+JSON syntax marks every object and array as a fold. The result is the
+fold you wanted in the first place: brace to brace, key included. For
+a JSON, YAML or config file it is the right choice. For TypeScript the
+built-in syntax file does not define folds, so `indent` is the
+practical option there; plugins fill the gap in chapter 29.
+
+`p` after a closed fold pastes after the fold's last line, which is
+what keeps the pasted entry from landing inside the one you copied.
+The same is true of `o`. And `e`, `a` and the rest of the normal-mode
+editing keys work on a closed fold's first line without opening it.
+
+Check the commas if you ever move an entry to the end of an object.
+Folds are line ranges; they know nothing about JSON.
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": {
+    "statusCode": 404,
+    "sentry": false
+  },
+  "ORDER_ALREADY_SHIPPED": {
+    "statusCode": 409,
+    "sentry": false
+  },
+  "ORDER_NOT_PENDING": {
+    "statusCode": 409,
+    "sentry": false
+  },
+  "CUSTOMER_NOT_FOUND": {
+    "statusCode": 404,
+    "sentry": false
+  },
+  "LEGACY_REFUND_FAILED": {
+    "statusCode": 502,
+    "sentry": true
+  },
+  "PAYMENT_DECLINED": {
+    "statusCode": 402,
+    "sentry": false
+  },
+  "PAYMENT_PROVIDER_TIMEOUT": {
+    "statusCode": 504,
+    "sentry": true
+  },
+  "REFUND_FAILED": {
+    "statusCode": 502,
+    "sentry": true
+  },
+  "REFUND_WINDOW_EXPIRED": {
+    "statusCode": 409,
+    "sentry": false
+  },
+  "EMAIL_SEND_FAILED": {
+    "statusCode": 502,
+    "sentry": true
+  }
+}
+
+@expected errors.json
+{
+  "ORDER_NOT_FOUND": {
+    "statusCode": 404,
+    "sentry": false
+  },
+  "ORDER_ALREADY_SHIPPED": {
+    "statusCode": 409,
+    "sentry": false
+  },
+  "ORDER_NOT_PENDING": {
+    "statusCode": 409,
+    "sentry": false
+  },
+  "CUSTOMER_NOT_FOUND": {
+    "statusCode": 404,
+    "sentry": false
+  },
+  "PAYMENT_DECLINED": {
+    "statusCode": 402,
+    "sentry": false
+  },
+  "PAYMENT_DECLINED_RETRYABLE": {
+    "statusCode": 402,
+    "sentry": false
+  },
+  "PAYMENT_PROVIDER_TIMEOUT": {
+    "statusCode": 504,
+    "sentry": true
+  },
+  "REFUND_FAILED": {
+    "statusCode": 502,
+    "sentry": true
+  },
+  "REFUND_WINDOW_EXPIRED": {
+    "statusCode": 409,
+    "sentry": false
+  },
+  "EMAIL_SEND_FAILED": {
+    "statusCode": 502,
+    "sentry": true
+  }
+}

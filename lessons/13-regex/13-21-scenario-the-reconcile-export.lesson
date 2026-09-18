@@ -1,0 +1,199 @@
+@meta
+id: 13-21
+title: Scenario — the reconcile export
+chapter: 13
+type: scenario
+skills: regex-zs-ze, regex-classes, regex-quantifiers, regex-anchors, regex-verymagic, cgn, dot-repeat
+par: 108
+minutes: 14
+vscode: a spreadsheet for the CSV, three hand-edits in the TypeScript, and a diff you would not trust
+vimrc: set ignorecase smartcase
+open: reconcile.csv export.provider.ts README.md
+
+@brief
+A ticket, not an exercise.
+
+    FIN-212  Finance's reconciliation importer rejected last night's
+             file. Three things are wrong with it, and one of them is
+             in the code that produces it.
+
+Three files, open as three buffers. `:w` before `:bn` — vim will not
+let you leave a changed file otherwise — and finish with `:wqa`, not
+`:wq`, because there is more than one file open.
+
+  1. reconcile.csv — a refund is a negative amount, and a refunded row
+     must carry the status `REFUNDED`. Three negative rows still say
+     `PAID`. One negative row is already right and the positive `PAID`
+     rows are correct as they are.
+
+  2. reconcile.csv — the currency column must be upper case. Three rows
+     have it in lower case. Every other column keeps its case, and the
+     header row is not a data row.
+
+  3. export.provider.ts — the header string and the row builder still
+     call the column `ccy`. Finance's schema calls it `currency`.
+     Rename all three. The local `ccyCode` is not the column and keeps
+     its name.
+
+  4. README.md — nothing to change. It documents the format and is open
+     for reference. Touch it and the check fails.
+
+Every edit here is a pattern that lands on the right thing plus a
+change that repeats. The judgement is in the patterns: what is the
+context, and what is the match.
+
+@keys
+| `\zs` | context before, match after — so `cgn` changes only the match |
+| `\C` | this pattern is case-sensitive, whatever `ignorecase` says |
+| `[a-z]{3}` | three lower-case letters, under `\v` |
+| `cgn` then `.` | change the next match, then the next |
+| `gUgn` then `.` | upper-case the next match, then the next |
+| `<ccy>` | the whole word, under `\v` |
+| `:w` then `:bn` | write, next buffer |
+| `:wqa` | write everything and quit |
+
+@hints
+For the status column, the condition is the negative amount and the
+match is `PAID`. The two are separated by a comma. That is a `\zs`
+pattern.
+--
+For the currency, `ignorecase` is on and it makes `[a-z]` match
+capitals. Pin the case with `\C` — and remember that under `\v` a
+`{3}` is bare. Then `gUgn` upper-cases the match and `.` does the
+next one.
+--
+`ccy` is a whole word in the three places that change and part of a
+longer one in the place that does not. `\v<ccy>` says so. `cw` at the
+first, `n.` for the rest.
+--
+`:w`, `:bn`, and `:wqa` at the very end. `:wq` with three files open
+stops with "more files to edit".
+
+@solution
+**reconcile.csv** — `/\v,-\d+,\zsPAID` `Enter` lands on the `PAID` of
+the first negative row, and only negative rows: the amount is context.
+`cgnREFUNDED`, `Esc`, then `.` twice.
+
+Then `/\v\C,[a-z]{3},` `Enter` — three lower-case letters between
+commas, and `\C` so that the upper-case rows do not qualify. `gUgn`
+upper-cases the match, `.` twice more. `:w` and `:bn`.
+
+**export.provider.ts** — `/\v<ccy>` `Enter`, `cwcurrency`, `Esc`, then
+`n.` twice. `ccyCode` never matched. `:wqa`.
+
+**README.md** — not touched.
+
+About ninety keystrokes for three fixes across two files, and none of
+them involved reading the CSV. That is the thing to take from this
+chapter. A find-and-replace on `PAID` would have hit every row; a
+find-and-replace on `gbp` would have needed three runs and a check of
+the README. A pattern that carries its own condition — negative amount,
+lower-case letters, whole word — lands only where the edit belongs, and
+`cgn` with `.` does the rest one match at a time, each one visible
+before it changes.
+
+The `\C` is the detail most people miss. With `ignorecase` on, which
+is the setting nearly everyone runs, `[a-z]` silently means "any
+letter", and the currency pattern would have stopped on `GBP` first.
+Any pattern whose whole job is case needs the case pinned.
+
+@start reconcile.csv
+order_id,customer_id,currency,amount,status
+ord_9101,cus_4471,GBP,1499,PAID
+ord_9104,cus_1180,GBP,2599,PAID
+ord_9112,cus_4471,gbp,1499,PAID
+ord_9118,cus_3302,GBP,4200,PAID
+ord_9120,cus_2210,GBP,-2599,PAID
+ord_9125,cus_7754,EUR,15990,PENDING
+ord_9127,cus_1180,eur,2199,PAID
+ord_9131,cus_9021,GBP,-1499,REFUNDED
+ord_9134,cus_4471,GBP,899,PAID
+ord_9138,cus_3302,GBP,-4200,PAID
+ord_9140,cus_9021,gbp,1299,PAID
+ord_9142,cus_2210,EUR,-899,PAID
+
+@expected reconcile.csv
+order_id,customer_id,currency,amount,status
+ord_9101,cus_4471,GBP,1499,PAID
+ord_9104,cus_1180,GBP,2599,PAID
+ord_9112,cus_4471,GBP,1499,PAID
+ord_9118,cus_3302,GBP,4200,PAID
+ord_9120,cus_2210,GBP,-2599,REFUNDED
+ord_9125,cus_7754,EUR,15990,PENDING
+ord_9127,cus_1180,EUR,2199,PAID
+ord_9131,cus_9021,GBP,-1499,REFUNDED
+ord_9134,cus_4471,GBP,899,PAID
+ord_9138,cus_3302,GBP,-4200,REFUNDED
+ord_9140,cus_9021,GBP,1299,PAID
+ord_9142,cus_2210,EUR,-899,REFUNDED
+
+@start export.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderRepository } from '../order/order.repository';
+import { DEFAULT_CCY } from './export.constants';
+
+const header = 'order_id,customer_id,ccy,amount,status';
+
+@injectable()
+export class ExportProvider {
+  constructor(@inject(OrderRepository) protected orderRepository: OrderRepository) {}
+
+  public async reconcile(args: { from: Date; to: Date }) {
+    const orders = await this.orderRepository.findMany({
+      where: { placedAt: { gte: args.from, lt: args.to } },
+    });
+
+    return [header, ...orders.map((order) => this.row(order))].join('\n');
+  }
+
+  public row(order: { id: string; customerId: string; ccy?: string; total: number; status: string }) {
+    const ccyCode = order.ccy ?? DEFAULT_CCY;
+
+    return [order.id, order.customerId, ccyCode, order.total, order.status].join(',');
+  }
+}
+
+@expected export.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderRepository } from '../order/order.repository';
+import { DEFAULT_CCY } from './export.constants';
+
+const header = 'order_id,customer_id,currency,amount,status';
+
+@injectable()
+export class ExportProvider {
+  constructor(@inject(OrderRepository) protected orderRepository: OrderRepository) {}
+
+  public async reconcile(args: { from: Date; to: Date }) {
+    const orders = await this.orderRepository.findMany({
+      where: { placedAt: { gte: args.from, lt: args.to } },
+    });
+
+    return [header, ...orders.map((order) => this.row(order))].join('\n');
+  }
+
+  public row(order: { id: string; customerId: string; currency?: string; total: number; status: string }) {
+    const ccyCode = order.currency ?? DEFAULT_CCY;
+
+    return [order.id, order.customerId, ccyCode, order.total, order.status].join(',');
+  }
+}
+
+@start README.md
+# Reconciliation export
+
+Produced nightly by `ExportProvider.reconcile` and collected by finance
+over SFTP at 02:00.
+
+## Columns
+
+| column      | notes                                        |
+|-------------|----------------------------------------------|
+| order_id    | `ord_` followed by digits                    |
+| customer_id | `cus_` followed by digits                    |
+| currency    | ISO 4217, upper case: `GBP`, `EUR`           |
+| amount      | minor units; negative for a refund           |
+| status      | `PAID`, `PENDING` or `REFUNDED`              |
+
+A negative amount must carry the status `REFUNDED`. The importer
+rejects the whole file on the first row that breaks this.

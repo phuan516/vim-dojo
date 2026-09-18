@@ -1,0 +1,224 @@
+@meta
+id: 32-16
+title: Retire a feature flag
+chapter: 32
+type: scenario
+skills: multi-file-refactor, ex-shift, global-delete, op-linewise
+par: 142
+minutes: 12
+vscode: delete the if, reindent by hand, miss the else
+open: src/domain/order/checkout.provider.ts src/configuration/flags.json src/configuration/flags.ts src/domain/order/checkout.resolver.ts CHANGELOG.md
+vimrc: set hidden shiftwidth=2 expandtab
+
+@brief
+    FLAG-62  `expressCheckout` has been at 100% for six weeks. Retire
+             it. The flag goes, the branch it guarded stays, and the
+             old path goes with the flag.
+
+Four files:
+
+  1. checkout.provider.ts — `checkout` branches on the flag. The
+     express path is now the only path: it keeps its code but loses a
+     level of indentation, and the old charge-then-update path below it
+     goes entirely.
+
+  2. flags.json — the entry goes.
+
+  3. flags.ts — the field goes.
+
+  4. checkout.resolver.ts — the flag is no longer reported to the
+     client, so that line goes too.
+
+CHANGELOG.md records the rollout and stays as it is.
+
+The interesting file is the provider. Deleting a conditional is not
+deleting lines that contain the condition — it is promoting one branch
+and deleting the other, and the promotion is an indentation change.
+
+@keys
+| `dd` | delete this line |
+| `6<<` | shift six lines one level left |
+| `8dd` | delete eight lines |
+| `:g/pat/d` | delete every matching line in this buffer |
+| `:bn` `:wqa` | next buffer, write everything |
+
+@hints
+Do the provider in three moves, in this order: remove the `if` line,
+dedent the branch that survives, then remove everything from the `if`'s
+closing brace down to the end of the old path.
+--
+`<<` shifts a line left by one `shiftwidth`, and it takes a count like
+everything else. The surviving branch is six lines, so `6<<` from its
+first line does the whole promotion in three keystrokes.
+--
+After the dedent the cursor is still on the first line of the branch.
+`6j` lands on the `}` that used to close the `if`, and from there `8dd`
+takes that brace, the blank line, the old charge call and the old update
+block.
+
+@solution
+`/if (this.flags.expressCheckout)` `Enter` `dd` `6<<` `6j` `8dd`, then
+`:bn` `:g/expressCheckout/d` three times, then `:wqa`. 123 keystrokes.
+
+**`<<` with a count is the promotion.** The usual instinct after deleting
+an `if` is to visually select the block and press `<`, which works and
+costs a mode change and a motion. `6<<` is the same thing in three
+keystrokes and leaves the cursor where it started, which is what makes
+the `6j` afterwards countable. If you would rather not count, `>i{` and
+`<i{` shift everything inside the surrounding braces — but here the
+braces you want are the ones you are about to delete, so a count is
+simpler.
+
+**Delete the branch, not the condition.** The line that mentions
+`expressCheckout` is one of fifteen lines this change removes from the
+provider. Searching for the flag name and deleting the lines that match
+it — which is what `:g/expressCheckout/d` would do here — leaves both
+branches in place, back to back, and the second one unreachable. That is
+a real review comment on real flag-removal MRs, and it is why this file
+is the one part of the ticket you do by hand.
+
+**The other three are `:g`.** In the JSON, the type and the resolver, the
+flag genuinely is one line each, identified by its name, and the same
+command works in all three buffers. Two shapes of change, two tools, in
+one ticket.
+
+One habit worth keeping for flag removal specifically: work the flag out
+of the code first and delete the flag's definition last. If you delete
+the definition first, the compiler stops being able to tell you where the
+remaining uses are, and you are back to grepping.
+
+@start src/domain/order/checkout.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class CheckoutProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    return this.orderRepository.findOne({ where: { id } });
+  }
+
+  public async checkout(id: string) {
+    const order = await this.findOne(id);
+
+    if (this.flags.expressCheckout) {
+      await this.paymentService.authorise(order.id, order.total);
+
+      return this.orderRepository.update({
+        where: { id },
+        values: { status: 'PENDING' },
+      });
+    }
+
+    await this.paymentService.charge(order.id, order.total);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'PENDING' },
+    });
+  }
+}
+
+@expected src/domain/order/checkout.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class CheckoutProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    return this.orderRepository.findOne({ where: { id } });
+  }
+
+  public async checkout(id: string) {
+    const order = await this.findOne(id);
+
+    await this.paymentService.authorise(order.id, order.total);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'PENDING' },
+    });
+  }
+}
+
+@start src/configuration/flags.json
+{
+  "expressCheckout": true,
+  "giftReceipts": false,
+  "saveCardOnFile": true
+}
+
+@expected src/configuration/flags.json
+{
+  "giftReceipts": false,
+  "saveCardOnFile": true
+}
+
+@start src/configuration/flags.ts
+export type Flags = {
+  expressCheckout: boolean;
+  giftReceipts: boolean;
+  saveCardOnFile: boolean;
+};
+
+@expected src/configuration/flags.ts
+export type Flags = {
+  giftReceipts: boolean;
+  saveCardOnFile: boolean;
+};
+
+@start src/domain/order/checkout.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { CheckoutProvider } from './checkout.provider';
+
+@injectable()
+export class CheckoutResolver {
+  constructor(@inject(CheckoutProvider) protected checkoutProvider: CheckoutProvider) {}
+
+  public async checkoutOptions() {
+    return {
+      expressCheckout: this.flags.expressCheckout,
+      giftReceipts: this.flags.giftReceipts,
+      saveCardOnFile: this.flags.saveCardOnFile,
+    };
+  }
+}
+
+@expected src/domain/order/checkout.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { CheckoutProvider } from './checkout.provider';
+
+@injectable()
+export class CheckoutResolver {
+  constructor(@inject(CheckoutProvider) protected checkoutProvider: CheckoutProvider) {}
+
+  public async checkoutOptions() {
+    return {
+      giftReceipts: this.flags.giftReceipts,
+      saveCardOnFile: this.flags.saveCardOnFile,
+    };
+  }
+}
+
+@start CHANGELOG.md
+# Changelog
+
+## 2024-09-30
+- expressCheckout rolled out to 100% of traffic.
+
+## 2024-08-18
+- expressCheckout rolled out to 50% of traffic.
+
+## 2024-07-01
+- expressCheckout added behind a flag, 5% of traffic.

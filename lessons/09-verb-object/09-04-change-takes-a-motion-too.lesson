@@ -1,0 +1,90 @@
+@meta
+id: 09-04
+title: Change takes a motion too
+chapter: 09
+type: lesson
+skills: op-motion
+par: 34
+minutes: 4
+vscode: double-click the identifier and type over it
+open: customer.provider.ts
+
+@brief
+The error code in this provider is wrong. The registry calls it
+`CUSTOMER_NOT_FOUND`; the provider throws `CUSTOMER_MISSING`, so the
+handler never matches it and the API returns a 500.
+
+Rename the thrown code to `CUSTOMER_NOT_FOUND` and save. The quotes stay
+as they are.
+
+@keys
+| `cw` | change from the cursor to the end of this word |
+| `ce` | the same thing, spelled with a different motion |
+| `fC` | forward to the next capital C |
+
+@hints
+`d` is not the only operator that takes a motion. Every one of them does,
+and the one that deletes and drops you into insert mode is `c`.
+--
+`cw` deletes the word from the cursor onwards and leaves you typing. An
+underscore is a word character, so `CUSTOMER_MISSING` is one word, not
+two.
+--
+`10G` to the `throw` line, `fC` onto the `C` of the code, then `cw`, type
+the new code, `Esc`.
+
+@solution
+    10G fC cw CUSTOMER_NOT_FOUND <Esc> :wq<Enter>
+
+Most of those keystrokes are the new name, which is the sign of an edit
+done properly — you paid for the text you wanted and nothing else.
+
+`cw` has one wrinkle worth knowing now rather than being surprised by
+later. `dw` deletes up to the start of the next word, space included.
+`cw` does not: it behaves like `ce` and stops at the end of the current
+word, leaving the space alone. Vim special-cases it, because changing a
+word and then having to retype the space that followed it would be
+maddening.
+
+That is the only place in the grammar where an operator quietly alters its
+motion. Everywhere else, the motion means exactly what it means on its
+own — which is why `cw` on whitespace, or in the middle of a word, does
+what the plain `w` would have told you it does.
+
+Two habits follow. Use `ce` if you want to stop guessing which rule
+applies; it is unambiguous. And use `f` to land on the thing you are about
+to operate on, rather than counting `w` presses past dots and brackets.
+
+@start customer.provider.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class CustomerProvider {
+  public async findOne(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_MISSING');
+    }
+
+    return customer;
+  }
+}
+
+@expected customer.provider.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class CustomerProvider {
+  public async findOne(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return customer;
+  }
+}

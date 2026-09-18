@@ -1,0 +1,426 @@
+@meta
+id: 32-06
+title: Boss — partial refunds, six files
+chapter: 32
+type: boss
+skills: feature-implementation, multi-file-refactor, obj-brace, obj-quote, buffer-switch
+par: 830
+minutes: 24
+vscode: six tabs, a lot of typing, one missed layer
+open: src/domain/order/order.entity.ts src/domain/order/order.repository.ts src/configuration/errors/default.json src/domain/order/order.provider.ts src/domain/order/order.resolver.ts test/order.provider.test.ts test/factories/order.factory.ts
+vimrc: set hidden
+
+@brief
+    PAY-455  Support want to refund part of an order instead of all of
+             it. The column landed last sprint and the test factory was
+             updated with it, which is why the build is currently red:
+             `refundedTotal` exists in the database and in the factory
+             and nowhere in the TypeScript.
+
+             Take it the rest of the way through the stack.
+
+Six files, in the order they are open.
+
+  1. order.entity.ts — `refundedTotal: number;` directly under `total`.
+
+  2. order.repository.ts — map it in `toEntity`, directly under `total`.
+
+  3. errors/default.json — `REFUND_EXCEEDS_TOTAL`, a 409, not sent to
+     Sentry, directly under `ORDER_ALREADY_SHIPPED`.
+
+  4. order.provider.ts — a `refundPartial(id: string, amount: number)`
+     below `cancel`, one blank line between them:
+
+         const order = await this.findOne(id);
+         refuse with REFUND_EXCEEDS_TOTAL when
+           order.refundedTotal + amount > order.total
+         await this.paymentService.refund(order.id, amount);
+         return the repository update with
+           values: { refundedTotal: order.refundedTotal + amount }
+
+  5. order.resolver.ts — `refundOrder` below `cancelOrder`, taking
+     `args: { id: string; amount: number }` and calling
+     `this.orderProvider.refundPartial(args.id, args.amount)`.
+
+  6. order.provider.test.ts — one more `it`, below the existing one,
+     named `refuses to refund more than the order total`. Build the
+     order with `orderFactory({ total: 5000, refundedTotal: 4000 })`,
+     stub `findOne` the same way, and expect
+     `provider.refundPartial(order.id, 2000)` to reject with
+     `REFUND_EXCEEDS_TOTAL`.
+
+The factory is open for reference and does not change. Neither does the
+migration under prisma/.
+
+Par is 830 keystrokes. Typing the four new blocks out by hand runs well
+over a thousand. Every one of the new blocks is a near copy of something
+already in the file it belongs to.
+
+@keys
+| `15Y` then `p` | yank a method with its blank line, put it back below |
+| `ciw` | change the word under the cursor |
+| `ci(` `ci{` `ci'` `ci"` | change inside the brackets, braces, quotes |
+| `f)` `i` | append just before the closing bracket |
+| `:s/old/new/g` | this line only |
+| `:bn` `:wqa` | next buffer, write everything |
+
+@hints
+Work in the order the buffers are open. That order is not an accident:
+every file tells you the name you need in the next one, and the test is
+last because it exercises everything above it.
+--
+Four of the six edits are duplicate-and-edit. The entity's new field is
+the `total` line copied and one word changed. The JSON is the
+ALREADY_SHIPPED line copied and one string changed. The repository line
+is a copy with two words changed, which is `:s/total/refundedTotal/g`
+over that one line. The resolver method is `cancelOrder` copied with
+three edits.
+--
+For the provider: put the cursor on the blank line above `cancel` and
+yank fifteen lines — the gap and the whole method. Move to the closing
+brace of `cancel` and put. You now have a correctly spaced second method
+whose body is already the right shape, and five small edits to make on
+it.
+--
+Edit the copy by searching forwards. Every string you need to change
+occurs first in the original and second in the copy, and you are sitting
+below the original, so `/SHIPPED` `Enter` goes straight to the copy's
+copy of it. This is why editing the lower duplicate is easier than
+editing the upper one.
+
+@solution
+A route that measures 723 keystrokes. It is long, but there are only two
+ideas in it.
+
+**entity** `/total: number` `Enter` `yyp` `ciwrefundedTotal` `Esc`
+
+**repository** `:bn` `/total: record` `Enter` `yyp` `:s/total/refundedTotal/g`
+— two words on one line, and a line-scoped substitution is shorter than
+two `ciw`s and cannot land on the wrong one.
+
+**errors** `:bn` `/ALREADY_SHIPPED` `Enter` `yyp` `ci"REFUND_EXCEEDS_TOTAL`
+`Esc` — the status code and the Sentry flag were already right, which is
+the whole argument for copying the neighbouring line instead of typing a
+new one.
+
+**provider** `:bn` `/public async cancel` `Enter` `k` `15Y` `14j` `p`.
+The `k` is the important keystroke: it puts the blank line into the yank,
+so the copy arrives correctly spaced and you never type or count a blank
+line. Then, on the copy:
+
+    www ciwrefundPartial Esc         the method name
+    f) i, amount: number Esc         the second parameter
+    /=== 'SHIPPED' Enter             jumps to the copy, not the original
+    ci(order.refundedTotal + amount > order.total Esc
+    /ALREADY_SHIPPED Enter  ci'REFUND_EXCEEDS_TOTAL Esc
+    /order.id) Enter  ci(order.id, amount Esc
+    /status: 'CANCELLED' Enter
+    ci{ refundedTotal: order.refundedTotal + amount  Esc
+
+**resolver** `:bn` `/cancelOrder` `Enter` `k` `4Y` `3j` `p`, then
+`www` `ciwrefundOrder` `Esc`, `f{` `ci{ id: string; amount: number ` `Esc`,
+`/cancel(args` `Enter` `ciwrefundPartial` `Esc` `f)` `i, args.amount` `Esc`.
+
+**test** `:bn` `/refuses to cancel` `Enter` `k` `7Y` `6j` `p`, then on the
+copy: `f'` `ci'refuses to refund more than the order total` `Esc`,
+`j0f{` `ci{ total: 5000, refundedTotal: 4000 ` `Esc`,
+`/cancel(order` `Enter` `ciwrefundPartial` `Esc` `f)` `i, 2000` `Esc`
+`f'` `ci'REFUND_EXCEEDS_TOTAL` `Esc`.
+
+Then `:wqa`.
+
+Two ideas, then.
+
+**Copy the neighbour.** Every new block in this ticket already exists
+four lines away with two or three words different. Copying it brings the
+indentation, the spacing, the trailing commas and the house style with
+it, free and correct. Typing it brings your best recollection of the
+house style. On a six-file ticket the difference is not the keystrokes,
+it is the three review comments you do not get.
+
+**Search forwards into the copy.** Once the copy is below the original,
+every distinctive string in it has exactly one occurrence between you and
+it. So `/SHIPPED` `Enter` is a reliable "go to the next thing I have to
+change" and you never look at a line number. That is what makes the edit
+sequence above readable as a list of decisions rather than as navigation.
+
+The thing that separates this from the same work in an editor with a
+mouse is not speed. It is that at no point did you scroll, and at no
+point did you retype something that already existed. Those two habits are
+what the last thirty-one chapters were for.
+
+@start src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@expected src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  refundedTotal: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}
+
+@expected src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      refundedTotal: record.refundedTotal,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}
+
+@start src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@expected src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "REFUND_EXCEEDS_TOTAL": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async refundPartial(id: string, amount: number) {
+    const order = await this.findOne(id);
+
+    if (order.refundedTotal + amount > order.total) {
+      throw exception('REFUND_EXCEEDS_TOTAL');
+    }
+
+    await this.paymentService.refund(order.id, amount);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { refundedTotal: order.refundedTotal + amount },
+    });
+  }
+}
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@expected src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+
+  public async refundOrder(_: unknown, args: { id: string; amount: number }) {
+    return this.orderProvider.refundPartial(args.id, args.amount);
+  }
+}
+
+@start test/order.provider.test.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from '../src/domain/order/order.provider';
+import { OrderRepository } from '../src/domain/order/order.repository';
+import { PaymentService } from '../src/infrastructure/services/payment.service';
+import { orderFactory } from './factories/order.factory';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const provider = new OrderProvider(orderRepository, paymentService);
+
+  afterEach(() => jest.resetAllMocks());
+
+  it('refuses to cancel an order that has shipped', async () => {
+    const order = orderFactory({ status: 'SHIPPED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+
+    await expect(provider.cancel(order.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+  });
+});
+
+@expected test/order.provider.test.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from '../src/domain/order/order.provider';
+import { OrderRepository } from '../src/domain/order/order.repository';
+import { PaymentService } from '../src/infrastructure/services/payment.service';
+import { orderFactory } from './factories/order.factory';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const provider = new OrderProvider(orderRepository, paymentService);
+
+  afterEach(() => jest.resetAllMocks());
+
+  it('refuses to cancel an order that has shipped', async () => {
+    const order = orderFactory({ status: 'SHIPPED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+
+    await expect(provider.cancel(order.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+  });
+
+  it('refuses to refund more than the order total', async () => {
+    const order = orderFactory({ total: 5000, refundedTotal: 4000 });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+
+    await expect(provider.refundPartial(order.id, 2000)).rejects.toThrow('REFUND_EXCEEDS_TOTAL');
+  });
+});
+
+@start test/factories/order.factory.ts
+import { Order } from '../../src/domain/order/order.entity';
+
+export const orderFactory = (overrides: Partial<Order> = {}): Order => ({
+  id: 'ord_7f3a',
+  customerId: 'cus_91bd',
+  status: 'PENDING',
+  total: 5000,
+  refundedTotal: 0,
+  ...overrides,
+});
+
+@start prisma/migrations/20240901_refunded_total/migration.sql
+ALTER TABLE orders ADD COLUMN refunded_total INT NOT NULL DEFAULT 0;

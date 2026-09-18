@@ -1,0 +1,87 @@
+@meta
+id: 22-04
+title: Drill — the block and its braces
+chapter: 22
+type: drill
+skills: visual-line
+par: 16
+minutes: 5
+reps: 8
+vscode: click the fold arrow, select the folded line, Delete
+open: order.provider.ts
+
+@brief
+Eight times: delete the `if` block in `cancel` — the `if` line, its
+body, and the closing brace. Three lines, gone, nothing else touched.
+
+`%` jumps between matching brackets. Inside a line-wise selection it
+takes every line between the two braces with it.
+
+@keys
+| `V` | line-wise selection |
+| `$` | end of the line, where the `{` is |
+| `%` | jump to the matching bracket, extending the selection |
+| `d` | delete the selection |
+
+@hints
+Search for `if`, then `$` puts the cursor on the opening brace. `V`
+before or after the `$`, it does not matter — line-wise does not care
+about the column.
+--
+`/if` `Enter`, `$V%d`. Watch the three lines highlight before you press
+`d`; that is the whole reason to do it this way rather than counting.
+
+@solution
+    /if<Enter> $ V % d :wq<Enter>
+
+Twelve keystrokes. `d%` from the brace would delete character-wise
+from `{` to `}` and leave the `if (...)` stub behind. Making it
+line-wise first is what turns a bracket match into a block delete, and
+it works on a three-line `if` and a three-hundred-line class alike.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  public async cancel(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  public async cancel(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}

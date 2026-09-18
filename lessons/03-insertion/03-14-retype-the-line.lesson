@@ -1,0 +1,48 @@
+@meta
+id: 03-14
+title: Drill — retype the line
+chapter: 03
+type: drill
+skills: insert-ctrl-w
+reps: 8
+par: 40
+minutes: 5
+vscode: triple-click, retype
+open: standup.md
+
+@brief
+Eight times: the Blocked line is out of date and nothing in it is worth
+keeping. Get to the end of it, clear it, and type the new one.
+
+`Blocked: waiting on finance` is what it should say.
+
+@keys
+| `A` | append at the end of the line |
+| `Ctrl-U` | clear the line back to the indent |
+| `Esc` | out |
+
+@hints
+`A` first. `Ctrl-U` deletes what is before the cursor, so the cursor has
+to be at the end for it to take the whole line.
+--
+`A` `Ctrl-U` is two keys pressed as one movement. Do not look at the line
+in between them.
+
+@solution
+    A <Ctrl-U> Blocked: waiting on finance <Esc> :wq<Enter>
+
+Thirty-four keystrokes, twenty-seven of them the new line.
+
+Worth noticing as you repeat it: the cost of the edit is now entirely the
+typing. There is no selecting, no dragging, no measuring how much to
+delete. That is the state you want every small edit to reach, and it is
+why the keys in this chapter are worth drilling rather than reading.
+
+`Ctrl-U` respects the indent, so this works exactly the same on a line
+buried four levels deep in a class.
+
+@start standup.md
+Blocked: nothing
+
+@expected standup.md
+Blocked: waiting on finance

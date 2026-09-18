@@ -1,0 +1,274 @@
+@meta
+id: 16-18
+title: When tabs are wrong
+chapter: 16
+type: lesson
+skills: tabpages, buffer-switch
+par: 105
+minutes: 7
+vscode: five tabs, and the one you want is never the one you are on
+open: order.entity.ts order.provider.ts order.repository.ts order.resolver.ts errors.json
+vimrc: set hidden
+
+@brief
+Five files, three of them need the same one-word change, and the
+instinct from VS Code is to give each file a tab and click along the
+row. Do the arithmetic first. `:tabnew order.provider.ts` is twenty-six
+keystrokes before you have edited anything, and finding the right page
+later is `gt` pressed until it looks right. `:b prov` is eight and
+lands. The par on this lesson is set so that the tab route cannot make
+it; that is the lesson.
+
+The status `SHIPPED` is being renamed `DISPATCHED`. It is a value, not
+an error code, so:
+
+  1. `order.entity.ts`: `'SHIPPED'` in the `OrderStatus` union.
+  2. `order.provider.ts`: both places the value appears, in `ship` and
+     in `cancel`. The error code `ORDER_ALREADY_SHIPPED` is a public
+     name and stays exactly as it is.
+  3. `order.repository.ts`: the `status` in `findShipped`'s where
+     clause.
+
+The resolver and the errors file are open and do not change. `hidden`
+is on, so hop freely and write once at the end.
+
+@keys
+| `:b prov` `:b rep` | there, and there |
+| `gt` | the thing you are not doing |
+| `n` then `.` | next match, same change |
+
+@hints
+`/SHIPPED'` with the closing quote finds the value. In the provider
+it would also match the end of the error code, but both values come
+before it in the file, so `n` reaches them first.
+--
+In the provider, `cw`, type the new word, `Esc`, then `n` and `.` for
+the second one. The third match is the error code; stop before it.
+--
+`:b rep`, same search, same `cw`. Then `:wqa`.
+
+@solution
+    /SHIPPED'<Enter>  cw DISPATCHED <Esc>
+    :b prov<Enter>  /SHIPPED'<Enter>  cw DISPATCHED <Esc>  n  .
+    :b rep<Enter>  /SHIPPED'<Enter>  cw DISPATCHED <Esc>  :wqa<Enter>
+
+Ninety-one keystrokes for three files. Ten of them are switching.
+
+Now the honest case for tabs. Use one when you want a second layout
+you will come back to: code on the left and its test on the right in
+one page, the schema and the migration in another. Do not use one per
+file. That habit imports the worst part of the VS Code workflow, the
+strip of names you scan with your eyes, into an editor whose whole
+design is that you name the thing you want and it appears. If you
+find yourself with more than two or three tab pages, something has
+gone wrong upstream, and the fix is `:b`.
+
+@start order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@expected order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'DISPATCHED' | 'CANCELLED';
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_NOT_PENDING');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_NOT_PENDING');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'DISPATCHED' },
+    });
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'DISPATCHED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findShipped(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, status: 'SHIPPED', deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}
+
+@expected order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findShipped(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, status: 'DISPATCHED', deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}
+
+@start order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async shipOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.ship(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_NOT_PENDING": { "statusCode": 409, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}

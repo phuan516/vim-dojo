@@ -1,0 +1,61 @@
+@meta
+id: 11-03
+title: Drill — dw then dot, eight times
+chapter: 11
+type: drill
+skills: dot-repeat
+par: 23
+minutes: 5
+reps: 8
+vscode: eight double-clicks and eight Deletes
+open: review.md
+
+@brief
+Eight review comments, each one still labelled `draft`. Strip the label
+off all eight. One `dw`, then `j.` to the bottom of the file.
+
+Nothing to work out. The rhythm is the whole exercise: move, dot, move,
+dot, without looking down at your hands.
+
+@keys
+| `dw` | delete the word and the space after it |
+| `j` | down a line, same column |
+| `.` | again |
+
+@hints
+`dw` once at the top. After that you are only ever pressing two keys per
+line.
+--
+Do not re-type `dw` on line two. If your fingers want to, that is exactly
+the habit this drill exists to break.
+
+@solution
+    dw  then  j.  seven times
+
+Twenty keystrokes for eight edits, and only one of them was a decision.
+
+The reason to drill this rather than just know it: `.` pays off when it is
+automatic. The moment you have to stop and ask "is the dot still holding
+what I want?" you have already lost the time it saves. After a few hundred
+repetitions your hand reaches for `j.` before the thought finishes, and
+that is when repeated edits stop being work.
+
+@start review.md
+draft the refund guard needs a test for the boundary day
+draft this catch swallows the payment error, log it
+draft customerId is read twice, hoist it
+draft prefer the repository over a raw prisma call here
+draft this string should come from the errors file
+draft the retry count is duplicated in three places
+draft toEntity should not expose the deleted column
+draft name this after the class, not the interface
+
+@expected review.md
+the refund guard needs a test for the boundary day
+this catch swallows the payment error, log it
+customerId is read twice, hoist it
+prefer the repository over a raw prisma call here
+this string should come from the errors file
+the retry count is duplicated in three places
+toEntity should not expose the deleted column
+name this after the class, not the interface

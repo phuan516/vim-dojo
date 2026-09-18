@@ -1,0 +1,111 @@
+@meta
+id: 24-01
+title: The shape of a command
+chapter: 24
+type: lesson
+skills: ex-delete
+par: 14
+minutes: 4
+vscode: scroll to it, click, shift-click, Delete
+open: orders.fixture.ts
+
+@brief
+A bad merge left the `ord_1002` fixture in the file twice. The second
+copy, lines 14 to 19, has to go. The first copy and everything around
+it stays exactly as it is.
+
+You have typed a lot of colon commands by now: `:wq`, `:s`, `:g`, `:bn`.
+This chapter is about what they have in common. Every one of them has
+the same three parts: a *range* that says which lines, a *command* that
+says what to do, and an *argument* that says how. `:%s/a/b/g` is range
+`%`, command `s`, argument `/a/b/g`. `:wq` is no range, command `wq`,
+no argument.
+
+The command here is `d`, delete. It is the same delete as `dd`, but it
+takes a range instead of a motion, which means you do not need to move
+the cursor to the lines first. Give it the two line numbers and press
+Enter.
+
+@keys
+| `:14,19d` | delete lines 14 to 19, wherever the cursor is |
+| `:d` | delete the current line |
+| `:5d` | delete line 5 |
+
+@hints
+The line numbers are down the left edge. The block to remove starts at
+the second `{` for `ord_1002` and ends at its `},`.
+--
+Two line numbers separated by a comma, then `d`. Nothing else. The
+cursor can stay on line 1.
+--
+`:14,19d` and Enter, then `:wq`.
+
+@solution
+    :14,19d<Enter>  :wq<Enter>
+
+Twelve keystrokes, and the cursor never left line 1.
+
+`14G6dd` would have done it in six. That is not the point. The point is
+that `:14,19d` is a sentence in a small language, and every command in
+this chapter is the same sentence with a different verb. `:14,19m0`
+moves those lines to the top. `:14,19t$` copies them to the bottom.
+`:14,19>` indents them. `:14,19j` joins them. Once the shape is in your
+hands, each new command costs you one letter to learn.
+
+The range can be a single line (`:5d`), two lines (`:14,19d`), or
+nothing at all, which means the current line (`:d`). `.` is the current
+line, `$` the last, `%` the whole file, and a mark works too (`:'a,'bd`).
+Chapter 25 adds patterns and offsets to that list. For now, line numbers
+are enough, and they are right there in the gutter.
+
+@start orders.fixture.ts
+export const orders = [
+  {
+    id: 'ord_1001',
+    customerId: 'cus_501',
+    status: 'PENDING',
+    total: 4200,
+  },
+  {
+    id: 'ord_1002',
+    customerId: 'cus_502',
+    status: 'SHIPPED',
+    total: 1899,
+  },
+  {
+    id: 'ord_1002',
+    customerId: 'cus_502',
+    status: 'SHIPPED',
+    total: 1899,
+  },
+  {
+    id: 'ord_1003',
+    customerId: 'cus_501',
+    status: 'CANCELLED',
+    total: 650,
+    cancellationReason: 'REFUND_WINDOW_EXPIRED',
+  },
+];
+
+@expected orders.fixture.ts
+export const orders = [
+  {
+    id: 'ord_1001',
+    customerId: 'cus_501',
+    status: 'PENDING',
+    total: 4200,
+  },
+  {
+    id: 'ord_1002',
+    customerId: 'cus_502',
+    status: 'SHIPPED',
+    total: 1899,
+  },
+  {
+    id: 'ord_1003',
+    customerId: 'cus_501',
+    status: 'CANCELLED',
+    total: 650,
+    cancellationReason: 'REFUND_WINDOW_EXPIRED',
+  },
+];

@@ -1,0 +1,71 @@
+@meta
+id: 20-15
+title: What you just ran
+chapter: 20
+type: lesson
+skills: register-named
+par: 61
+minutes: 5
+vscode: retype the find-and-replace into a comment and hope it matches
+open: seed.sql
+
+@brief
+Three more read-only registers record what you just did. `":` holds the
+last command line you ran, without the colon. `"/` holds the last
+search pattern. `".` holds the last text you typed in insert mode. They
+exist so you can put a thing you did into the file, exactly, instead of
+remembering it.
+
+The `customer_ref` column was renamed to `customer_id` in the last
+migration and this seed file has not caught up. Rename it everywhere in
+one substitute. Then, on a new line directly under the header comment,
+record exactly what you ran, in the form `-- applied: %s/.../.../g`,
+by putting the register rather than retyping the command.
+
+@keys
+| `":p` | put the last command line |
+| `"/p` | put the last search pattern |
+| `".p` | put the last inserted text |
+| `@:` | run the last command line again |
+
+@hints
+Run the substitute first. Whatever you type after the colon is what
+`":` will hold, so type it the way you want it recorded.
+--
+`gg` back to the header, `o` to open the line under it, type the
+prefix, `Esc`, then `":p`.
+--
+`:%s/customer_ref/customer_id/g` Enter, `gg`, `o-- applied: ` `Esc`,
+`":p`.
+
+@solution
+    :%s/customer_ref/customer_id/g<Enter>  gg o-- applied: <Esc> ":p  :wq<Enter>
+
+The recorded line cannot disagree with what actually ran, which is the
+point of putting it rather than typing it. The same register is what
+`@:` replays, so a long substitute or `:g` command you want to run
+again on another range is one keystroke away rather than a retype.
+
+`"/` after that substitute holds `customer_ref` — a substitute sets the
+search pattern too, which is why `n` finds the next old name after
+`:s`. `".` holds `-- applied: `, the last thing you typed in insert
+mode; it is the register behind the `.` command's typing, and `".p`
+is occasionally the quickest way to type the same words on a line where
+`.` would do the wrong thing.
+
+@start seed.sql
+-- seed: orders and refunds for the local environment
+
+INSERT INTO orders (id, customer_ref, status, total) VALUES ('ord_001', 'cus_042', 'PENDING', 1999);
+INSERT INTO orders (id, customer_ref, status, total) VALUES ('ord_002', 'cus_017', 'SHIPPED', 4500);
+INSERT INTO orders (id, customer_ref, status, total) VALUES ('ord_003', 'cus_042', 'CANCELLED', 2750);
+INSERT INTO refunds (id, order_id, customer_ref, amount) VALUES ('ref_001', 'ord_003', 'cus_042', 2750);
+
+@expected seed.sql
+-- seed: orders and refunds for the local environment
+-- applied: %s/customer_ref/customer_id/g
+
+INSERT INTO orders (id, customer_id, status, total) VALUES ('ord_001', 'cus_042', 'PENDING', 1999);
+INSERT INTO orders (id, customer_id, status, total) VALUES ('ord_002', 'cus_017', 'SHIPPED', 4500);
+INSERT INTO orders (id, customer_id, status, total) VALUES ('ord_003', 'cus_042', 'CANCELLED', 2750);
+INSERT INTO refunds (id, order_id, customer_id, amount) VALUES ('ref_001', 'ord_003', 'cus_042', 2750);

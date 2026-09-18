@@ -1,0 +1,165 @@
+@meta
+id: 15-02
+title: The anchor decides who goes
+chapter: 15
+type: lesson
+skills: global-delete
+par: 22
+minutes: 5
+vscode: search for //, look at each result, decide, delete, repeat
+open: order.provider.ts
+
+@brief
+A colleague debugged `OrderProvider` by commenting things out instead of
+deleting them, and the review has asked for the corpse to be removed.
+Every line that is nothing but commented-out code goes.
+
+The trap is that the file also has real comments, the short ones at the
+end of a line of live code. Those stay, and so does the code in front of
+them. A pattern that just says "contains two slashes" would take the
+live lines with the dead ones.
+
+The `:g` pattern is a full regex, the same dialect you used in chapter
+13. The thing that separates a dead line from a live one here is not
+what it contains but where the slashes sit: at the start of the line,
+after nothing but indentation. Say that, and only the dead lines match.
+
+@keys
+| `:g/pattern/d` | delete every line matching `pattern` |
+| `^` | in a pattern, the start of the line |
+| `\s*` | any amount of whitespace |
+| `\/` | a literal slash inside a slash-delimited pattern |
+
+@hints
+Look at what a dead line and a live line have in common, then at what
+they do not. The slashes are on both. Their position is not.
+--
+Anchor the pattern to the start of the line, allow for the indentation,
+then the two slashes. Each slash needs a backslash in front of it,
+because a bare slash would end the pattern early.
+--
+`:g/^\s*\/\//d` and Enter. Nine dead lines go; the four lines with a
+trailing comment do not move.
+
+@solution
+    :g/^\s*\/\//d<Enter>  :wq<Enter>
+
+The `^` is the whole lesson. Without it the pattern matches thirteen
+lines and deletes four lines of working code. With it, nine. Whenever
+you reach for `:g` with a `d` after it, the question to ask is not "what
+do the lines I want contain" but "what do the lines I do not want
+contain that mine do not". Anchors, `^` and `$`, are usually the answer.
+
+The backslashes in `\/\/` are unlovely. Vim lets you use almost any
+punctuation as the delimiter instead of `/`, so `:g#^\s*//#d` is the
+same command with nothing to escape. Worth knowing for patterns full of
+slashes, like paths and URLs.
+
+And as before: `:g/^\s*\/\/` with no `d` prints the candidates first.
+For a destructive command on a file you did not write, that preview is
+the professional habit.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+// import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    // @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+    // console.log('findOne', id, order);
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND'); // 404, not sentry
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+    // const customer = await this.customerRepository.findOne({ where: { id: order.customerId } });
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED'); // finance asked for 409 here
+    }
+
+    await this.paymentService.refund(order.id);
+    // await this.emailService.send(customer.email, 'order-cancelled', { order });
+    // console.log('refund done', order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' }, // reason is optional
+    });
+  }
+
+  public async markShipped(id: string) {
+    const order = await this.findOne(id);
+    // if (order.status === 'CANCELLED') {
+    //   throw exception('ORDER_ALREADY_CANCELLED');
+    // }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' }, // shippedAt is set by the trigger
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND'); // 404, not sentry
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED'); // finance asked for 409 here
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' }, // reason is optional
+    });
+  }
+
+  public async markShipped(id: string) {
+    const order = await this.findOne(id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' }, // shippedAt is set by the trigger
+    });
+  }
+}

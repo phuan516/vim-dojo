@@ -1,0 +1,79 @@
+@meta
+id: 25-10
+title: The search you already did
+chapter: 25
+type: lesson
+skills: range-pattern
+par: 24
+minutes: 5
+vscode: find the word, look, scroll to the next one, select the gap, delete
+open: incident.log
+
+@brief
+An on-call paste with two gateway failures in it. The first one retried
+and settled — noise. The second one is the incident. Trim the noise: from
+the first `ERROR` line down to the line just above the second `ERROR`.
+
+You will search for `ERROR` to find the top of that block anyway. Having
+searched, you should not have to type the pattern a second time: `\/` is
+an address meaning "the next line matching the search I last used", and
+`\?` is the same backwards. They read the same register the `n` key does.
+
+@keys
+| `\/` | as an address: next match of the last search pattern |
+| `\?` | previous match of the last search pattern |
+| `:.,\/-1d` | from here to one line above the next match |
+| `\&` | next match of the last *substitute* pattern |
+
+@hints
+Search for `ERROR` first. That puts you on the top line of the block and
+loads the pattern.
+--
+The bottom of the block is one line above the next match, which is
+`\/-1`.
+--
+`/ERROR` Enter, then `:.,\/-1d` Enter, then `:wq`.
+
+@solution
+    /ERROR<Enter>  :.,\/-1d<Enter>  :wq<Enter>
+
+Twenty keystrokes for a block whose length you never counted.
+
+`\/` matters more than it looks. Retyping a pattern is not just extra
+keys — it is a second chance to type it differently from the first, and
+an address that quietly matches the wrong line is a bad way to find out.
+Searching once and referring to that search keeps the two ends honest.
+
+It also composes with everything else in the chapter:
+
+    :\?,\/d              from the previous match to the next one
+    :.,\/-1>             indent to just above the next match
+    :\/+1,$d             everything below the next match
+
+`n` and `N` share the same pattern, so a workflow of "search, look at
+one hit, then act from the cursor to the following hit" never needs the
+pattern typed twice. And `\&` reaches for the last `:s` pattern instead,
+which is different from the search pattern more often than you expect.
+
+@start incident.log
+2026-03-01 09:11:58 INFO  order ord_1001 accepted
+2026-03-01 09:12:04 INFO  payment authorised for ord_1001
+2026-03-01 09:12:05 ERROR gateway timeout for ord_1001
+2026-03-01 09:12:07 WARN  retrying payment for ord_1001 in 2s
+2026-03-01 09:12:09 WARN  retrying payment for ord_1001 in 4s
+2026-03-01 09:12:13 INFO  payment authorised for ord_1001
+2026-03-01 09:12:14 INFO  order ord_1001 confirmed
+2026-03-01 09:41:06 ERROR gateway timeout for ord_1002
+2026-03-01 09:41:08 WARN  retrying payment for ord_1002 in 2s
+2026-03-01 09:41:12 WARN  retrying payment for ord_1002 in 4s
+2026-03-01 09:41:20 ERROR gateway refused connection for ord_1002
+2026-03-01 09:41:20 INFO  refund queued for ord_1002
+
+@expected incident.log
+2026-03-01 09:11:58 INFO  order ord_1001 accepted
+2026-03-01 09:12:04 INFO  payment authorised for ord_1001
+2026-03-01 09:41:06 ERROR gateway timeout for ord_1002
+2026-03-01 09:41:08 WARN  retrying payment for ord_1002 in 2s
+2026-03-01 09:41:12 WARN  retrying payment for ord_1002 in 4s
+2026-03-01 09:41:20 ERROR gateway refused connection for ord_1002
+2026-03-01 09:41:20 INFO  refund queued for ord_1002

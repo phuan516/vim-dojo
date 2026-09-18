@@ -1,0 +1,336 @@
+@meta
+id: 17-17
+title: Scenario — refunds need a reason
+chapter: 17
+type: scenario
+skills: jumplist, marks-set, marks-jump, mark-backtick, search-slash, op-motion
+par: 300
+minutes: 15
+vscode: four tabs, a lot of Ctrl+Tab, and Go to Definition when the language server is awake
+open: order.provider.ts payment.service.ts order.entity.ts order.resolver.ts default.json
+vimrc: set hidden
+
+@brief
+A ticket, not an exercise.
+
+    PAY-207  Finance's export needs a reason against every refund.
+             Thread a `reason` string from the GraphQL mutation down
+             to the payment gateway, and store it on the order.
+
+Five files are open as buffers. Four change; one does not.
+
+  1. order.provider.ts — `cancel` takes `reason: string` as a second
+     parameter, passes it as the second argument to
+     `paymentService.refund`, and adds `refundReason: reason` to the
+     update values after `status: 'CANCELLED'`.
+
+  2. payment.service.ts — `refund` takes `reason: string` as a second
+     parameter and sends it in the request body: `{ orderId, reason }`.
+
+  3. order.entity.ts — `Order` gains `refundReason?: string;` under
+     `cancellationReason?`.
+
+  4. order.resolver.ts — `cancelOrder` accepts `reason: string` in its
+     args type, after `id: string`, and passes `args.reason` to the
+     provider.
+
+  5. default.json — already has every code you need. Leave it alone.
+
+Start in the provider, on the refund call. You will be leaving it for
+the service and coming back to it, and the whole of this chapter has
+been about doing that without searching twice. Every file except the
+JSON is graded.
+
+@keys
+| `mA` `` `A `` | global mark, and back to it from any file |
+| `Ctrl-O` | back through the jumplist, across files |
+| `:b name` | switch to the buffer whose name contains `name` |
+| `f)` `t}` | onto the paren, up to before the brace |
+| `:wqa` | write everything, quit |
+
+@hints
+Do the provider's signature and the refund call together, then mark
+the refund line before leaving for the service, since the update
+values you still have to edit are just below it.
+--
+In the service, `/refund(` from the top of the file finds the
+signature. The body's `{ orderId }` is the next line: `j` then `t}`.
+--
+Back in the provider, `/CANCELLED` and `t}` get you to the update
+values. Then the entity and the resolver are one insert each, and the
+resolver's second edit is on the line below its first; `0` before
+`f)` because `j` keeps the column you ended the insert on.
+--
+Par assumes each new piece of text is typed exactly once and no line
+is ever retyped. Roughly two hundred and sixty keystrokes, most of
+them the new code.
+
+@solution
+One route, buffer by buffer.
+
+**order.provider.ts** — `/cancel(` Enter, `f)i, reason: string` Esc.
+`/refund(` Enter, `mA`, `f)i, reason` Esc.
+
+**payment.service.ts** — `:b payment`. `/refund(` Enter,
+`f)i, reason: string` Esc, `j` `t}i, reason` Esc.
+
+**order.provider.ts again** — `` `A ``. `/CANCELLED` Enter,
+`t}i, refundReason: reason` Esc.
+
+**order.entity.ts** — `:b entity`. `/cancellationReason` Enter,
+`orefundReason?: string;` Esc.
+
+**order.resolver.ts** — `:b resolver`. `/cancelOrder` Enter,
+`t}i; reason: string` Esc, `j` `0f)i, args.reason` Esc.
+
+`:wqa`.
+
+Nothing in this ticket is hard. The point is how much of it is
+*navigation* rather than editing: nine jumps across four files, and
+the code you typed is a handful of short inserts. In VS Code you
+would have done it with tabs and the mouse and it would have taken
+about as long. The difference is that this route never loses its
+place, because every departure from a line was paired with a way
+back that does not depend on remembering where you were.
+
+`` `A `` was the right key for the return to the provider because you
+had made two jumps inside the service and were not going to count
+them. `Ctrl-O` twice would have done the same. Either is fine; what is
+not fine is `:b provider` followed by scrolling.
+
+The JSON file is there to be left alone, and to notice that `:b
+default` is never typed. Buffers you do not touch cost nothing.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { CustomerProvider } from '../customer/customer.provider';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerProvider) protected customerProvider: CustomerProvider,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async create(args: { customerId: string; total: number }) {
+    const customer = await this.customerProvider.findOne(args.customerId);
+
+    const order = await this.orderRepository.create({
+      values: { customerId: customer.id, total: args.total, status: 'PENDING' },
+    });
+
+    await this.emailService.send({ orderId: order.id, template: 'order_confirmation' });
+
+    return order;
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_NOT_PENDING');
+    }
+
+    await this.orderRepository.update({ where: { id }, values: { status: 'SHIPPED' } });
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { CustomerProvider } from '../customer/customer.provider';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerProvider) protected customerProvider: CustomerProvider,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async create(args: { customerId: string; total: number }) {
+    const customer = await this.customerProvider.findOne(args.customerId);
+
+    const order = await this.orderRepository.create({
+      values: { customerId: customer.id, total: args.total, status: 'PENDING' },
+    });
+
+    await this.emailService.send({ orderId: order.id, template: 'order_confirmation' });
+
+    return order;
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_NOT_PENDING');
+    }
+
+    await this.orderRepository.update({ where: { id }, values: { status: 'SHIPPED' } });
+
+    return order;
+  }
+
+  public async cancel(id: string, reason: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id, reason);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED', refundReason: reason },
+    });
+  }
+}
+
+@start payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string) {
+    const response = await this.http.post(`/refunds`, { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@expected payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string, reason: string) {
+    const response = await this.http.post(`/refunds`, { orderId, reason });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@start order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@expected order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+  refundReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@expected order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string; reason: string }) {
+    return this.orderProvider.cancel(args.id, args.reason);
+  }
+}
+
+@start default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_NOT_PENDING": { "statusCode": 409, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}

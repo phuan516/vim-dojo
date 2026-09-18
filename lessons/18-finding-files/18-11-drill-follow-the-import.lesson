@@ -1,0 +1,110 @@
+@meta
+id: 18-11
+title: Drill — follow the import
+chapter: 18
+type: drill
+skills: edit-file, find-path
+par: 29
+minutes: 5
+reps: 8
+vscode: Ctrl+click, edit, Ctrl+S
+open: src/domain/order/order.resolver.ts
+
+@brief
+Eight times: from the resolver, follow the `./order.provider` import
+with `gf`, change the code the provider throws from `ORDER_NOT_FOUND`
+to `ORDER_MISSING`, save, quit.
+
+The import is on line 2. Do not open the provider any other way.
+
+@keys
+| `gf` | open the file named under the cursor |
+| `cw` | change to the end of the word |
+
+@hints
+`j` to the import line, `f'` onto the path, `gf`.
+--
+`/NOT_` lands inside the code. `cwMISSING` replaces `NOT_FOUND` because
+underscores are word characters, so the word runs to the closing quote.
+
+@solution
+    j f' gf /NOT_<Enter> cwMISSING <Esc> :wq<Enter>
+
+By the last rep `jf'gf` should be one gesture. In a real file the import
+you want is rarely on line 2, but `/order.prov` Enter then `gf` is the
+same shape, and searching for the import is faster than reading for it.
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+}
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_MISSING');
+    }
+
+    return order;
+  }
+}
+
+@start src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+    };
+  }
+}

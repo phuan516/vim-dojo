@@ -1,0 +1,109 @@
+@meta
+id: 14-09
+title: The whole word and nothing else
+chapter: 14
+type: lesson
+skills: sub-basic
+par: 28
+minutes: 5
+vscode: Ctrl-H with the "match whole word" toggle on
+open: export.parser.ts
+
+@brief
+The variable `line` in this parser is being renamed `row`, because
+`line` is what the product team call the items on an order and the
+name has caused two bugs already. The `line` field on `ExportRow`
+goes with it, and so does the comment that describes it.
+
+Look at what else is in the file before you type anything:
+`lineNumber`, `newline`, `pipeline`, `isOnline`. A pattern of `line`
+matches inside every one of them, and `:%s/line/row/g` would leave you
+with `rowNumber`, `newrow` and `piperow`. Chapter 13 gave you the
+anchors that stop a pattern matching inside a longer word. This is
+where they pay for themselves.
+
+@keys
+| `\<` `\>` | start of a word, end of a word — anchors, they match no text |
+| `:%s/\<line\>/row/g` `Enter` | only `line` as a whole word |
+| `\v<line>` | the same in very magic |
+
+@hints
+The problem is not the range and not the flags. It is that the pattern
+is too loose. Tighten it.
+--
+`\<` matches at the start of a word and `\>` at the end. Wrap the
+word in them and it can no longer match inside `lineNumber`.
+--
+`:%s/\<line\>/row/g` and Enter. Seven changes, and every decoy in the
+file is left alone.
+
+@solution
+    :%s/\<line\>/row/g<Enter>  :wq<Enter>
+
+Twenty-three keystrokes, four of them anchors.
+
+Word boundaries are the single most useful thing to add to a rename.
+They cost four keystrokes and turn a dangerous substitute into a safe
+one for the most common kind of collision, which is the short name
+that appears inside longer names. `*` in chapter 12 added them for you
+without asking; in a substitute you add them yourself.
+
+They are not a complete answer. `\<status\>` still matches `status`
+inside a string a customer reads, or in a URL, because a quote and a
+slash are word boundaries too. The anchors know about letters, not
+about meaning. The next lesson is about the cases the pattern cannot
+catch, and the tool for those.
+
+@start export.parser.ts
+export type ExportRow = { id: string; status: string; total: number; line: number };
+
+// The export is newline-delimited, one order per line, pipe-separated.
+export function parseExport(raw: string) {
+  const results: ExportRow[] = [];
+  let lineNumber = 0;
+
+  for (const line of raw.split(/\r?\n/)) {
+    lineNumber += 1;
+
+    if (line.trim() === '' || line.startsWith('#')) {
+      continue;
+    }
+
+    const [id, status, total] = line.split('|');
+
+    results.push({ id, status, total: Number(total), line: lineNumber });
+  }
+
+  return results;
+}
+
+export function isOnline(pipeline: string) {
+  return pipeline.startsWith('online-');
+}
+
+@expected export.parser.ts
+export type ExportRow = { id: string; status: string; total: number; row: number };
+
+// The export is newline-delimited, one order per row, pipe-separated.
+export function parseExport(raw: string) {
+  const results: ExportRow[] = [];
+  let lineNumber = 0;
+
+  for (const row of raw.split(/\r?\n/)) {
+    lineNumber += 1;
+
+    if (row.trim() === '' || row.startsWith('#')) {
+      continue;
+    }
+
+    const [id, status, total] = row.split('|');
+
+    results.push({ id, status, total: Number(total), row: lineNumber });
+  }
+
+  return results;
+}
+
+export function isOnline(pipeline: string) {
+  return pipeline.startsWith('online-');
+}

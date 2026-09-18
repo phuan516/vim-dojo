@@ -1,0 +1,171 @@
+@meta
+id: 15-07
+title: Any normal command, on every match
+chapter: 15
+type: lesson
+skills: global-normal
+par: 39
+minutes: 6
+vscode: multi-cursor on every console.log, Home, type the slashes
+open: order.provider.ts
+
+@brief
+The debug prints in `OrderProvider` are wanted for one more day, so
+they are not to be deleted. Comment them out instead: every
+`console.log` line gets `// ` in front of it, after the indentation.
+Seven of them.
+
+In chapter 11 you did this with `I// ` on one line and `j.` on the
+rest, which is fine for three lines and tedious for thirty. `:g` can run
+a substitute on each line, but a substitute that has to preserve
+indentation is ugly to write.
+
+There is a third option, and it is the reason this chapter exists. The
+command after the pattern does not have to be an Ex command. It can be
+`normal`, followed by any sequence of ordinary normal-mode keys. Those
+keys are then replayed on every marked line, as if you had moved there
+and typed them yourself.
+
+@keys
+| `:g/pattern/normal keys` | on every matching line, type `keys` as if in normal mode |
+| `I` | insert at the first non-blank character of the line |
+
+@hints
+The command you would type by hand on one line is `I// ` then `Esc`. Get
+`:g` to type it for you.
+--
+After the pattern, write `normal` and a space, then the keys exactly as
+you would press them. You do not need the `Esc`: when the keys run out,
+vim leaves insert mode by itself.
+--
+`:g/console\.log/normal I// ` and Enter. Note the space after the
+slashes; it is part of the text being inserted.
+
+@solution
+    :g/console\.log/normal I// <Enter>  :wq<Enter>
+
+Thirty-two keystrokes for seven lines, and it stays thirty-two for
+seventy.
+
+`:normal` is the bridge between the two halves of vim. Everything you
+have learned since chapter 1 was normal-mode keys, and `:g` was an Ex
+command that could only run other Ex commands. `:g//normal` joins them:
+any keystroke sequence you know becomes a per-line loop, driven by a
+pattern. There is nothing to learn about the keys themselves; `I// ` is
+the same `I// ` from chapter 11. What is new is the machine that types
+it for you.
+
+One mechanical detail. A `:normal` sequence that ends in insert mode is
+ended for you; vim behaves as if you had pressed `Esc`. So you can leave
+the `Esc` off the end. You cannot leave one out of the middle, and the
+next lessons will show what to do about that.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    console.log('findOne', id);
+    const order = await this.orderRepository.findOne({ where: { id } });
+    console.log('findOne result', order);
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    console.log('cancel', id);
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      console.log('cancel refused, already shipped', id);
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    console.log('refunding', order.id, order.total);
+    await this.paymentService.refund(order.id);
+    console.log('refund done', order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async markShipped(id: string) {
+    const order = await this.findOne(id);
+    console.log('markShipped', order.id, order.status);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    // console.log('findOne', id);
+    const order = await this.orderRepository.findOne({ where: { id } });
+    // console.log('findOne result', order);
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    // console.log('cancel', id);
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      // console.log('cancel refused, already shipped', id);
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    // console.log('refunding', order.id, order.total);
+    await this.paymentService.refund(order.id);
+    // console.log('refund done', order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async markShipped(id: string) {
+    const order = await this.findOne(id);
+    // console.log('markShipped', order.id, order.status);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+}

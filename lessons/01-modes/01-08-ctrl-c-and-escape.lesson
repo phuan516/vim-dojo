@@ -1,0 +1,66 @@
+@meta
+id: 01-08
+title: Ctrl-C and Escape are not twins
+chapter: 01
+type: lesson
+skills: esc, mode-awareness, cmdline, insert-i
+par: 14
+minutes: 4
+vscode: Ctrl-C copies — here it does nothing of the kind
+open: config.ts
+
+@brief
+`Esc` is a long way from the home row, and sooner or later somebody tells
+you that `Ctrl-C` does the same job. Nearly. It leaves insert mode, it
+cancels a half-typed command line, and it interrupts a command that is
+taking too long.
+
+What it skips is the tidying up vim does on the way out of insert mode:
+abbreviations do not expand, and anything configured to run when insert
+mode ends does not run. In a plain vim you will not notice. In a vim with
+a plugin or two, you will, and it will look like the plugin is broken.
+
+The timeout in config.ts is ten times too small. It should be `300`.
+Make the change, and this once leave insert mode with `Ctrl-C` instead of
+`Esc` so you have felt the difference.
+
+@keys
+| `Ctrl-C` | leave insert mode, skipping the usual exit work |
+| `Ctrl-C` | on the command line, cancel it |
+| `Esc` | leave insert mode properly |
+
+@hints
+`$` lands on the last character of the line, which is the comma. You want
+to type to the left of it.
+--
+`i` inserts before the character the cursor is on. One character is all
+you are adding.
+--
+`jj` to the timeout line, `$`, `i`, the new digit, then `Ctrl-C`, then
+save and quit.
+
+@solution
+    j j $ i 0 <Ctrl-C> :wq<Enter>
+
+Use `Esc`. That is the honest recommendation. `Ctrl-C` is the right key in
+exactly one common situation — a command that has run away from you, a
+search over a huge file or a mistaken `:g`, where it is the interrupt and
+`Esc` is not.
+
+The wider point is that vim gives you more than one way out of a mode and
+they differ in the details. `Esc`, `Ctrl-C` and `Ctrl-[` all get you to
+normal mode; `Ctrl-[` is `Esc` exactly, the same byte on the wire, which
+is why some people use it and never reach for the far corner of the
+keyboard.
+
+@start config.ts
+export const config = {
+  port: 4000,
+  timeout: 30,
+};
+
+@expected config.ts
+export const config = {
+  port: 4000,
+  timeout: 300,
+};

@@ -1,0 +1,302 @@
+@meta
+id: 23-07
+title: Read a long file as a table of contents
+chapter: 23
+type: lesson
+skills: folds
+par: 31
+minutes: 6
+vscode: Fold All in the command palette, then scroll
+open: order.provider.ts
+vimrc: set foldmethod=indent
+
+@brief
+This provider has grown to nine methods and over a hundred lines. The
+file opens with folding by indentation switched on, and every fold
+closed: the whole class body is a single line on your screen.
+
+Open just enough to see the method signatures and nothing else. Read
+them. Every method that reads data is named `find…` — except one,
+which someone named `get…`. Rename it to match, in its definition and
+at its single call site. Nothing else in the file changes.
+
+@keys
+| `zo` `zc` | open, close the fold under the cursor |
+| `zR` | open every fold in the file |
+| `zM` | close every fold in the file |
+| `zr` `zm` | open, close one more level everywhere |
+| `zj` `zk` | move to the start of the next fold, the end of the previous |
+
+@hints
+The cursor starts on line 1, which is outside every fold. `zj` moves
+to the first fold; `zo` opens it one level, which shows the signatures
+with the bodies still closed. `zr` does the same from anywhere.
+--
+With bodies folded, the class is nine lines of signatures. The odd one
+out is easy to spot. `zR` opens everything if you want to see the
+bodies again; `zM` closes it all.
+--
+Once you know the name: `/getOrder` lands on it, `3s` replaces `get`
+with what you type, and `n` then `.` does the caller.
+
+@solution
+    zj zo (read the signatures)
+    /getOrder<Enter> 3sfind<Esc> n . :wq<Enter>
+
+Twenty-seven keystrokes, and the reading was free.
+
+`foldmethod=indent` builds folds from indentation: every line indented
+deeper than the one above starts a fold. It needs no setup and works
+in any language that indents consistently, which is every codebase
+that runs a formatter. Its weakness is that a method's closing brace
+is outside the body fold, so you see the signature and the brace, and
+one line of fold text between them. For reading, that is exactly what
+you want.
+
+The levels matter. `foldlevel` is how many levels are open; the file
+starts at zero, so the class body itself is closed. `zr` raises the
+level by one and `zm` lowers it, which is the fastest way to say "show
+me signatures but not bodies". `zR` and `zM` are the extremes. `zo`
+and `zc` work on one fold; `zO` and `zC` on it and everything inside.
+
+The search opened the fold it landed in. That is the `foldopen` option
+doing its job: searches, marks and jumps open whatever they land in,
+so folds never hide the thing you asked for.
+
+`foldmethod=syntax` is the other automatic one, and it is the subject
+of the next lesson. `set foldmethod=indent` in your vimrc is a
+reasonable default; chapter 28 is where that file gets written.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { CustomerRepository } from '../customer/customer.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+import { PlaceOrderInput } from './order.types';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(customerId: string) {
+    const customer = await this.customerRepository.findOne({ where: { id: customerId } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return this.orderRepository.findByCustomer({ customerId });
+  }
+
+  public async findRecent(days: number) {
+    const since = new Date(Date.now() - days * 86_400_000);
+
+    return this.orderRepository.findPlacedSince({ since });
+  }
+
+  public async place(input: PlaceOrderInput) {
+    const customer = await this.customerRepository.findOne({ where: { id: input.customerId } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    const total = input.lines.reduce((sum, line) => sum + line.price * line.quantity, 0);
+
+    return this.orderRepository.create({
+      values: { customerId: customer.id, status: 'PENDING', total, placedAt: new Date() },
+    });
+  }
+
+  public async getOrderTotals(customerId: string) {
+    const orders = await this.findByCustomer(customerId);
+
+    return orders.reduce((sum, order) => sum + order.total, 0);
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    const days = (Date.now() - order.placedAt.getTime()) / 86_400_000;
+
+    if (days <= 30) {
+      await this.paymentService.refund(order.id);
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_NOT_PENDING');
+    }
+
+    await this.emailService.send({
+      to: order.customerId,
+      template: 'ORDER_SHIPPED',
+      variables: { orderId: order.id },
+    });
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+
+  public async findOverdue() {
+    const cutoff = new Date(Date.now() - 14 * 86_400_000);
+    const pending = await this.orderRepository.findPending();
+
+    return pending.filter((order) => order.placedAt < cutoff);
+  }
+
+  public async findLifetimeValue(customerId: string) {
+    const total = await this.getOrderTotals(customerId);
+    const refunds = await this.paymentService.refundsFor(customerId);
+
+    return total - refunds.reduce((sum, refund) => sum + refund.amount, 0);
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { CustomerRepository } from '../customer/customer.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+import { PlaceOrderInput } from './order.types';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(customerId: string) {
+    const customer = await this.customerRepository.findOne({ where: { id: customerId } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return this.orderRepository.findByCustomer({ customerId });
+  }
+
+  public async findRecent(days: number) {
+    const since = new Date(Date.now() - days * 86_400_000);
+
+    return this.orderRepository.findPlacedSince({ since });
+  }
+
+  public async place(input: PlaceOrderInput) {
+    const customer = await this.customerRepository.findOne({ where: { id: input.customerId } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    const total = input.lines.reduce((sum, line) => sum + line.price * line.quantity, 0);
+
+    return this.orderRepository.create({
+      values: { customerId: customer.id, status: 'PENDING', total, placedAt: new Date() },
+    });
+  }
+
+  public async findOrderTotals(customerId: string) {
+    const orders = await this.findByCustomer(customerId);
+
+    return orders.reduce((sum, order) => sum + order.total, 0);
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    const days = (Date.now() - order.placedAt.getTime()) / 86_400_000;
+
+    if (days <= 30) {
+      await this.paymentService.refund(order.id);
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_NOT_PENDING');
+    }
+
+    await this.emailService.send({
+      to: order.customerId,
+      template: 'ORDER_SHIPPED',
+      variables: { orderId: order.id },
+    });
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+
+  public async findOverdue() {
+    const cutoff = new Date(Date.now() - 14 * 86_400_000);
+    const pending = await this.orderRepository.findPending();
+
+    return pending.filter((order) => order.placedAt < cutoff);
+  }
+
+  public async findLifetimeValue(customerId: string) {
+    const total = await this.findOrderTotals(customerId);
+    const refunds = await this.paymentService.refundsFor(customerId);
+
+    return total - refunds.reduce((sum, refund) => sum + refund.amount, 0);
+  }
+}

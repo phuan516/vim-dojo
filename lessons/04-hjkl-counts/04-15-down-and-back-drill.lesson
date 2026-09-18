@@ -1,0 +1,83 @@
+@meta
+id: 04-15
+title: Drill — down, edit, back up, edit
+chapter: 04
+type: drill
+skills: count-prefix, relativenumber
+par: 30
+minutes: 5
+reps: 8
+vscode: two clicks and a scroll
+open: staging.env
+vimrc: set relativenumber
+
+@brief
+Eight times, in this order: append `  # ok` — two spaces, hash, space,
+`ok` — to the last line of the file, then append the same thing to the
+`WEBHOOK_SECRET` line, then save and quit.
+
+Down with a count, up with a count. No arrow keys, no scrolling. Read the margin both times, because
+after the first edit every number on it has changed.
+
+@keys
+| `18j` | down eighteen lines |
+| `9k` | up nine lines |
+| `A` | append at the end of the line |
+
+@hints
+The second jump is upward, and its count is not the one you just used.
+--
+Read, jump, edit, read again. Never reuse a number after you have moved.
+
+@solution
+    18j A <space><space># ok <Esc> 9k A <space><space># ok <Esc> :wq<Enter>
+
+Twenty-five keystrokes.
+
+The mistake this drill exists to burn out is reusing a stale number. You
+read `18` off the margin, you jump, and the whole margin silently
+renumbers itself around your new position. Half of all missed jumps in
+your first month will be a number you read before the last move rather
+than after it.
+
+@start staging.env
+# staging environment
+APP_NAME=payments
+LOG_LEVEL=debug
+PORT=4000
+DATABASE_URL=postgres://payments@database:5432/payments
+REDIS_URL=redis://cache:6379
+QUEUE_PREFIX=staging
+PROVIDER_BASE_URL=https://sandbox.provider.test
+PROVIDER_TIMEOUT_MS=30000
+WEBHOOK_SECRET=set-me
+RETRY_ATTEMPTS=6
+RETRY_BACKOFF_MS=2000
+REFUND_WINDOW_DAYS=90
+EXPORT_SCHEDULE=0 * * * *
+FEATURE_PARTIAL_REFUNDS=false
+FEATURE_INSTANT_PAYOUT=false
+METRICS_PORT=9100
+SENTRY_DSN=
+TRACE_SAMPLE_RATE=0.1
+
+@expected staging.env
+# staging environment
+APP_NAME=payments
+LOG_LEVEL=debug
+PORT=4000
+DATABASE_URL=postgres://payments@database:5432/payments
+REDIS_URL=redis://cache:6379
+QUEUE_PREFIX=staging
+PROVIDER_BASE_URL=https://sandbox.provider.test
+PROVIDER_TIMEOUT_MS=30000
+WEBHOOK_SECRET=set-me  # ok
+RETRY_ATTEMPTS=6
+RETRY_BACKOFF_MS=2000
+REFUND_WINDOW_DAYS=90
+EXPORT_SCHEDULE=0 * * * *
+FEATURE_PARTIAL_REFUNDS=false
+FEATURE_INSTANT_PAYOUT=false
+METRICS_PORT=9100
+SENTRY_DSN=
+TRACE_SAMPLE_RATE=0.1  # ok

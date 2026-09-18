@@ -1,0 +1,149 @@
+@meta
+id: 30-04
+title: Jump to it, and come back
+chapter: 30
+type: lesson
+skills: ctags, goto-definition
+par: 82
+minutes: 6
+vscode: F12 to go, Alt-Left to come back
+vimrc: set hidden
+open: src/domain/order/order.provider.ts
+
+@brief
+`cancel` writes a `refundReceipt` into the order, but nothing ever sets
+`receiptId`, so this file does not compile. The receipt comes back from
+the refund call; the refund call currently returns the whole gateway
+response.
+
+Two edits, one at each end of the same jump.
+
+  1. At the definition of `issueRefund`, return `response.data.receiptId`
+     rather than `response.data`.
+  2. Back at the call site, capture it: `const receiptId = await …`.
+
+`Ctrl-]` is `:tag` for the word under the cursor, and `Ctrl-T` is the way
+back. They are a stack, not a toggle: jump three definitions deep and
+three `Ctrl-T` presses unwind you exactly the way you came.
+
+@keys
+| `Ctrl-]` | jump to the definition of the word under the cursor |
+| `Ctrl-T` | pop back one level of the tag stack |
+| `:tags` | show the stack, deepest last |
+| `:pop` | the long form of `Ctrl-T` |
+
+@hints
+Search for `issueRefund` to get the cursor on the call, then `Ctrl-]`.
+--
+At the definition, the line to change is the `return`. `f;` puts you on
+the semicolon and `i` types in front of it.
+--
+`Ctrl-T` brings you back to the exact character you left from, so the
+second edit starts with `^` and an insert.
+
+@solution
+    /issueRefund<Enter>  Ctrl-]
+    /response\.data<Enter>  f; i .receiptId <Esc>
+    Ctrl-T  ^ i const receiptId =  <Esc>  :wqa<Enter>
+
+Note what you did not do: you did not know which file `issueRefund` was
+in, you did not open a file browser, and you did not lose your place.
+That is the whole of F12 and Alt-Left, from a text file that `ctags`
+wrote.
+
+`:tags` prints the stack. It is worth looking at once, because it
+explains the behaviour that confuses people: `Ctrl-T` is not "the
+previous file", it is "one level shallower". If you jump A → B, come
+back, then jump A → C, the stack has one entry both times.
+
+`Ctrl-]` needs the cursor on the name, which makes `*`, `f` and `w`
+part of the workflow rather than separate from it. Searching for a call
+and pressing `Ctrl-]` is two motions and lands you on the definition —
+about as fast as the mouse hand moves to the trackpad.
+
+@start tags
+!_TAG_FILE_FORMAT	2	//
+!_TAG_FILE_SORTED	1	//
+OrderProvider	src/domain/order/order.provider.ts	/^export class OrderProvider {$/;"	c
+PaymentService	src/infrastructure/services/payment.service.ts	/^export class PaymentService {$/;"	c
+cancel	src/domain/order/order.provider.ts	/^  public async cancel(id: string) {$/;"	m	class:OrderProvider
+findOne	src/domain/order/order.provider.ts	/^  public async findOne(id: string) {$/;"	m	class:OrderProvider
+issueRefund	src/infrastructure/services/payment.service.ts	/^  public async issueRefund(orderId: string) {$/;"	m	class:PaymentService
+
+@start src/domain/order/order.provider.ts
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+export class OrderProvider {
+  constructor(
+    protected orderRepository: OrderRepository,
+    protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    return this.orderRepository.findOne({ where: { id } });
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    await this.paymentService.issueRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED', refundReceipt: receiptId },
+    });
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+export class OrderProvider {
+  constructor(
+    protected orderRepository: OrderRepository,
+    protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    return this.orderRepository.findOne({ where: { id } });
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    const receiptId = await this.paymentService.issueRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED', refundReceipt: receiptId },
+    });
+  }
+}
+
+@start src/infrastructure/services/payment.service.ts
+import { HttpClient } from '../http/http.client';
+
+export class PaymentService {
+  constructor(protected http: HttpClient) {}
+
+  public async issueRefund(orderId: string) {
+    const response = await this.http.post('/refunds', { orderId });
+
+    return response.data;
+  }
+}
+
+@expected src/infrastructure/services/payment.service.ts
+import { HttpClient } from '../http/http.client';
+
+export class PaymentService {
+  constructor(protected http: HttpClient) {}
+
+  public async issueRefund(orderId: string) {
+    const response = await this.http.post('/refunds', { orderId });
+
+    return response.data.receiptId;
+  }
+}

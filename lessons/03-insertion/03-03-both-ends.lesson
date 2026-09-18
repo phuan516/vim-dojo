@@ -1,0 +1,55 @@
+@meta
+id: 03-03
+title: Drill — both ends of the line
+chapter: 03
+type: drill
+skills: insert-I, insert-A
+reps: 8
+par: 24
+minutes: 5
+vscode: two clicks and two bursts of typing
+open: order.entity.ts
+
+@brief
+Eight times: make the field readonly and terminate it. `readonly ` goes in
+front of the code, the semicolon goes at the end.
+
+Two trips into insert mode, and the cursor never moves along the line
+under its own steam. Nothing to work out. The point is that your fingers
+stop choosing between `I` and `A` and just know.
+
+@keys
+| `I` | insert at the first non-blank character |
+| `A` | append at the end of the line |
+| `Esc` | out |
+| `:wq` | save and quit |
+
+@hints
+`I` first, then `Esc`, then `A` — you do not need to move between them,
+because `A` finds the end of the line on its own.
+--
+By rep four, stop looking at the screen between the two edits. `I` … `Esc`
+`A` … `Esc` is one shape, not two decisions.
+
+@solution
+    j I readonly<Space> <Esc> A ; <Esc> :wq<Enter>
+
+Nineteen keystrokes, ten of them the word `readonly` and the semicolon.
+
+What you are drilling is the absence of a step. There is no "get to the
+start of the line" and no "get to the end of the line" in that sequence,
+because both are baked into the capitals. A VS Code habit puts a mouse
+click or a Home/End press between every edit and the next; this does not.
+
+When you meet `C` and `S` in later chapters they follow the same rule:
+the capital is the whole-line-flavoured version of the lowercase key.
+
+@start order.entity.ts
+export type Order = {
+  id: string
+};
+
+@expected order.entity.ts
+export type Order = {
+  readonly id: string;
+};

@@ -1,0 +1,90 @@
+@meta
+id: 09-21
+title: Capstone — delete, copy, paste, change
+chapter: 09
+type: scenario
+skills: op-motion, delete-d, change-c, yank-y, put-p, replace-r
+par: 68
+minutes: 6
+vscode: Ctrl+X, Ctrl+C, Ctrl+V, Shift+Alt+Down
+open: config.ts
+
+@brief
+Vim has no clipboard shortcuts because it has something better:
+yank, delete and put. Deleting also copies, so "cut" and "copy"
+are the same idea with a different verb.
+
+In config.ts:
+
+  1. One line is duplicated. Delete the second copy.
+  2. Add  timeout: 5000,  directly under the port line.
+  3. Copy the databaseUrl line, paste it underneath, and rename the
+     key on the copy to  replicaUrl
+  4. Fix the typo  'debgu'  ->  'debug'
+
+The point of step 3 is that you never touch the mouse and never
+retype the value.
+
+@keys
+dd      delete (cut) a line        3dd  three lines
+yy      yank (copy) a line         3yy  three lines
+p  P    put below / put above the cursor
+o  O    open a line below / above and start typing
+x       delete one character       X  delete backwards
+cw      change to end of word (deletes it, drops you in INSERT)
+C       change from cursor to end of line
+D       delete from cursor to end of line
+r       replace exactly one character, stay in NORMAL
+u       undo
+
+@hints
+Put the cursor anywhere on the duplicate line and press dd. Vim does
+not care which column you are in - dd is a whole-line operation.
+--
+yy copies the line under the cursor. p pastes it on the line below.
+So yyp duplicates a line in three keystrokes.
+--
+On the pasted copy, move to the word databaseUrl and press cw. The
+word vanishes and you are in INSERT mode. Type replicaUrl, Esc.
+--
+'debgu' is two letters swapped. Land on the g and press  x  then  p .
+x deletes the character AND copies it; p puts it back after the
+cursor, which is exactly a transpose. Or: land on the word, ciw.
+
+@solution
+/host   Enter     first host line
+j dd              down one, delete the duplicate
+
+/port   Enter
+o timeout: 5000,  Esc
+
+/databaseUrl Enter
+yy p              duplicate the line
+cw replicaUrl Esc rename the key on the copy
+
+/debgu  Enter
+ciw debug Esc     (or land on the g and press  xp  )
+
+:wq
+
+Notice you never selected anything. In vim you say what to do and
+what to do it to - the selection step disappears.
+
+@start config.ts
+export const config = {
+  port: 3000,
+  host: 'localhost',
+  host: 'localhost',
+  databaseUrl: 'mysql://database:3306/orders',
+  logLevel: 'debgu',
+};
+
+@expected config.ts
+export const config = {
+  port: 3000,
+  timeout: 5000,
+  host: 'localhost',
+  databaseUrl: 'mysql://database:3306/orders',
+  replicaUrl: 'mysql://database:3306/orders',
+  logLevel: 'debug',
+};

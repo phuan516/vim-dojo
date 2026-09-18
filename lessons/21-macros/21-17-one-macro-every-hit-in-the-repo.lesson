@@ -1,0 +1,190 @@
+@meta
+id: 21-17
+title: One macro, every hit in the repo
+chapter: 21
+type: lesson
+skills: macro-across-files, macro-record
+par: 107
+minutes: 9
+vscode: search across files, then open each result and do the two edits by hand
+open: order.spec.ts
+vimrc: set hidden
+
+@brief
+The services went async and three spec files did not. Every test that
+still reads `it('...', () => {` needs `async`, and the call on the line
+below it needs `await`:
+
+    it('refunds a paid order', () => {        →    it('refunds a paid order', async () => {
+      service.refund('ord_101');              →      await service.refund('ord_101');
+
+Seven tests across `order.spec.ts`, `customer.spec.ts` and
+`refund.spec.ts`. Only `order.spec.ts` is open. `order.provider.ts` is
+in the directory too and is not a spec; leave it alone.
+
+Record the macro on the first test in the open file. Then use the
+quickfix list from chapter 19 to find the rest, in every file, and play
+the macro on each hit.
+
+@keys
+| `:vimgrep /pattern/ *.spec.ts` | fill the quickfix list from the matching files |
+| `:cdo normal @a` | play `a` at every quickfix entry |
+| `:wqa` | write every buffer and quit |
+
+@hints
+The macro should not step: no `j` at the end, no search at the start.
+`:cdo` puts the cursor on each hit for you. Start it with `0` so the
+column `:cdo` chooses does not matter.
+--
+Record on the first test, then grep. Grep after recording, not before,
+so the line you already edited is no longer a match.
+--
+`/it(.*, () =>` to reach the first test. `qa0f(;iasync <Esc>j^iawait <Esc>q`.
+Then `:vimgrep /it(.*, () =>/ *.spec.ts`, `:cdo normal @a`, `:wqa`.
+
+@solution
+    /it(.*, () => <Enter>   qa 0f(; iasync  <Esc> j^ iawait  <Esc> q
+    :vimgrep /it(.*, () =>/ *.spec.ts<Enter>   :cdo normal @a<Enter>   :wqa<Enter>
+
+Ninety-three keystrokes for fourteen edits in three files.
+
+`:cdo` runs a command at every entry in the quickfix list, moving
+between buffers as it goes, and `normal @a` is a command. That is the
+whole idea. The macro is recorded once, in one file, on one line, and
+the quickfix list carries it to every other place the pattern lives.
+Nothing about the macro knows there are other files.
+
+The order of operations matters. Record first, grep second. If you
+grep first, the test you record on is entry one, and `:cdo` will
+replay the macro on a line that already has its `async`. Recording
+first means that line no longer matches by the time the list is
+built.
+
+The other thing to be careful about is what `:cdo` hands the macro. It
+puts the cursor on the column where the match begins, which is the
+`it`. A macro that starts with `0` does not care. A macro that assumes
+a column will be wrong in a way that is hard to see across three files
+you are not looking at, which is why the `:wqa` at the end deserves a
+glance at `:ls` first when the change is bigger than this one.
+
+@start order.spec.ts
+import { OrderService } from './order.service';
+
+describe('OrderService', () => {
+  it('cancels a pending order', () => {
+    service.cancel('ord_101');
+    expect(repository.update).toHaveBeenCalled();
+  });
+
+  it('refuses to cancel a shipped order', () => {
+    expect(service.cancel('ord_102')).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+  });
+
+  it('finds an order by id', async () => {
+    const order = await service.findOne('ord_103');
+    expect(order.id).toBe('ord_103');
+  });
+
+  it('throws for an unknown id', () => {
+    expect(service.findOne('ord_999')).rejects.toThrow('ORDER_NOT_FOUND');
+  });
+});
+
+@expected order.spec.ts
+import { OrderService } from './order.service';
+
+describe('OrderService', () => {
+  it('cancels a pending order', async () => {
+    await service.cancel('ord_101');
+    expect(repository.update).toHaveBeenCalled();
+  });
+
+  it('refuses to cancel a shipped order', async () => {
+    await expect(service.cancel('ord_102')).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+  });
+
+  it('finds an order by id', async () => {
+    const order = await service.findOne('ord_103');
+    expect(order.id).toBe('ord_103');
+  });
+
+  it('throws for an unknown id', async () => {
+    await expect(service.findOne('ord_999')).rejects.toThrow('ORDER_NOT_FOUND');
+  });
+});
+
+@start customer.spec.ts
+import { CustomerService } from './customer.service';
+
+describe('CustomerService', () => {
+  it('creates a customer', () => {
+    service.create({ email: 'alice@example.com', name: 'Alice' });
+    expect(repository.create).toHaveBeenCalled();
+  });
+
+  it('rejects a duplicate email', () => {
+    expect(service.create({ email: 'alice@example.com', name: 'Alice' })).rejects.toThrow('CUSTOMER_EXISTS');
+  });
+});
+
+@expected customer.spec.ts
+import { CustomerService } from './customer.service';
+
+describe('CustomerService', () => {
+  it('creates a customer', async () => {
+    await service.create({ email: 'alice@example.com', name: 'Alice' });
+    expect(repository.create).toHaveBeenCalled();
+  });
+
+  it('rejects a duplicate email', async () => {
+    await expect(service.create({ email: 'alice@example.com', name: 'Alice' })).rejects.toThrow('CUSTOMER_EXISTS');
+  });
+});
+
+@start refund.spec.ts
+import { RefundService } from './refund.service';
+
+describe('RefundService', () => {
+  it('refunds inside the window', () => {
+    service.refund('ord_104');
+    expect(payments.refund).toHaveBeenCalledWith('ord_104');
+  });
+
+  it('records the reason outside the window', () => {
+    service.refund('ord_105');
+    expect(repository.update).toHaveBeenCalledWith(expect.objectContaining({ cancellationReason: 'REFUND_WINDOW_EXPIRED' }));
+  });
+});
+
+@expected refund.spec.ts
+import { RefundService } from './refund.service';
+
+describe('RefundService', () => {
+  it('refunds inside the window', async () => {
+    await service.refund('ord_104');
+    expect(payments.refund).toHaveBeenCalledWith('ord_104');
+  });
+
+  it('records the reason outside the window', async () => {
+    await service.refund('ord_105');
+    expect(repository.update).toHaveBeenCalledWith(expect.objectContaining({ cancellationReason: 'REFUND_WINDOW_EXPIRED' }));
+  });
+});
+
+@start order.provider.ts
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+export class OrderProvider {
+  constructor(protected orderRepository: OrderRepository) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+}

@@ -1,0 +1,80 @@
+@meta
+id: 06-17
+title: Four edits, four different anchors
+chapter: 06
+type: lesson
+skills: find-f, repeat-semicolon, line-end
+par: 38
+minutes: 6
+vscode: four clicks in three lines, plus a tab you must not touch
+open: order.resolver.ts errors.json
+
+@brief
+A resolver that has been through a bad merge. Four things are wrong, and no
+two of them want the same key:
+
+  1. `id:string` has lost the space after its colon.
+  2. `viewer` is not always present, so it must become `viewer?: Viewer`.
+  3. The return statement is not terminated.
+  4. `where:{ id }` has lost its space too.
+
+`errors.json` is open so you can see the codes are already registered. It is
+not yours to change — change it and the check fails.
+
+Before you press anything, decide for each edit which anchor is cheapest:
+the end of the line, a named character forwards, a named character
+backwards, or the repeat of the find you just did.
+
+@keys
+| `f:` `F:` | forward or backward to a colon |
+| `;` | repeat the last find |
+| `A` | append at the end of the line |
+| `i` `a` | insert before or after the cursor |
+
+@hints
+Edits 1 and 2 are on the same line and both anchored on colons. Do the first
+with `f:` and the second with the key that repeats it.
+--
+Edit 2 wants the `?` before the colon, so insert with `i` there. Edit 1
+wants a space after the colon, so insert with `a`.
+--
+For the last line, terminate it first — that puts you at the right-hand end
+— and then travel backwards to the one colon on the line with `F:`.
+
+@solution
+    j f : a  <Esc> ; i ? <Esc>
+    j A ; <Esc> F : a  <Esc> :wq<Enter>
+
+Nineteen keystrokes for four edits across two lines, and the only thing you
+had to think about was which character to name.
+
+The pattern is worth stating plainly, because it is most of what this
+chapter is for. In a line of code, every place you want to be is next to a
+character you can name — a colon, a comma, a paren, a brace, a quote. So the
+question is never how far away is it. The question is which character, which
+direction, and on it or beside it. Answer those three and the motion is two
+or three keys, every time, regardless of line length.
+
+On the last line, `F:` beats `^` plus `f:` by one key and beats `0` plus a
+count by two, because you were already at the right-hand end. Picking the
+cheaper direction is a small habit that compounds over thousands of edits.
+
+@start order.resolver.ts
+export class OrderResolver {
+  public async order(id:string, viewer: Viewer) {
+    return this.orderProvider.findOne({ where:{ id } })
+  }
+}
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_FORBIDDEN": { "statusCode": 403, "sentry": false }
+}
+
+@expected order.resolver.ts
+export class OrderResolver {
+  public async order(id: string, viewer?: Viewer) {
+    return this.orderProvider.findOne({ where: { id } });
+  }
+}

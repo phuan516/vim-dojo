@@ -1,0 +1,123 @@
+@meta
+id: 25-04
+title: The address that searches
+chapter: 25
+type: lesson
+skills: range-pattern
+par: 19
+minutes: 5
+vscode: Ctrl-F the word, click the line, Home, shift-Down, Delete
+open: order.repository.ts
+
+@brief
+A `console.log` survived review and is sitting in `findMany`. Delete that
+line. There is exactly one.
+
+Every address so far has been a number in disguise — a line you counted
+to, or `.` and `$` with arithmetic. The last kind of address is a
+pattern: `/console/` means "the next line below the cursor that matches
+`console`". It is the same search you type after `/`, used as a line
+number.
+
+So you do not have to go there first. The address goes and the command
+follows.
+
+@keys
+| `:/console/d` | delete the next line matching `console` |
+| `:/pat/` | as an address: the next line below the cursor matching `pat` |
+| `:/pat/y` | yank it, `:/pat/m0` move it, and so on |
+
+@hints
+The address is a search between two slashes, used exactly where a line
+number would go.
+--
+The pattern only has to be enough to pick the line out. `console` is
+plenty.
+--
+`:/console/d` Enter, then `:wq`. The cursor never leaves line 1.
+
+@solution
+    :/console/d<Enter>  :wq<Enter>
+
+Sixteen keystrokes, and note what you did *not* do: you did not search,
+look at where you landed, and then delete. You described the line and
+deleted it in one sentence.
+
+Three things worth knowing about pattern addresses:
+
+They search **forward from the line below the cursor**, and they wrap
+around the end of the file, so from line 1 you reach anything. The line
+the cursor is on is not considered — `:/console/d` run twice deletes two
+different lines.
+
+They take the **last-used pattern's options**, which means `ignorecase`
+applies. `/console/` would match `Console` too. Chapter 13's `\C` forces
+case sensitivity when that matters.
+
+They are **the same regex engine** as `/` and `:s`, so `\<` `\>`, `\v`
+and groups all work: `:/\<order\>/d` is an address as much as a search.
+
+The trailing slash is optional when nothing follows the pattern — `:/console d`
+would be read as part of the pattern, so keep the slash and you will
+never have to think about it.
+
+@start order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord, PrismaClient } from '@prisma/client';
+
+@injectable()
+export class OrderRepository {
+  constructor(protected prisma: PrismaClient) {}
+
+  public async findOne(id: string) {
+    const record = await this.prisma.order.findUnique({ where: { id } });
+
+    return record ? this.toEntity(record) : undefined;
+  }
+
+  public async findMany(customerId: string) {
+    const records = await this.prisma.order.findMany({ where: { customerId } });
+    console.log('findMany returned', records.length);
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord) {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}
+
+@expected order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord, PrismaClient } from '@prisma/client';
+
+@injectable()
+export class OrderRepository {
+  constructor(protected prisma: PrismaClient) {}
+
+  public async findOne(id: string) {
+    const record = await this.prisma.order.findUnique({ where: { id } });
+
+    return record ? this.toEntity(record) : undefined;
+  }
+
+  public async findMany(customerId: string) {
+    const records = await this.prisma.order.findMany({ where: { customerId } });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord) {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}

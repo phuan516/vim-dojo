@@ -1,0 +1,117 @@
+@meta
+id: 31-08
+title: An augroup becomes two API calls
+chapter: 31
+type: lesson
+skills: lua-config
+par: 60
+minutes: 7
+vscode: no equivalent — this is an editor event hook
+open: init.lua
+
+@brief
+Autocommands are the last part of a vimrc to port, and the part that looks
+least like its vimscript. Four lines of `augroup` become two function
+calls:
+
+    vim.api.nvim_create_augroup('Trim', { clear = true })
+    vim.api.nvim_create_autocmd('BufWritePre', { group = ..., pattern = ..., command = ... })
+
+`nvim_create_augroup` returns an id. You keep it in a local and hand it to
+every autocommand that belongs in the group, which replaces the
+`augroup`/`augroup END` sandwich entirely. `{ clear = true }` is the
+`autocmd!` line: it wipes the group before redefining it, so re-sourcing
+your config does not stack up four copies of the same hook.
+
+The event name is the first argument. Everything else — `pattern`,
+`group`, `once`, `desc`, and either `command` (a string of ex) or
+`callback` (a Lua function) — goes in the table. `callback` is the one
+that changes how you write these, because the body can be real code
+instead of a `:call` into a function defined elsewhere.
+
+Note `[[ ]]`. That is Lua's long-string syntax, and it is the right way to
+hold a vim pattern: backslashes inside it mean nothing to Lua, so
+`[[%s/\s\+$//e]]` arrives at vim exactly as written. In ordinary quotes
+you would have to double every backslash.
+
+The call in front of you is missing its event and its pattern. Fill both
+in so it matches the vimrc augroup quoted above it.
+
+This lesson is graded in vim. The Lua is written, not run.
+
+@keys
+| `ci'` | change inside the quotes — works on an empty pair too |
+| `nvim_create_autocmd(event, opts)` | event first, everything else in the table |
+
+@hints
+Two blanks, both empty quote pairs. The vimrc line in the comment above
+has both answers in it.
+--
+`ci'` puts you between the quotes even when there is nothing between them
+yet, and it finds the quote pair forward on the line — you do not have to
+land the cursor on it.
+--
+Search for `create_autocmd`, `ci'` the event, then drop two lines, `0`,
+and `ci'` the pattern.
+
+@solution
+    /create_autocmd<Enter> ci'BufWritePre<Esc> 2j 0 ci'*.ts<Esc> :wq<Enter>
+
+The `0` matters. After the first change the cursor sits at the end of
+`BufWritePre`, and `j` keeps the column — two lines down that is past the
+quotes, and `ci'` would look forward, find nothing, and quietly do
+nothing. Going to column 0 first costs one keystroke and removes the whole
+class of failure.
+
+For the record, the same hook written the modern way:
+
+    vim.api.nvim_create_autocmd('BufWritePre', {
+      group = trim,
+      pattern = '*.ts',
+      callback = function()
+        local pos = vim.api.nvim_win_get_cursor(0)
+        vim.cmd([[%s/\s\+$//e]])
+        vim.api.nvim_win_set_cursor(0, pos)
+      end,
+    })
+
+That restores the cursor after the substitution, which the one-line
+version does not. You could write that in vimscript too — it is just
+harder to read, and harder still to test, and that gap is the honest
+argument for Lua config. Not speed. Legibility of the awkward parts.
+
+@start init.lua
+-- ~/.config/nvim/init.lua
+
+-- Trim trailing whitespace before writing a TypeScript file.
+-- Ported from the vimrc:
+--   augroup Trim
+--     autocmd!
+--     autocmd BufWritePre *.ts %s/\s\+$//e
+--   augroup END
+
+local trim = vim.api.nvim_create_augroup('Trim', { clear = true })
+
+vim.api.nvim_create_autocmd('', {
+  group = trim,
+  pattern = '',
+  command = [[%s/\s\+$//e]],
+})
+
+@expected init.lua
+-- ~/.config/nvim/init.lua
+
+-- Trim trailing whitespace before writing a TypeScript file.
+-- Ported from the vimrc:
+--   augroup Trim
+--     autocmd!
+--     autocmd BufWritePre *.ts %s/\s\+$//e
+--   augroup END
+
+local trim = vim.api.nvim_create_augroup('Trim', { clear = true })
+
+vim.api.nvim_create_autocmd('BufWritePre', {
+  group = trim,
+  pattern = '*.ts',
+  command = [[%s/\s\+$//e]],
+})

@@ -1,0 +1,94 @@
+@meta
+id: 07-17
+title: Drill — bracket to bracket, semicolon
+chapter: 07
+type: drill
+skills: match-percent
+par: 46
+minutes: 4
+reps: 10
+vscode: six scrolls and six clicks on the closing brace
+open: registry.ts
+
+@brief
+Six container registrations, none of them terminated. Semicolon on the
+closing bracket of each.
+
+Nothing to work out. The dojo will hand you the file ten times.
+
+@keys
+| `%` | jump to the matching bracket |
+| `A` | append at the end of the line |
+| `2j` | down two lines |
+
+@hints
+The rep is `%` to the closing bracket, `A` `;` `Esc`, then `2j` to the top
+of the next registration.
+--
+Do not look at where `%` put you. That is the habit being drilled: you
+trust the match rather than checking it.
+
+@solution
+    % A ; <Esc> 2j    six times, then :wq<Enter>
+
+Thirty-eight keystrokes for six terminations.
+
+These blocks are three lines long, so `%` looks like an expensive way to
+press `jj`. It is not, and the reason is that `%` does not change when the
+block does. Add a second `useClass` line, wrap one registration in a
+factory, and `jj` is wrong everywhere while `%` is still right everywhere.
+
+The drill is really about trust. Beginners press `%`, look at where they
+landed, and check the indentation — which costs more than the keystroke
+saved. Landing correctly a hundred times in a row is what stops you
+checking.
+
+@start registry.ts
+container.register(OrderRepository, {
+  useClass: OrderRepository,
+})
+
+container.register(OrderProvider, {
+  useClass: OrderProvider,
+})
+
+container.register(RefundRepository, {
+  useClass: RefundRepository,
+})
+
+container.register(RefundProvider, {
+  useClass: RefundProvider,
+})
+
+container.register(PaymentService, {
+  useClass: HttpPaymentService,
+})
+
+container.register(EmailService, {
+  useClass: SmtpEmailService,
+})
+
+@expected registry.ts
+container.register(OrderRepository, {
+  useClass: OrderRepository,
+});
+
+container.register(OrderProvider, {
+  useClass: OrderProvider,
+});
+
+container.register(RefundRepository, {
+  useClass: RefundRepository,
+});
+
+container.register(RefundProvider, {
+  useClass: RefundProvider,
+});
+
+container.register(PaymentService, {
+  useClass: HttpPaymentService,
+});
+
+container.register(EmailService, {
+  useClass: SmtpEmailService,
+});

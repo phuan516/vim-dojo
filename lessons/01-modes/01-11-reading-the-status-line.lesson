@@ -1,0 +1,76 @@
+@meta
+id: 01-11
+title: Reading the bottom of the screen
+chapter: 01
+type: lesson
+skills: mode-awareness, cmdline, insert-a, esc
+par: 40
+minutes: 5
+vscode: the status bar, which you have probably never read either
+open: incident.md
+
+@brief
+The last line of a vim window is where the editor talks to you, and new
+users ignore it for months. It holds three different things at different
+moments: the mode indicator, the messages vim prints, and the command
+line you are typing on.
+
+There is one more signal worth learning today. Press `Ctrl-G` and vim
+prints the file's name, how many lines it has, where you are in it, and
+whether it has unsaved changes — shown as a `[Modified]` flag, or `[+]`
+where vim is short of room. That flag is the answer to "did I save this?",
+and it is always on screen.
+
+incident.md needs two additions, and you are going to save in between so
+you can watch the flag appear, clear, and appear again.
+
+  1. The Impact line should end `queued for four hours`.
+  2. Then write the file with `:w` and press `Ctrl-G`.
+  3. The Status line should read `resolved, monitoring`.
+
+Then save and quit.
+
+@keys
+| `Ctrl-G` | print the file name, position and modified flag |
+| `[+]` | seen in the message: unsaved changes exist |
+| `:w` | write — the flag clears |
+| `$` `a` | end of line, append |
+
+@hints
+The Impact line is two down from the top, the Status line is two below
+that. `$a` gets you appending at the end of either one.
+--
+After `Esc`, type `:w` and Enter. Then `Ctrl-G` and read the line it
+prints — no `[+]`, because everything on disk matches what you are
+looking at.
+--
+Now the Status line: `jj` then `$a`, type `, monitoring`, `Esc`. Press
+`Ctrl-G` again and the flag is back. `:wq` clears it for good.
+
+@solution
+    j j $ a <space> hours <Esc> :w<Enter>
+    j j $ a , <space> monitoring <Esc> :wq<Enter>
+
+`Ctrl-G` is not a key you will press often once you trust the flag, but it
+is the fastest way to answer three questions at once when you are lost:
+which file am I in, how far through it am I, and have I saved.
+
+The habit to build is glancing at the bottom left before you type
+anything, not after something has gone wrong. `-- INSERT --` there means
+your next keystroke is a letter in your file. Nothing there means your
+next keystroke is a command. That one glance prevents most of the
+accidents in your first month.
+
+@start incident.md
+# Payment incident 2026-05-11
+
+Impact: refunds queued for four
+Owner: priya
+Status: resolved
+
+@expected incident.md
+# Payment incident 2026-05-11
+
+Impact: refunds queued for four hours
+Owner: priya
+Status: resolved, monitoring

@@ -1,0 +1,76 @@
+@meta
+id: 02-08
+title: Undoing the undo
+chapter: 02
+type: lesson
+skills: redo, undo
+par: 56
+minutes: 4
+vscode: Ctrl+Y or Ctrl+Shift+Z
+open: on-call.md
+
+@brief
+`u` one keystroke too far is a normal thing to do. You hold it down, the
+text flies past, and you overshoot. `Ctrl-R` walks forward again: redo,
+the exact mirror of undo.
+
+The on call rota is being patched during the week. In order:
+
+  1. Append ` (until Wednesday)` to the Primary line.
+
+  2. Append ` (swap with Jo?)` to the Secondary line.
+
+  3. Panic. Press `u` twice, which takes both of them off.
+
+  4. The Primary change was right all along. Bring it back — and only it.
+
+Then save. Primary keeps its note, Secondary is back to `Secondary: Sam`.
+
+You typed the Primary note once. Type it a second time and you have
+missed the point of the lesson, though the file will still be correct.
+
+@keys
+| `Ctrl-R` | redo — undo one undo |
+| `u` | undo |
+| `:redo` | the spelled out form of `Ctrl-R` |
+
+@hints
+Undo and redo move along the same line of changes. Two `u` presses put
+you two steps back; you want to come forward one.
+--
+`Ctrl-R` is the control key with `r`, pressed in normal mode. Not `:r`,
+which is something else entirely.
+--
+The order matters. Redo replays the oldest of the two undone changes
+first, which is the Primary line — exactly the one you want.
+
+@solution
+    jj $ a  (until Wednesday) <Esc>
+    j $ a  (swap with Jo?) <Esc>
+    u u
+    <Ctrl-R>
+    ZZ
+
+Undo and redo are a cursor moving along a list of states. `u` steps
+towards the past, `Ctrl-R` steps towards the present, and neither of them
+destroys anything by itself.
+
+One rule to internalise now, because it explains a surprise later: the
+moment you make a *new* change after undoing, the states ahead of you
+stop being reachable by `Ctrl-R`. In most editors they are gone for good
+at that point. In vim they are not gone, only off the path — and the last
+lesson of this chapter is how to walk back onto it.
+
+@start on-call.md
+# On call this week
+
+Primary: Priya
+Secondary: Sam
+Escalation: platform lead
+
+@expected on-call.md
+# On call this week
+
+Primary: Priya (until Wednesday)
+Secondary: Sam
+Escalation: platform lead

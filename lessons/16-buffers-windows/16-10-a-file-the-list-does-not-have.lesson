@@ -1,0 +1,133 @@
+@meta
+id: 16-10
+title: A file the list does not have
+chapter: 16
+type: lesson
+skills: split-window, window-nav
+par: 95
+minutes: 5
+vscode: Ctrl-P, changelog, Enter, and it opens over the file you were reading
+open: order.provider.ts
+
+@brief
+So far every file you have touched was opened for you. The ticket for
+the refund window has landed in the provider and the reviewer wants a
+line in `CHANGELOG.md`, which is not open and is not in the list. `:sp`
+takes a filename: `:sp CHANGELOG.md` opens that file in a new window
+above the current one, and the provider stays exactly where it was
+below. If the name does not exist yet, the window opens empty and the
+file is created when you write it.
+
+Under `## Unreleased`, below the existing bullet, add:
+
+    - 30 day refund window on cancellation (ORD-418)
+
+The provider is open for you to check the ticket number against the
+code; it does not change.
+
+@keys
+| `:sp name` | open `name` in a new window above this one |
+| `:new name` | the same thing; `:new` alone opens an empty scratch window |
+| `Ctrl-W n` | `:new` as a chord |
+| `Ctrl-W j` `Ctrl-W k` | down a window, up a window |
+
+@hints
+`:sp CHANGELOG.md`. The cursor is in the new window, on line 1 of the
+changelog.
+--
+`/reason` lands on the existing bullet. `o`, the new bullet, `Esc`.
+--
+`:wqa` writes the changelog and closes both windows. Nothing was
+changed in the provider, so it is not written.
+
+@solution
+    :sp CHANGELOG.md<Enter>  /reason<Enter>  o - 30 day refund window on cancellation (ORD-418) <Esc>  :wqa<Enter>
+
+Around eighty keystrokes, fifty of them the bullet.
+
+Until chapter 18 gives you `:e` and `:find`, `:sp name` is your way of
+opening a file that nobody opened for you, and it is often the better
+way even afterwards: the file you were in does not go anywhere, and
+the new one is a window away rather than a buffer away. Chapter 18's
+finding tools all have a split form for exactly that reason.
+
+`:new` with no name is the scratch pad: an empty window for a draft
+commit message, a list of ids to work through, a bit of code you want
+to reshape before pasting it back. `:q!` throws it away; `:w name`
+keeps it.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    // ORD-418: refunds only inside the 30 day window
+    const days = (Date.now() - order.placedAt.getTime()) / 86_400_000;
+
+    if (days <= 30) {
+      await this.paymentService.refund(order.id);
+
+      return this.orderRepository.update({
+        where: { id },
+        values: { status: 'CANCELLED' },
+      });
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED', cancellationReason: 'REFUND_WINDOW_EXPIRED' },
+    });
+  }
+}
+
+@start CHANGELOG.md
+# Changelog
+
+## Unreleased
+
+- cancellation records a reason (ORD-402)
+
+## 1.4.0
+
+- customer lookup by email
+- refunds go through the payment service
+- order status SHIPPED
+
+@expected CHANGELOG.md
+# Changelog
+
+## Unreleased
+
+- cancellation records a reason (ORD-402)
+- 30 day refund window on cancellation (ORD-418)
+
+## 1.4.0
+
+- customer lookup by email
+- refunds go through the payment service
+- order status SHIPPED

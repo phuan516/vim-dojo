@@ -1,0 +1,77 @@
+@meta
+id: 09-09
+title: Delete as far as a character
+chapter: 09
+type: lesson
+skills: op-motion
+par: 16
+minutes: 4
+vscode: click before the argument, shift-click after the comma, Delete
+open: order.provider.ts
+
+@brief
+The payment gateway dropped the `amount` parameter from `refund` in the
+last release — it reads the amount off the order now. The call here still
+passes `order.total` and the build is failing on it.
+
+    await this.paymentService.refund(order.id, order.total, 'MANUAL');
+
+Make it pass `order.id` and `'MANUAL'` only, spaced as the other calls in
+this file are, and save.
+
+@keys
+| `f,` | forward onto the next comma |
+| `df,` | delete from the cursor up to and including the next comma |
+| `d2f,` | the same, but to the second comma |
+
+@hints
+Counting words through `order.total,` is a trap — the dot and the comma
+are words too. Delete to a *character* instead.
+--
+`f` is a motion, so `d` takes it. `df,` deletes everything from the
+cursor through the next comma inclusive.
+--
+Land on the space after the first comma, then `df,`. From line one:
+`4j`, `f,`, `l`, `df,`.
+
+@solution
+    4j f, l df, :wq<Enter>
+
+Twelve keystrokes for an edit that VS Code charges you a click, a
+shift-click and a good aim for.
+
+Two things make this work. `f` is inclusive — it takes the character it
+lands on — so `df,` removes the comma as well as the argument. And
+starting one character to the right of the first comma means the space
+that belonged to the deleted argument goes with it, leaving the spacing
+of the remaining arguments already correct. Landing on the comma itself
+and pressing `df,` would leave you with two spaces to tidy up.
+
+That choice, cursor one character left or right before an operator, is
+most of what separates a clean edit from one you have to go back and fix.
+
+`f` also takes a count, and the count survives the operator: `d2f,`
+deletes through the second comma from here. If you ever want to strip two
+arguments in one go, that is the key.
+
+@start order.provider.ts
+export class OrderProvider {
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    await this.paymentService.refund(order.id, order.total, 'MANUAL');
+
+    return this.orderRepository.update({ where: { id } });
+  }
+}
+
+@expected order.provider.ts
+export class OrderProvider {
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    await this.paymentService.refund(order.id, 'MANUAL');
+
+    return this.orderRepository.update({ where: { id } });
+  }
+}

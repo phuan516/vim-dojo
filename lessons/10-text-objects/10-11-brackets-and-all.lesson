@@ -1,0 +1,80 @@
+@meta
+id: 10-11
+title: Brackets and all
+chapter: 10
+type: lesson
+skills: obj-paren, obj-word, inner-vs-around
+par: 74
+minutes: 7
+vscode: click before the paren, shift-click after it, delete
+open: invoice.provider.ts
+
+@brief
+`i(` keeps the brackets. `a(` takes them. That is the whole difference,
+and it decides which of two very different edits you are making: changing
+what a call is passed, or removing the call.
+
+The `Order` entity has dropped its getters. `getTotal()`, `getShipping()`
+and `getTax()` are plain fields now — `total`, `shipping`, `tax` — so
+every call site has to lose both the `get` prefix and the empty brackets.
+
+Three lines in this provider. Nothing else moves, and the trailing commas
+stay.
+
+@keys
+| `a(` | the brackets and everything in them |
+| `da(` | delete the call's brackets, empty or not |
+| `ab` | the same object, no shift key |
+| `ciw` | for the name in front of them |
+
+@hints
+Each line needs two edits: the name changes, and the `()` goes away
+entirely. They are two different objects.
+--
+`ciw` handles the name. `da(` handles the brackets — and it works on
+empty brackets, where there is no inner text to delete at all.
+--
+`f.` then `l` lands you on the `g` of the getter, `ciw` renames it, then
+`f(` and `da(` removes the brackets. Then `j0` and do it again.
+
+@solution
+    3j f. l ciw total <Esc> f( da(
+    j 0 f. l ciw shipping <Esc> f( da(
+    j 0 f. l ciw tax <Esc> f( da(
+    :wq<Enter>
+
+Sixty-two keystrokes for six edits across three lines.
+
+`di(` and `da(` are the pair to have straight before you need them under
+pressure. `di(` on `refund(order.id)` leaves `refund()` — the call
+survives with no arguments. `da(` leaves `refund` — the arguments and the
+brackets are gone and you have an identifier. Neither is more correct;
+they are answers to different questions.
+
+The empty-bracket case is the one people are surprised by. `di(` on `()`
+fails, because there is nothing inside to delete. `a(` does not need there
+to be anything inside — it is defined by the brackets themselves — so
+`da(` on an empty pair removes them and is the tidiest way to turn a
+method call into a property access.
+
+@start invoice.provider.ts
+export class InvoiceProvider {
+  public build(order: Order) {
+    return {
+      total: order.getTotal(),
+      shipping: order.getShipping(),
+      tax: order.getTax(),
+    };
+  }
+}
+
+@expected invoice.provider.ts
+export class InvoiceProvider {
+  public build(order: Order) {
+    return {
+      total: order.total,
+      shipping: order.shipping,
+      tax: order.tax,
+    };
+  }
+}

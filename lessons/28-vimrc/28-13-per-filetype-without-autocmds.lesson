@@ -1,0 +1,118 @@
+@meta
+id: 28-13
+title: Per-filetype settings without autocommands
+chapter: 28
+type: lesson
+skills: vimrc-filetype
+par: 264
+minutes: 7
+vscode: "[typescript]": { ... } blocks in settings.json
+open: .vimrc after/ftplugin/typescript.vim
+
+@brief
+Chapter 27 showed you the autocommand way to make a setting apply to one
+language:
+
+    autocmd FileType typescript setlocal shiftwidth=2
+
+It works, and three languages later your vimrc has twenty of those lines
+interleaved with everything else. Vim has a better place for them, and it
+has had it for thirty years.
+
+Anything in `~/.vim/after/ftplugin/<filetype>.vim` is sourced every time
+a buffer of that filetype is loaded — after vim's own ftplugin for that
+language, which is what `after/` means and why it is the directory you
+want. Your line wins over the one that ships with vim, without you having
+to argue with it.
+
+Two jobs here.
+
+  1. In the vimrc, replace the three `autocmd FileType typescript` lines
+     with one comment saying where those settings now live:
+
+         " per-filetype settings live in ~/.vim/after/ftplugin/<filetype>.vim
+
+  2. In the second buffer — an empty `after/ftplugin/typescript.vim` —
+     write them properly:
+
+         " TypeScript: Prettier's defaults, and a column to aim at
+         setlocal shiftwidth=2
+         setlocal colorcolumn=100
+         setlocal suffixesadd=.ts
+
+`setlocal`, not `set`. These files run for one buffer, and `set` would
+change the global value for every other file you have open.
+
+@keys
+| `setlocal` | set an option for this buffer only |
+| `:set filetype?` | what vim thinks this buffer is |
+| `dd` | delete a line |
+| `:wqa` | write everything and quit |
+
+@hints
+Write the replacement comment before you delete the autocommands — `O`
+from an `autocmd` line gives you a clean line, where `o` from a comment
+line would start you off with another `"`.
+--
+The three autocommands are contiguous, so `3dd` takes all three.
+--
+In the empty buffer, `i` and the three `setlocal` lines, then `gg` and
+`O` for the comment above them. Then `:wqa`.
+
+@solution
+    /autocmd<Enter>
+    O " per-filetype settings live in ~/.vim/after/ftplugin/<filetype>.vim <Esc>
+    j 3dd :w<Enter> :bn<Enter>
+    i setlocal shiftwidth=2<Enter> setlocal colorcolumn=100<Enter>
+    setlocal suffixesadd=.ts <Esc>
+    gg O " TypeScript: Prettier's defaults, and a column to aim at <Esc>
+    :wqa<Enter>
+
+Why this is better than the autocommands it replaces, beyond tidiness:
+
+- The file is named after the filetype, so there is exactly one place to
+  look when TypeScript behaves oddly, and `:scriptnames` shows it was
+  loaded.
+- It cannot fire twice. Source your vimrc a second time and every
+  `autocmd` in it that is not wrapped in an `augroup`/`autocmd!` pair is
+  now registered twice over. An ftplugin has no such failure mode.
+- It is per buffer by construction. `setlocal` in an autocommand is the
+  same idea, but nothing stops you writing `set` by mistake, and the
+  symptom — one file's settings leaking into another — is horrible to
+  track down.
+
+`suffixesadd=.ts` is a small gift for later: it lets `gf` open
+`./order.repository` under the cursor as `order.repository.ts`.
+
+And the reason it is `after/ftplugin` rather than `ftplugin`: vim loads
+`$VIMRUNTIME/ftplugin/typescript.vim` first, and `~/.vim/ftplugin/` would
+*replace* it rather than add to it. `after/` runs last, so you override
+exactly what you meant to and inherit the rest.
+
+@start .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Filetypes ---
+autocmd FileType typescript setlocal shiftwidth=2
+autocmd FileType typescript setlocal colorcolumn=100
+autocmd FileType typescript setlocal suffixesadd=.ts
+
+@expected .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Filetypes ---
+" per-filetype settings live in ~/.vim/after/ftplugin/<filetype>.vim
+
+@expected after/ftplugin/typescript.vim
+" TypeScript: Prettier's defaults, and a column to aim at
+setlocal shiftwidth=2
+setlocal colorcolumn=100
+setlocal suffixesadd=.ts

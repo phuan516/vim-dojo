@@ -1,0 +1,56 @@
+@meta
+id: 06-14
+title: Do that again with semicolon
+chapter: 06
+type: lesson
+skills: repeat-semicolon, find-f
+par: 28
+minutes: 4
+vscode: four clicks, four spacebars
+open: refund.args.ts
+
+@brief
+Someone has committed this type with the formatter switched off. Every colon
+has lost the space that follows it:
+
+    { orderId: string, amount: number, reason: string, channel: string }
+
+Put the four spaces back. The targets are identical — the next colon, then
+the next, then the next — which is a pattern worth having a key for rather
+than typing `f:` over and over.
+
+@keys
+| `f:` | forward to the next colon |
+| `;` | repeat the last `f`, `F`, `t` or `T` |
+| `a` | insert to the right of the cursor |
+
+@hints
+Do the first colon with `f:` and an insert. Then notice that the next three
+jobs are the same job.
+--
+`;` repeats whatever find you last performed, in the same direction, from
+wherever the cursor is now. After `f:`, every `;` is another `f:`.
+--
+`f:` `a` space `Esc`, then `;` `a` space `Esc` three more times.
+
+@solution
+    f : a  <Esc> ; a  <Esc> ; a  <Esc> ; a  <Esc> :wq<Enter>
+
+The first jump costs two keys and every jump after it costs one. That is the
+trade `;` makes: you describe the target once and then repeat the
+description as often as you like.
+
+Two details that decide whether this works. Insert with `a` rather than `i`,
+so the cursor ends up past the colon — if it ended before the colon, the
+next `;` would find the very same colon again and you would stack up two
+spaces. And `;` repeats the last find in the whole editor, not the last find
+on this line, so it keeps working after you move down a line, which is what
+makes the drills in this chapter flow.
+
+`,` repeats the same find in the opposite direction, and that is next.
+
+@start refund.args.ts
+export type RefundArgs = { orderId:string, amount:number, reason:string, channel:string };
+
+@expected refund.args.ts
+export type RefundArgs = { orderId: string, amount: number, reason: string, channel: string };

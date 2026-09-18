@@ -1,0 +1,48 @@
+@meta
+id: 05-07
+title: Drill — past the chain with W
+chapter: 05
+type: drill
+skills: WORD-motions, word-counts
+par: 18
+minutes: 4
+reps: 8
+vscode: clicking into the middle of the update call
+open: order.repository.ts
+
+@brief
+Eight times: add `total` to the values object so the update writes
+`{ total, status }`. The cursor has to cross a repository chain and two
+braces to get there.
+
+Use `W` and count the stops. Par is set so that the `w` route does not
+fit.
+
+@keys
+| `W` | next WORD, whitespace separated |
+| `8W` | eight of them |
+| `i` | insert before the cursor |
+
+@hints
+The cursor starts on `return`. The stops from there are the whole
+`this.orderRepository.update({` chunk, `where:`, `{`, `id`, `},`,
+`values:`, `{`, `status`. Eight.
+--
+Count once, then stop counting. By rep four you should be pressing `8W`
+because the shape of the line is familiar, not because you recounted it.
+
+@solution
+    8W  i total,  <Esc>  :wq<Enter>
+
+Fifteen keystrokes. With `w` the same landing is fifteen presses of one
+key, which is slower to do and, worse, impossible to check — you cannot
+tell by eye whether you pressed it fourteen or sixteen times.
+
+That is the real argument for the count: a number you worked out once is
+verifiable. A key you held down is not.
+
+@start order.repository.ts
+    return this.orderRepository.update({ where: { id }, values: { status } });
+
+@expected order.repository.ts
+    return this.orderRepository.update({ where: { id }, values: { total, status } });

@@ -1,0 +1,44 @@
+@meta
+id: 05-16
+title: Drill — rename the method call
+chapter: 05
+type: drill
+skills: word-e
+par: 18
+minutes: 4
+reps: 8
+vscode: double-click, type
+open: order.repository.ts
+
+@brief
+Eight times: `findMany` becomes `findOne`. End of the word, append,
+`Ctrl-W`, type, out.
+
+@keys
+| `6e` | six word-ends forward |
+| `a` | append |
+| `Ctrl-W` | delete the word behind the cursor |
+
+@hints
+The stops are `return`, `this`, the dot, `orderRepository`, the dot,
+`findMany`. Six.
+--
+The whole rep is one breath: land, append, wipe, type, escape. If you are
+checking the screen after `Ctrl-W`, you are not there yet.
+
+@solution
+    6e  a  <Ctrl-W> findOne <Esc>  :wq<Enter>
+
+Sixteen keystrokes and seven of them are the new name.
+
+Worth noticing while you repeat it: you never once looked at where a
+selection started or ended. The word boundary did that for you, the same
+way on every rep, on a line you have not read carefully. That reliability
+is what makes keyboard editing faster than pointing — not the keys
+themselves.
+
+@start order.repository.ts
+    return this.orderRepository.findMany({ where: { id } });
+
+@expected order.repository.ts
+    return this.orderRepository.findOne({ where: { id } });

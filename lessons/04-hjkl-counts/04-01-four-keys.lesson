@@ -1,0 +1,68 @@
+@meta
+id: 04-01
+title: The four keys under your fingers
+chapter: 04
+type: lesson
+skills: hjkl
+par: 15
+minutes: 3
+vscode: arrow keys, or a click on the line you want
+open: customer.entity.ts
+
+@brief
+In normal mode the cursor moves on `h` `j` `k` `l`. They sit under the
+four fingers of your right hand, exactly where they already rest. Left,
+down, up, right — in that order, left to right on the keyboard.
+
+`j` looks like it hangs down. `k` sticks up. That is the whole mnemonic,
+and after a week you will not need it.
+
+The arrow keys also work. They are not the lesson. Every time you reach
+for them your hand leaves the home row and has to find its way back, and
+you pay that cost hundreds of times a day.
+
+This file is missing a semicolon at the end of the `name` field. Add it
+and save.
+
+@keys
+| `h` | left |
+| `j` | down |
+| `k` | up |
+| `l` | right |
+| `A` | append at the end of the line |
+
+@hints
+The cursor starts on line 1. The field you want is further down, so `j`
+is the key you need — press it once per line.
+--
+Once you are on the right line, `A` puts you in insert mode at the end of
+it, whatever column you were in. Then the semicolon, then `Esc`.
+--
+Three presses of `j`, then `A`, then `;`, then `Esc`, then `:wq`.
+
+@solution
+    j j j A ; <Esc> :wq<Enter>
+
+Ten keystrokes. Notice what you did not do: you did not look for the end
+of the line, because `A` found it for you, and you did not aim with a
+mouse, because the line was three down and you said so.
+
+Keep your fingers home. `j` is the index finger's neighbour, not a
+journey. If you catch yourself counting presses of `j` past about five,
+the next lesson has the fix — and it is not holding the key down.
+
+@start customer.entity.ts
+export type Customer = {
+  id: string;
+  email: string;
+  name: string
+  createdAt: Date;
+};
+
+@expected customer.entity.ts
+export type Customer = {
+  id: string;
+  email: string;
+  name: string;
+  createdAt: Date;
+};

@@ -1,0 +1,91 @@
+@meta
+id: 12-16
+title: Drill — search, land on the end
+chapter: 12
+type: drill
+skills: search-offset
+par: 28
+minutes: 5
+reps: 8
+vscode: find it, click after the 30, type two zeros
+open: docker-compose.yml
+
+@brief
+Eight times: the worker's `--timeout=30` should be `--timeout=3000`. The
+flag is in the middle of a long command line, so the end of the line is
+no help to you.
+
+One search with an offset, two characters typed, save.
+
+@keys
+| `/text/e` `Enter` | land on the last character of the match |
+| `a` | append after the cursor |
+
+@hints
+Search for the flag and its value together, and ask the search to leave
+you at the end of what it found.
+--
+`/timeout=30/e` `Enter` puts the cursor on the `0`. Then `a00` `Esc`.
+
+@solution
+/timeout=30/e<Enter>  a00<Esc>  :wq<Enter>
+
+Twenty-two keystrokes, and none of them were aimed. This is the
+everyday use of `/e`: a value buried in the middle of a line, where `$`
+takes you too far and counting `w`s takes thought.
+
+By rep eight the `/e` should be arriving as part of the pattern rather
+than as an afterthought. That is the point — the offset is not an extra
+step, it is part of saying where you want to be.
+
+@start docker-compose.yml
+version: '3.9'
+
+services:
+  order-api:
+    image: registry.internal/order-api:2.4.1
+    command: node dist/server.js --port 4000 --metrics
+    environment:
+      DATABASE_URL: mysql://database:3306/orders
+      RABBIT_URL: amqp://rabbit-1:5672/payments
+    depends_on:
+      - database
+      - rabbit-1
+
+  order-worker:
+    image: registry.internal/order-worker:2.4.1
+    command: node dist/worker.js --queue payments --timeout=30 --retries=2
+    environment:
+      DATABASE_URL: mysql://database:3306/orders
+    depends_on:
+      - database
+
+  database:
+    image: mysql:8.4
+    command: --default-authentication-plugin=caching_sha2_password
+
+@expected docker-compose.yml
+version: '3.9'
+
+services:
+  order-api:
+    image: registry.internal/order-api:2.4.1
+    command: node dist/server.js --port 4000 --metrics
+    environment:
+      DATABASE_URL: mysql://database:3306/orders
+      RABBIT_URL: amqp://rabbit-1:5672/payments
+    depends_on:
+      - database
+      - rabbit-1
+
+  order-worker:
+    image: registry.internal/order-worker:2.4.1
+    command: node dist/worker.js --queue payments --timeout=3000 --retries=2
+    environment:
+      DATABASE_URL: mysql://database:3306/orders
+    depends_on:
+      - database
+
+  database:
+    image: mysql:8.4
+    command: --default-authentication-plugin=caching_sha2_password

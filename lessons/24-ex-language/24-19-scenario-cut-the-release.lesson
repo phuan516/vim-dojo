@@ -1,0 +1,175 @@
+@meta
+id: 24-19
+title: Scenario — cut the release
+chapter: 24
+type: scenario
+skills: ex-delete, ex-move, ex-copy, sub-range, buffer-switch
+par: 112
+minutes: 12
+vscode: three tabs and a lot of cut, scroll, paste
+open: CHANGELOG.md errors.ts flags.fixture.ts
+vimrc: set hidden
+
+@brief
+A ticket, not an exercise.
+
+    REL-150  Cut 1.5.0. Changelog, error map and the feature flag
+             fixture all need tidying before the tag goes on.
+
+Three files, open as three buffers.
+
+  1. CHANGELOG.md — everything under `Unreleased` moves under the empty
+     `## 1.5.0` heading, sorted alphabetically, with a blank line before
+     `## 1.4.0` as every section has. The `Bump dev dependencies` entry
+     is dropped; we do not log those. `Add customer tiers` is also
+     listed under 1.4.0 by mistake, where it never shipped. Remove that
+     one. `Unreleased` is left as an empty section.
+
+  2. errors.ts — four codes were added at the bottom this sprint. The
+     map is kept in status code order, lowest first. Codes that tie
+     keep their current order.
+
+  3. flags.fixture.ts — `customer-tiers` and `partial-refunds` only
+     exist for staging. Production needs both, identical apart from
+     `env`, added at the end of the list in the same order.
+
+Nothing in this ticket needs the cursor to leave line 1 of any file.
+
+@keys
+| `:7d` | delete line 7 |
+| `:5,9m11` | move lines 5 to 9 to below line 11 |
+| `:7,10sort` | sort lines 7 to 10 |
+| `:2,9sort n /pat/` | sort by the number after the match |
+| `:2,3t5` | copy lines 2 to 3 to below line 5 |
+| `:6,7s/a/b/` | substitute on lines 6 to 7 only |
+| `:bn` `:wqa` | next buffer; write all and quit |
+
+@hints
+In the changelog, delete first, then move, then sort, then delete the
+1.4.0 duplicate. Each step changes the line numbers for the next, so
+read the gutter again before every command rather than planning all
+four in advance.
+--
+Move the blank line under the Unreleased list along with the entries.
+It becomes the blank line before `## 1.4.0`, and Unreleased keeps the
+one above it.
+--
+The error map has two keys with digits in their names. Sort by the
+number after `statusCode`, not the first number on the line.
+--
+The flags: copy the two lines to the end, then a substitute with a
+two-line range on the copies. Par assumes you never retype a flag line.
+
+@solution
+A route that measures ninety-seven keystrokes.
+
+**CHANGELOG.md** — `:7d` drops the dependency bump. `:5,9m11` moves the
+four entries and their trailing blank line under `## 1.5.0`. They are
+now lines 7 to 10, so `:7,10sort`. The stray tiers entry under 1.4.0 is
+now on line 16: `:16d`.
+
+**errors.ts** — `:bn`, then `:2,9sort n /statusCode/`.
+
+**flags.fixture.ts** — `:bn`, `:2,3t5` to copy the staging pair to the
+end of the list, then `:6,7s/staging/production/` on the copies. `:wqa`.
+
+Every command in this ticket is a range, a verb and an argument, and
+not one of them needed the cursor to move. That is the shape of the ex
+language and it is what you should feel when a job is mostly moving
+lines around: the file has coordinates, the gutter shows them, and the
+command line takes them directly.
+
+The thing to watch is the coordinates changing under you. Each delete
+and move renumbers everything below it. The habit that keeps you safe
+is to run one command, look, and read the numbers again for the next
+one, rather than working out a sequence in your head. When you want the
+numbers not to shift, a `:g` marks every line first and then acts, and
+chapter 15 already showed you that trick.
+
+@start CHANGELOG.md
+# Changelog
+
+## Unreleased
+
+- Record cancellation reason on orders
+- Add partial refunds
+- Bump dev dependencies
+- Fix duplicate charge on retried checkout
+- Add customer tiers
+
+## 1.5.0
+
+## 1.4.0
+
+- Add refund window
+- Send email receipts
+- Add customer tiers
+
+## 1.3.0
+
+- Add customer lookup by email
+- Return 404 for unknown orders
+
+@expected CHANGELOG.md
+# Changelog
+
+## Unreleased
+
+## 1.5.0
+
+- Add customer tiers
+- Add partial refunds
+- Fix duplicate charge on retried checkout
+- Record cancellation reason on orders
+
+## 1.4.0
+
+- Add refund window
+- Send email receipts
+
+## 1.3.0
+
+- Add customer lookup by email
+- Return 404 for unknown orders
+
+@start errors.ts
+export const errors = {
+  PAYMENT_DECLINED: { statusCode: 402, sentry: false },
+  ORDER_NOT_FOUND: { statusCode: 404, sentry: false },
+  ORDER_ALREADY_SHIPPED: { statusCode: 409, sentry: false },
+  REFUND_FAILED: { statusCode: 502, sentry: true },
+  TIER_3_REQUIRED: { statusCode: 403, sentry: false },
+  REFUND_WINDOW_EXPIRED: { statusCode: 422, sentry: false },
+  GATEWAY_V2_TIMEOUT: { statusCode: 504, sentry: true },
+  CUSTOMER_NOT_FOUND: { statusCode: 404, sentry: false },
+};
+
+@expected errors.ts
+export const errors = {
+  PAYMENT_DECLINED: { statusCode: 402, sentry: false },
+  TIER_3_REQUIRED: { statusCode: 403, sentry: false },
+  ORDER_NOT_FOUND: { statusCode: 404, sentry: false },
+  CUSTOMER_NOT_FOUND: { statusCode: 404, sentry: false },
+  ORDER_ALREADY_SHIPPED: { statusCode: 409, sentry: false },
+  REFUND_WINDOW_EXPIRED: { statusCode: 422, sentry: false },
+  REFUND_FAILED: { statusCode: 502, sentry: true },
+  GATEWAY_V2_TIMEOUT: { statusCode: 504, sentry: true },
+};
+
+@start flags.fixture.ts
+export const flags = [
+  { flag: 'customer-tiers', env: 'staging', enabled: true },
+  { flag: 'partial-refunds', env: 'staging', enabled: true },
+  { flag: 'refund-window', env: 'staging', enabled: true },
+  { flag: 'refund-window', env: 'production', enabled: true },
+];
+
+@expected flags.fixture.ts
+export const flags = [
+  { flag: 'customer-tiers', env: 'staging', enabled: true },
+  { flag: 'partial-refunds', env: 'staging', enabled: true },
+  { flag: 'refund-window', env: 'staging', enabled: true },
+  { flag: 'refund-window', env: 'production', enabled: true },
+  { flag: 'customer-tiers', env: 'production', enabled: true },
+  { flag: 'partial-refunds', env: 'production', enabled: true },
+];

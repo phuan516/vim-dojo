@@ -1,0 +1,50 @@
+@meta
+id: 20-02
+title: Drill — yank, delete, "0p
+chapter: 20
+type: drill
+skills: register-zero
+par: 16
+minutes: 5
+reps: 8
+vscode: copy, cut, paste, get the wrong thing, sigh
+open: orders.csv
+
+@brief
+Eight times: the third row is a mangled copy of the second. Yank the
+good row, delete the bad one, and put a fresh copy of the good row at
+the bottom of the file. Yank first, delete second, put last, every rep.
+
+By rep four `"0p` should come out of your fingers whenever there has
+been a delete since the yank.
+
+@keys
+| `yy` | yank the line |
+| `dd` | delete the line — and overwrite the unnamed register |
+| `"0p` | put the last yank, ignoring the delete |
+
+@hints
+`j` `yy` takes the good row. `j` `dd` removes the bad one and leaves you
+on the last row.
+--
+Plain `p` here would put the mangled row back. `"0p` puts the yank.
+
+@solution
+    j yy j dd "0p :wq<Enter>
+
+Thirteen keystrokes, and the only one that is new is the `"0` in front
+of the put. The habit you are building is a question you ask on the way
+to `p`: has anything been deleted since I yanked? If yes, `"0p`. In a
+week you will stop hearing the question and just press the right one.
+
+@start orders.csv
+id,customer,status,total
+ord_001,cus_042,PENDING,1999
+ord_00,cus_042,PENDNG,1999
+ord_002,cus_017,SHIPPED,4500
+
+@expected orders.csv
+id,customer,status,total
+ord_001,cus_042,PENDING,1999
+ord_002,cus_017,SHIPPED,4500
+ord_001,cus_042,PENDING,1999

@@ -1,0 +1,57 @@
+@meta
+id: 04-02
+title: Drill — down five, append
+chapter: 04
+type: drill
+skills: hjkl
+par: 18
+minutes: 5
+reps: 8
+vscode: down arrow five times
+open: checklist.md
+
+@brief
+Eight times: get to the smoke test line, append ` ok`, save, quit.
+
+Nothing to work out. Watch your right hand — if it leaves the home row,
+start the rep again.
+
+@keys
+| `j` | down one line |
+| `A` | append at the end of the line |
+| `:wq` | save and quit |
+
+@hints
+Five presses of `j` from the top of the file.
+--
+Do not look at the keyboard and do not use the arrow keys. The point of
+the rep is that `j` stops being a decision.
+
+@solution
+    j j j j j A  ok <Esc> :wq<Enter>
+
+Fourteen keystrokes, and by rep eight it should take under three seconds.
+
+Five taps is about the limit of what is worth counting out one key at a
+time. Past that you are better off giving vim a number, which is the next
+lesson. This drill exists so that the short hops — two down, one up, one
+right — happen without thought, because those are most of the moving you
+will ever do.
+
+@start checklist.md
+# Release checklist
+
+- [ ] run the migrations
+- [ ] set the feature flags
+- [ ] warm the product cache
+- [ ] smoke test the checkout
+- [ ] tell support
+
+@expected checklist.md
+# Release checklist
+
+- [ ] run the migrations
+- [ ] set the feature flags
+- [ ] warm the product cache
+- [ ] smoke test the checkout ok
+- [ ] tell support

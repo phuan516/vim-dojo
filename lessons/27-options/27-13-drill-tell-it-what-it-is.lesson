@@ -1,0 +1,51 @@
+@meta
+id: 27-13
+title: Drill — tell it what it is
+chapter: 27
+type: drill
+skills: filetype
+par: 50
+minutes: 4
+reps: 8
+vscode: click the language name in the status bar, pick TypeScript
+open: order.provider.ts.20260917
+
+@brief
+Eight times: set the filetype to `typescript`, then open three lines under
+the comment with `3o` and type the note once. Save, quit, go again.
+
+You are not typing any slashes. Once vim knows the buffer is TypeScript it
+knows `//` starts a comment, and `o` on a comment line continues it.
+
+@keys
+| `:setf typescript` | set the filetype |
+| `:set ft?` | check it took |
+
+@hints
+Set the filetype first. The comment markers are vim's job after that.
+--
+`:setf typescript` `Enter`, then `3overified by finance` `Esc`, `:wq`.
+
+@solution
+    :setf typescript<Enter>  3overified by finance<Esc>  :wq<Enter>
+
+Forty-three keystrokes.
+
+This is the `formatoptions` flag `o` from the earlier drill, seen from the
+other side. There it was a nuisance and you took it out; here it is doing
+free typing for you. Same mechanism, and whether it helps depends entirely
+on whether the next line is meant to be a comment.
+
+Both facts arrive with the filetype. Nothing else in this drill sets
+anything.
+
+@start order.provider.ts.20260917
+// restored from backup after the 17 September incident
+const cutoffAt = new Date('2026-09-17T00:00:00Z');
+
+@expected order.provider.ts.20260917
+// restored from backup after the 17 September incident
+// verified by finance
+// verified by finance
+// verified by finance
+const cutoffAt = new Date('2026-09-17T00:00:00Z');

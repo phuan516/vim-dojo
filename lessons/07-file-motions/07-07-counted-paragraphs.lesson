@@ -1,0 +1,269 @@
+@meta
+id: 07-07
+title: Count the blocks, not the lines
+chapter: 07
+type: lesson
+skills: paragraph-motion, find-f
+par: 46
+minutes: 6
+vscode: scroll and count test blocks on the screen
+open: order.provider.spec.ts
+
+@brief
+Fourteen tests, 100 lines, one blank line between each pair. Three of them
+have gone flaky against the new payment sandbox and are being skipped until
+ORD-418 lands: the fourth, the ninth and the fourteenth.
+
+Turn `it(` into `it.skip(` on those three, and only those three.
+
+You already know how to step over one block at a time. The blocks here are
+evenly spaced and you know which numbers you want, so stepping five times
+and stepping once should cost the same.
+
+@keys
+| `5}` | forward five paragraphs |
+| `2{` | back two paragraphs |
+| `f(` | forward to the open paren |
+| `i` | insert before the cursor |
+
+@hints
+Every motion you have met takes a count, and the paragraph motions are no
+exception. Work out how many gaps lie between you and the block you want.
+--
+`5}` moves forward five blank lines in one go. From the top of the file the
+gaps are: after the imports, then one before each test. The fourth test
+therefore sits one line below the fifth gap.
+--
+The rep is `5}` `j` to get onto the `it(` line, then `f(` `i` `.skip` `Esc`
+to write the word in front of the paren. Each of the next two blocks is
+another five gaps away, so the same `5}` `j` repeats exactly.
+
+@solution
+    5} j f ( i .skip <Esc>
+    5} j f ( i .skip <Esc>
+    5} j f ( i .skip <Esc>
+    :wq<Enter>
+
+Forty keystrokes, and the same twelve three times.
+
+The count is not an optimisation, it is a change of unit. `5}` says "five
+blocks down" and lands on the right one whether each block is four lines or
+forty. `40j` says "forty lines down" and is wrong the moment somebody adds
+an assertion. Every counted motion you have learned behaves this way —
+`5j` counts lines, `5w` counts words, `5}` counts blocks — and the skill is
+picking the unit that matches what you are looking at. Here you were handed
+ordinals, so blocks was the unit.
+
+`{` takes a count too. `2{` is up two blocks, and it is the motion you want
+when a test fails and you need the `beforeEach` above it.
+
+One habit to carry forward: when the same short sequence repeats three
+times, notice it. In chapter 11 the dot command will replay the last change
+for one keystroke, and in chapter 21 you will record the whole rep once and
+run it fourteen times. Both of those only pay off if you are writing your
+edits as a repeatable rep in the first place, which is exactly what `5}` `j`
+`f(` `i.skip` `Esc` is.
+
+@start order.provider.spec.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { orderFactory, cancelOrderArgsFactory } from '../../../test/factories';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const provider = new OrderProvider(orderRepository, paymentService);
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
+  it('returns the order when one exists', async () => {
+    const order = orderFactory();
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    expect(await provider.findOne(order.id)).toEqual(order);
+  });
+
+  it('throws when the order is missing', async () => {
+    reveal(orderRepository).findOne.mockResolvedValue(undefined);
+    await expect(provider.findOne('ord_0000')).rejects.toThrow('ORDER_NOT_FOUND');
+  });
+
+  it('lists orders for a customer, newest first', async () => {
+    const orders = [orderFactory(), orderFactory()];
+    reveal(orderRepository).findByCustomer.mockResolvedValue(orders);
+    expect(await provider.findByCustomer('cus_88')).toEqual(orders);
+  });
+
+  it('refunds a cancelled order through the payment service', async () => {
+    const order = orderFactory({ status: 'COMPLETED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    await provider.cancel(cancelOrderArgsFactory({ id: order.id }));
+    expect(reveal(paymentService).refund).toHaveBeenCalledWith(order.id);
+  });
+
+  it('refuses to cancel an order that has shipped', async () => {
+    const order = orderFactory({ status: 'SHIPPED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    await expect(provider.cancel({ id: order.id })).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+  });
+
+  it('records a cancellation reason', async () => {
+    const order = orderFactory({ status: 'PENDING' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    await provider.cancel({ id: order.id, reason: 'CUSTOMER_REQUEST' });
+    expect(reveal(orderRepository).update).toHaveBeenCalled();
+  });
+
+  it('does not refund outside the thirty day window', async () => {
+    const order = orderFactory({ placedAt: new Date('2025-01-01') });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    await provider.cancel({ id: order.id });
+    expect(reveal(paymentService).refund).not.toHaveBeenCalled();
+  });
+
+  it('counts orders by status', async () => {
+    reveal(orderRepository).countByStatus.mockResolvedValue(12);
+    expect(await provider.countByStatus('PENDING')).toEqual(12);
+  });
+
+  it('creates an order in pending', async () => {
+    const order = orderFactory({ status: 'PENDING' });
+    reveal(orderRepository).create.mockResolvedValue(order);
+    expect(await provider.create({ customerId: 'cus_88', amount: 4999 })).toEqual(order);
+  });
+
+  it('defaults the currency to sterling', async () => {
+    const order = orderFactory({ currency: 'GBP' });
+    reveal(orderRepository).create.mockResolvedValue(order);
+    expect((await provider.create({ customerId: 'cus_88', amount: 100 })).currency).toEqual('GBP');
+  });
+
+  it('soft deletes rather than removing the row', async () => {
+    const order = orderFactory();
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    await provider.remove(order.id);
+    expect(reveal(orderRepository).softDelete).toHaveBeenCalledWith(order.id);
+  });
+
+  it('totals completed orders for a customer', async () => {
+    reveal(orderRepository).totalForCustomer.mockResolvedValue(9999);
+    expect(await provider.totalForCustomer('cus_88')).toEqual(9999);
+  });
+
+  it('reinstates a cancelled order', async () => {
+    const order = orderFactory({ status: 'CANCELLED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    await provider.reinstate(order.id);
+    expect(reveal(orderRepository).update).toHaveBeenCalled();
+  });
+
+  it('leaves a shipped order alone when reinstating', async () => {
+    const order = orderFactory({ status: 'SHIPPED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    await expect(provider.reinstate(order.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+  });
+});
+
+@expected order.provider.spec.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { orderFactory, cancelOrderArgsFactory } from '../../../test/factories';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const provider = new OrderProvider(orderRepository, paymentService);
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
+  it('returns the order when one exists', async () => {
+    const order = orderFactory();
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    expect(await provider.findOne(order.id)).toEqual(order);
+  });
+
+  it('throws when the order is missing', async () => {
+    reveal(orderRepository).findOne.mockResolvedValue(undefined);
+    await expect(provider.findOne('ord_0000')).rejects.toThrow('ORDER_NOT_FOUND');
+  });
+
+  it('lists orders for a customer, newest first', async () => {
+    const orders = [orderFactory(), orderFactory()];
+    reveal(orderRepository).findByCustomer.mockResolvedValue(orders);
+    expect(await provider.findByCustomer('cus_88')).toEqual(orders);
+  });
+
+  it.skip('refunds a cancelled order through the payment service', async () => {
+    const order = orderFactory({ status: 'COMPLETED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    await provider.cancel(cancelOrderArgsFactory({ id: order.id }));
+    expect(reveal(paymentService).refund).toHaveBeenCalledWith(order.id);
+  });
+
+  it('refuses to cancel an order that has shipped', async () => {
+    const order = orderFactory({ status: 'SHIPPED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    await expect(provider.cancel({ id: order.id })).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+  });
+
+  it('records a cancellation reason', async () => {
+    const order = orderFactory({ status: 'PENDING' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    await provider.cancel({ id: order.id, reason: 'CUSTOMER_REQUEST' });
+    expect(reveal(orderRepository).update).toHaveBeenCalled();
+  });
+
+  it('does not refund outside the thirty day window', async () => {
+    const order = orderFactory({ placedAt: new Date('2025-01-01') });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    await provider.cancel({ id: order.id });
+    expect(reveal(paymentService).refund).not.toHaveBeenCalled();
+  });
+
+  it('counts orders by status', async () => {
+    reveal(orderRepository).countByStatus.mockResolvedValue(12);
+    expect(await provider.countByStatus('PENDING')).toEqual(12);
+  });
+
+  it.skip('creates an order in pending', async () => {
+    const order = orderFactory({ status: 'PENDING' });
+    reveal(orderRepository).create.mockResolvedValue(order);
+    expect(await provider.create({ customerId: 'cus_88', amount: 4999 })).toEqual(order);
+  });
+
+  it('defaults the currency to sterling', async () => {
+    const order = orderFactory({ currency: 'GBP' });
+    reveal(orderRepository).create.mockResolvedValue(order);
+    expect((await provider.create({ customerId: 'cus_88', amount: 100 })).currency).toEqual('GBP');
+  });
+
+  it('soft deletes rather than removing the row', async () => {
+    const order = orderFactory();
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    await provider.remove(order.id);
+    expect(reveal(orderRepository).softDelete).toHaveBeenCalledWith(order.id);
+  });
+
+  it('totals completed orders for a customer', async () => {
+    reveal(orderRepository).totalForCustomer.mockResolvedValue(9999);
+    expect(await provider.totalForCustomer('cus_88')).toEqual(9999);
+  });
+
+  it('reinstates a cancelled order', async () => {
+    const order = orderFactory({ status: 'CANCELLED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    await provider.reinstate(order.id);
+    expect(reveal(orderRepository).update).toHaveBeenCalled();
+  });
+
+  it.skip('leaves a shipped order alone when reinstating', async () => {
+    const order = orderFactory({ status: 'SHIPPED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    await expect(provider.reinstate(order.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+  });
+});

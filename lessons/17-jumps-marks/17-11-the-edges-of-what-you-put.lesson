@@ -1,0 +1,135 @@
+@meta
+id: 17-11
+title: The edges of what you just put
+chapter: 17
+type: lesson
+skills: mark-backtick, marks-jump
+par: 26
+minutes: 5
+vscode: paste, then drag-select the pasted lines and press Tab
+open: payment.service.ts
+vimrc: set shiftwidth=4 expandtab
+
+@brief
+Somebody drafted a status check at the very bottom of this file,
+outside the class, flush against the left margin. It belongs in
+`refund`, directly after the `const response` line, with a blank line
+on either side. `charge` and `capture` show what it should look like.
+
+Move it. Delete the draft as a paragraph, put it in the right place,
+then indent the lines you just put, and only those lines, by one
+level. Do not count them and do not select them. Vim has already
+marked where the put text starts and where it ends.
+
+@keys
+| `'[` | first line of the last change or put |
+| `']` | last line of the last change or put |
+| `` `[ `` `` `] `` | the same, exact character |
+| `>` | indent, given a motion |
+| `dap` | delete a paragraph |
+
+@hints
+After `p`, the cursor is on the first line that was put. You need a
+motion from there to the last line that was put.
+--
+`']` is a motion to the last line of the text you just put, so `>']`
+indents from the cursor to the end of it.
+--
+`G` `dap` takes the draft and its leading blank line. `?refund(` Enter,
+`j` `p` drops it under the `const response` line. Then `>']`.
+
+@solution
+    G dap ?refund(<Enter> jp >'] :wq<Enter>
+
+Every time you change or put text, vim records where it starts in
+`[` and where it ends in `]`. They are the third pair of automatic
+marks, after `.` and `^`, and they turn "the thing I just pasted" into
+a motion. `>']` indents it. `=']` would re-indent it. `d']` would
+delete it again. `:'[,']s/foo/bar/` substitutes inside it and nowhere
+else, which is how you rename things in a block you just copied
+without touching the original.
+
+The draft's leading blank line came along with `dap`, which is what
+made the spacing right: the register held blank, `if`, `throw`, `}`,
+and putting it after the `const response` line gave a blank above the
+block and the existing blank below it. When a paragraph is the last
+one in the file, `ap` reaches back for the blank line above it instead
+of forward.
+
+The lesson set `shiftwidth` to four so that one `>` moves the draft
+from the margin to method-body depth. In your own projects it is
+whatever the codebase uses, and `>` moves by that.
+
+@start payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async charge(args: { orderId: string; amount: number }) {
+    const response = await this.http.post('/charges', args);
+
+    if (response.status !== 200) {
+      throw exception('CHARGE_FAILED');
+    }
+
+    return response.data;
+  }
+
+  public async refund(orderId: string) {
+    const response = await this.http.post('/refunds', { orderId });
+
+    return response.data;
+  }
+
+  public async capture(orderId: string) {
+    const response = await this.http.post('/captures', { orderId });
+
+    if (response.status !== 200) {
+      throw exception('CAPTURE_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+if (response.status !== 200) {
+  throw exception('REFUND_FAILED');
+}
+
+@expected payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async charge(args: { orderId: string; amount: number }) {
+    const response = await this.http.post('/charges', args);
+
+    if (response.status !== 200) {
+      throw exception('CHARGE_FAILED');
+    }
+
+    return response.data;
+  }
+
+  public async refund(orderId: string) {
+    const response = await this.http.post('/refunds', { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+
+  public async capture(orderId: string) {
+    const response = await this.http.post('/captures', { orderId });
+
+    if (response.status !== 200) {
+      throw exception('CAPTURE_FAILED');
+    }
+
+    return response.data;
+  }
+}

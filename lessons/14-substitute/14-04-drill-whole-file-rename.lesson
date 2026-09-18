@@ -1,0 +1,63 @@
+@meta
+id: 14-04
+title: Drill — the whole-file rename
+chapter: 14
+type: drill
+skills: sub-range, sub-basic
+par: 22
+minutes: 4
+reps: 8
+vscode: Ctrl-H, Replace All
+open: queue.config.ts
+
+@brief
+Eight times: the refunds queue has moved from `v1` to `v2`, and this
+config names it on six lines. Change all six with one command and save.
+
+You are drilling the shape `:%s/…/…/g` until the `%` and the `g` arrive
+without thought. They are the two characters people leave out.
+
+@keys
+| `:%s/old/new/g` `Enter` | every match on every line |
+
+@hints
+The range goes between the colon and the `s`. The flag goes after the
+last slash.
+--
+`:%s/v1/v2/g` and Enter. Nothing else in the file contains `v1`, so the
+pattern can be that short.
+
+@solution
+    :%s/v1/v2/g<Enter>  :wq<Enter>
+
+Sixteen keystrokes. A pattern this short is only safe because you
+looked at the file and saw that `v1` appears nowhere else. On a real
+file you would write `refunds\.v1` and pay eight more keystrokes for
+the certainty. Deciding how much pattern to write, for the file in
+front of you, is the habit; the drill is for the shape around it.
+
+@start queue.config.ts
+export const QUEUES = {
+  refunds: 'payments.refunds.v1',
+  refundsDead: 'payments.refunds.v1.dead',
+  refundsRetry: 'payments.refunds.v1.retry',
+};
+
+export const BINDINGS = [
+  { exchange: 'payments', routingKey: 'refund.created', queue: 'payments.refunds.v1' },
+  { exchange: 'payments', routingKey: 'refund.failed', queue: 'payments.refunds.v1.retry' },
+  { exchange: 'payments', routingKey: 'refund.dead', queue: 'payments.refunds.v1.dead' },
+];
+
+@expected queue.config.ts
+export const QUEUES = {
+  refunds: 'payments.refunds.v2',
+  refundsDead: 'payments.refunds.v2.dead',
+  refundsRetry: 'payments.refunds.v2.retry',
+};
+
+export const BINDINGS = [
+  { exchange: 'payments', routingKey: 'refund.created', queue: 'payments.refunds.v2' },
+  { exchange: 'payments', routingKey: 'refund.failed', queue: 'payments.refunds.v2.retry' },
+  { exchange: 'payments', routingKey: 'refund.dead', queue: 'payments.refunds.v2.dead' },
+];

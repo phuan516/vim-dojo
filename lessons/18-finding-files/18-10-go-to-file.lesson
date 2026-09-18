@@ -1,0 +1,132 @@
+@meta
+id: 18-10
+title: Go to the file under the cursor
+chapter: 18
+type: lesson
+skills: edit-file, find-path
+par: 34
+minutes: 4
+vscode: Ctrl+click the import path
+open: src/domain/order/order.provider.ts
+
+@brief
+Error codes are being renamed to say which system they came from.
+`REFUND_FAILED`, thrown by the payment service, becomes
+`PAYMENT_REFUND_FAILED`. The provider you are in imports that service.
+
+Put the cursor on the import path and press `gf`. Vim reads the file
+name under the cursor, resolves it against the current file's
+directory, tries the extensions in `suffixesadd` (the TypeScript
+ftplugin sets `.ts` for you), and opens it. No `:find`, no `path`
+needed for a relative import.
+
+Rename the code in the service. The provider stays as it is.
+
+@keys
+| `gf` | go to the file named under the cursor |
+| `Ctrl-W f` | the same, in a split |
+| `Ctrl-O` | jump back to where you came from |
+| `gF` | `gf`, then jump to the line number after the name |
+
+@hints
+The payment import is on line 4. Get the cursor anywhere on the quoted
+path, not on the word `import`.
+--
+`3j` then `f'` puts you on the opening quote. `gf` from there works;
+vim skips forward to the first file-name character.
+--
+`3jf'gf`, then `/REFUND_` Enter, `iPAYMENT_` Esc, `:wq`.
+
+@solution
+    3j f' gf /REFUND_<Enter> iPAYMENT_ <Esc> :wq<Enter>
+
+`gf` is the fastest way between a file and the files it imports, and
+you spend most of your day inside exactly that graph. `Ctrl-O` takes you
+back, because `gf` is a jump like any other from chapter 17.
+
+Where does it look? First the directory of the current file, because
+`.` is in `path` by default, so `./order.repository` and
+`../../infrastructure/services/payment.service` both resolve. Then the
+rest of `path`. Bare module names like `tsyringe` will not resolve
+unless you add `node_modules` to `path`, and you should not.
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async cancel(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+    };
+  }
+}
+
+@start src/infrastructure/services/payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string) {
+    const response = await this.http.post(`/refunds`, { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@expected src/infrastructure/services/payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string) {
+    const response = await this.http.post(`/refunds`, { orderId });
+
+    if (response.status !== 200) {
+      throw exception('PAYMENT_REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}

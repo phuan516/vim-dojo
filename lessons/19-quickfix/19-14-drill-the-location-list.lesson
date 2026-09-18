@@ -1,0 +1,94 @@
+@meta
+id: 19-14
+title: Drill — the location list
+chapter: 19
+type: drill
+skills: location-list
+par: 74
+minutes: 5
+reps: 8
+vscode: Replace All in Files
+vimrc: set nohidden smartcase
+open: src/shared/money.ts
+
+@brief
+The `Money` type is being renamed `Amount` in the three files that use
+it. `formatMoney` keeps its name: it is a function, and the pattern
+should say so with a word boundary. Eight times, through the location
+list: `:lvim`, `:ldo`, quit.
+
+@keys
+| `:lvim /pattern/ **/*.ts` | fill this window's location list |
+| `:ldo s/old/new/g \| update` | change every entry, write each file |
+
+@hints
+`:lvim /\<Money\>/ **/*.ts`. Seven hits, none of them inside
+`formatMoney`.
+--
+`:ldo s/\<Money\>/Amount/g | update`, then `:q`.
+
+@solution
+    :lvim /\<Money\>/ **/*.ts<Enter>  :ldo s/\<Money\>/Amount/g | update<Enter>  :q<Enter>
+
+The same two lines as lesson 8 with an `l` in front of each. The word
+boundaries carry the weight: `Money` on its own would also match inside
+`formatMoney` on two lines and rename a function you were not asked to
+touch.
+
+@start src/shared/money.ts
+export type Money = number;
+
+export const formatMoney = (value: Money, currency = 'GBP') =>
+  new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value / 100);
+
+@expected src/shared/money.ts
+export type Amount = number;
+
+export const formatMoney = (value: Amount, currency = 'GBP') =>
+  new Intl.NumberFormat('en-GB', { style: 'currency', currency }).format(value / 100);
+
+@start src/domain/order/order.entity.ts
+import { Money } from '../../shared/money';
+
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: Money;
+  placedAt: Date;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@expected src/domain/order/order.entity.ts
+import { Amount } from '../../shared/money';
+
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: Amount;
+  placedAt: Date;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start src/domain/payment/payment.entity.ts
+import { Money } from '../../shared/money';
+
+export type Payment = {
+  id: string;
+  orderId: string;
+  amount: Money;
+  refundedAmount?: Money;
+};
+
+@expected src/domain/payment/payment.entity.ts
+import { Amount } from '../../shared/money';
+
+export type Payment = {
+  id: string;
+  orderId: string;
+  amount: Amount;
+  refundedAmount?: Amount;
+};

@@ -1,0 +1,90 @@
+@meta
+id: 24-13
+title: Sort a block and drop the duplicates
+chapter: 24
+type: lesson
+skills: ex-sort
+par: 17
+minutes: 4
+vscode: an extension, or drag lines around by hand
+open: order.provider.ts
+
+@brief
+The imports at the top of this provider, lines 1 to 8, have been added
+to by three people and none of them looked at the ones already there.
+Two are duplicated outright. The lint rule wants them sorted and
+unique. Nothing below the blank line changes.
+
+`sort` takes a range and sorts the lines in it. With `u` it also drops
+lines that are exact duplicates of the one before them, which after a
+sort means every duplicate. Sorting is byte order by default, so every
+capital letter comes before every lowercase one; the lint rule happens
+to agree.
+
+@keys
+| `:1,8sort u` | sort lines 1 to 8, keeping one of each |
+| `:sort` | sort the whole file |
+| `:sort i` | sort ignoring case |
+
+@hints
+Range first, then `sort`, then the flag.
+--
+`u` is unique. Without it the sort still works but both duplicates are
+still there, next to each other.
+--
+`:1,8sort u` and Enter, `:wq`.
+
+@solution
+    :1,8sort u<Enter>  :wq<Enter>
+
+Fifteen keystrokes for what is, by hand, a genuinely annoying edit.
+
+`:sort` is the reason the shift and join lessons were worth doing: it is
+another verb with the same shape, and with the range it becomes precise.
+`:sort` on its own sorts the whole file, which is almost never what you
+want in code. `:1,8sort` sorts the import block and nothing else.
+`:'<,'>sort` sorts the visual selection, and that is how most people
+use it day to day: `V`, stretch it over the block, `:sort`.
+
+`u` compares whole lines, so two imports of the same thing with
+different spacing are not duplicates to it. Chapter 26 covers piping a
+range through the shell's `sort` and `uniq` for the cases where vim's
+own flags are not enough.
+
+@start order.provider.ts
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { injectable, inject } from 'tsyringe';
+import { EmailService } from '../../infrastructure/services/email.service';
+import { OrderRepository } from './order.repository';
+import { CustomerRepository } from '../customer/customer.repository';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+}
+
+@expected order.provider.ts
+import { CustomerRepository } from '../customer/customer.repository';
+import { EmailService } from '../../infrastructure/services/email.service';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { exception } from '../../configuration/errors';
+import { injectable, inject } from 'tsyringe';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+}

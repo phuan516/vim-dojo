@@ -1,0 +1,91 @@
+@meta
+id: 26-13
+title: A wall of JSON, made readable
+chapter: 26
+type: lesson
+skills: filter-bang
+par: 16
+minutes: 5
+vscode: paste it into a JSON beautifier website
+open: webhook-event.json
+
+@brief
+One line, two hundred characters, copied out of a webhook log and saved
+so somebody could work out why the capture was double-counted. Nobody can
+read it in this state.
+
+`jq .` reads JSON on standard input and prints it back formatted, two
+spaces to a level. Filter the whole file through it.
+
+This lesson needs `jq` installed. It is not part of coreutils, so if the
+command fails with `not found`, that is why — install it, or use the
+fallback in the solution, which is on every machine with Python.
+
+@keys
+| `:%!jq .` | reformat the whole file as JSON |
+| `:%!jq -S .` | the same, with the keys of every object sorted |
+| `:%!jq -c .` | the opposite — collapse it back to one line |
+| `:%!python3 -m json.tool` | no jq on the box; four-space indent |
+
+@hints
+The whole file is one line, so the range is the whole file.
+--
+The command is `jq` and the program you are giving it is a single dot,
+which means "this, unchanged" — the formatting is the side effect.
+--
+`:%!jq .` and Enter, then `:wq`.
+
+@solution
+    :%!jq .<Enter>  :wq<Enter>
+
+Eleven keystrokes. Learning the `!` operator pays for itself the first
+time you meet a minified anything.
+
+`jq` is worth more than the pretty-printing. The dot is a program, and
+the program can do any of the work:
+
+    :%!jq .data              only the data object, everything else gone
+    :%!jq -S .               every object's keys in alphabetical order
+    :%!jq 'keys'             just the top-level key names
+    :%!jq -c .               back to one line, for pasting into a test
+
+`-S` is the one to remember for code review. Two JSON fixtures that are
+supposed to be identical, written by two different people, diff against
+each other uselessly because the key order differs. Run both through
+`:%!jq -S .` and the diff collapses to the one field that actually
+changed.
+
+Without `jq`, `:%!python3 -m json.tool` does the formatting and
+`--sort-keys` does `-S`. It indents four spaces rather than two, so pick
+one and stay with it inside a repo. The same trick generalises: `:%!prettier
+--parser typescript` formats the buffer if the project has prettier,
+`:%!xmllint --format -` does XML, `:%!sqlformat` does SQL. Any formatter
+that reads standard input and writes standard output is already a vim
+command you did not have to configure.
+
+One warning about pretty-printing with a filter: the command has to
+parse. Feed `jq` a file with a trailing comma and it prints an error to
+the screen, nothing to standard output, and takes your buffer with it.
+That is the same lesson as the empty `grep`, and the same `u` fixes it.
+
+@start webhook-event.json
+{"id":"evt_8f21","type":"payment.captured","created":1774000000,"livemode":true,"data":{"orderId":"ord_1001","customerId":"cus_77","amount":4250,"currency":"GBP","refunded":false},"attempts":[1,2]}
+
+@expected webhook-event.json
+{
+  "id": "evt_8f21",
+  "type": "payment.captured",
+  "created": 1774000000,
+  "livemode": true,
+  "data": {
+    "orderId": "ord_1001",
+    "customerId": "cus_77",
+    "amount": 4250,
+    "currency": "GBP",
+    "refunded": false
+  },
+  "attempts": [
+    1,
+    2
+  ]
+}

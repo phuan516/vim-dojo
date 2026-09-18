@@ -1,0 +1,234 @@
+@meta
+id: 21-22
+title: Scenario — the fixture migration
+chapter: 21
+type: scenario
+skills: macro-recursive, macro-record, macro-count, macro-play
+par: 250
+minutes: 18
+vscode: four files, four different multi-cursor sessions, and a regex you will get wrong twice
+open: orders.fixture.ts customers.fixture.ts order-status.ts seed.spec.ts seed.ts
+
+@brief
+A ticket, not an exercise.
+
+    ORD-540  Seed data moves from CSV exports to typed fixtures.
+             Convert the two exports, give the status enum string
+             values, and make the seed spec async.
+
+Five files are open, in this order. `:bn` between them, `:wqa` at
+the end. Four of them change; each wants its own macro.
+
+  1. orders.fixture.ts — fourteen rows of `id,customerId,total,currency`
+     become records:
+
+         { id: 'ord_101', customerId: 'cus_7', total: 1200, currency: 'GBP' },
+
+  2. customers.fixture.ts — eight rows of `id|name|email` become
+     records:
+
+         { id: 'cus_7', name: 'Grace Lin', email: 'grace.lin@example.com' },
+
+  3. order-status.ts — every enum member gets a string value equal to
+     its name, as in lesson 1. Eight members.
+
+  4. seed.spec.ts — three tests need `async` on the `it(` line and
+     `await` after the `=` on the line below.
+
+  5. seed.ts — imports all of the above. Nothing to change.
+
+Use a different register for each macro. If one goes wrong you want
+to be able to fix that one and leave the others alone.
+
+@keys
+| `qaq` then `qa` … `@a` `q` | a recursive macro with a guard |
+| `qb` … `q`, `7@b` | a counted macro |
+| `qc` … `q`, `99@c` | a search-driven macro |
+| `:reg a b c d` | see all four at once |
+| `:bn` `:wqa` | next buffer; write all and quit |
+
+@hints
+Both fixtures end in `];`. A guard that finds the separator, `^f,`
+in one and `^f|` in the other, fails on that line, so both macros can
+be recursive and neither needs a count.
+--
+The enum is lesson 1 with `$x` first because the members end in a
+comma. The spec is lesson 7: search inside the macro, `j0` before the
+`f=`, and `99@d` until the search fails.
+--
+Orders: `qaq`, `qa^f,s', customerId: '<Esc>f,s', total: <Esc>f,s, currency: '<Esc>^i{ id: '<Esc>A' },<Esc>j@aq`, `@a`.
+Customers: the same shape with `f|` and `name`, `email`.
+--
+If a macro misbehaves on one line, `u` until the file is clean,
+`:reg` to read what you recorded, and either re-record into the same
+register or paste, fix and `0"ay$`.
+
+@solution
+One route, buffer by buffer.
+
+**orders.fixture.ts** — `j`, `qaq`, then
+`qa^f,s', customerId: '<Esc>f,s', total: <Esc>f,s, currency: '<Esc>^i{ id: '<Esc>A' },<Esc>j@aq`,
+then `@a`. Guard first, `@a` last, one press.
+
+**customers.fixture.ts** — `:bn`, `j`, `qbq`, then
+`qb^f|s', name: '<Esc>f|s', email: '<Esc>^i{ id: '<Esc>A' },<Esc>j@bq`,
+then `@b`.
+
+**order-status.ts** — `:bn`, `j`, `qc$x^yiwA = '<Esc>pa',<Esc>jq`,
+then `7@c`.
+
+**seed.spec.ts** — `:bn`, `qd/it(.*, () =><Enter>f(;iasync <Esc>j0f=wiawait <Esc>q`,
+then `99@d`.
+
+**seed.ts** — nothing. `:wqa`.
+
+Around two hundred and twenty keystrokes for thirty-three lines across
+four files, and not one of them was typed twice.
+
+This is the chapter in one sitting. Four macros, three shapes:
+recursive with a guard for a block of data that ends in something the
+guard rejects, counted for a short block where the count is on the
+screen, and search-driven for targets that are scattered. Each was
+recorded once, on one line, while looking at it.
+
+The thing to take away is not any one macro. It is that when the
+second identical line appears, the decision is already made. You
+record. If it is right, you play it until it fails. If it is wrong,
+it is text in a register and you fix it. That reflex is what the
+chapter was for; the tools around it, `:normal`, `:g`, `:cdo`,
+`:argdo`, only decide how far one recording travels.
+
+@start orders.fixture.ts
+export const orders = [
+  ord_101,cus_7,1200,GBP
+  ord_102,cus_7,450,GBP
+  ord_103,cus_12,9900,EUR
+  ord_104,cus_3,1575,GBP
+  ord_105,cus_21,80,USD
+  ord_106,cus_12,2200,EUR
+  ord_107,cus_8,640,GBP
+  ord_108,cus_8,640,GBP
+  ord_109,cus_30,12000,USD
+  ord_110,cus_3,315,GBP
+  ord_111,cus_17,1999,EUR
+  ord_112,cus_21,4250,USD
+  ord_113,cus_9,75,GBP
+  ord_114,cus_12,3600,EUR
+];
+
+@expected orders.fixture.ts
+export const orders = [
+  { id: 'ord_101', customerId: 'cus_7', total: 1200, currency: 'GBP' },
+  { id: 'ord_102', customerId: 'cus_7', total: 450, currency: 'GBP' },
+  { id: 'ord_103', customerId: 'cus_12', total: 9900, currency: 'EUR' },
+  { id: 'ord_104', customerId: 'cus_3', total: 1575, currency: 'GBP' },
+  { id: 'ord_105', customerId: 'cus_21', total: 80, currency: 'USD' },
+  { id: 'ord_106', customerId: 'cus_12', total: 2200, currency: 'EUR' },
+  { id: 'ord_107', customerId: 'cus_8', total: 640, currency: 'GBP' },
+  { id: 'ord_108', customerId: 'cus_8', total: 640, currency: 'GBP' },
+  { id: 'ord_109', customerId: 'cus_30', total: 12000, currency: 'USD' },
+  { id: 'ord_110', customerId: 'cus_3', total: 315, currency: 'GBP' },
+  { id: 'ord_111', customerId: 'cus_17', total: 1999, currency: 'EUR' },
+  { id: 'ord_112', customerId: 'cus_21', total: 4250, currency: 'USD' },
+  { id: 'ord_113', customerId: 'cus_9', total: 75, currency: 'GBP' },
+  { id: 'ord_114', customerId: 'cus_12', total: 3600, currency: 'EUR' },
+];
+
+@start customers.fixture.ts
+export const customers = [
+  cus_3|Chloe Martin|chloe.martin@example.com
+  cus_7|Grace Lin|grace.lin@example.com
+  cus_8|Hugo Silva|hugo.silva@example.com
+  cus_9|Isla Murray|isla.murray@example.com
+  cus_12|Liam Byrne|liam.byrne@example.com
+  cus_17|Quinn Doyle|quinn.doyle@example.com
+  cus_21|Umar Khan|umar.khan@example.com
+  cus_30|Yuki Tanaka|yuki.tanaka@example.com
+];
+
+@expected customers.fixture.ts
+export const customers = [
+  { id: 'cus_3', name: 'Chloe Martin', email: 'chloe.martin@example.com' },
+  { id: 'cus_7', name: 'Grace Lin', email: 'grace.lin@example.com' },
+  { id: 'cus_8', name: 'Hugo Silva', email: 'hugo.silva@example.com' },
+  { id: 'cus_9', name: 'Isla Murray', email: 'isla.murray@example.com' },
+  { id: 'cus_12', name: 'Liam Byrne', email: 'liam.byrne@example.com' },
+  { id: 'cus_17', name: 'Quinn Doyle', email: 'quinn.doyle@example.com' },
+  { id: 'cus_21', name: 'Umar Khan', email: 'umar.khan@example.com' },
+  { id: 'cus_30', name: 'Yuki Tanaka', email: 'yuki.tanaka@example.com' },
+];
+
+@start order-status.ts
+export enum OrderStatus {
+  PENDING,
+  CONFIRMED,
+  PAID,
+  PACKED,
+  SHIPPED,
+  DELIVERED,
+  CANCELLED,
+  REFUNDED,
+}
+
+@expected order-status.ts
+export enum OrderStatus {
+  PENDING = 'PENDING',
+  CONFIRMED = 'CONFIRMED',
+  PAID = 'PAID',
+  PACKED = 'PACKED',
+  SHIPPED = 'SHIPPED',
+  DELIVERED = 'DELIVERED',
+  CANCELLED = 'CANCELLED',
+  REFUNDED = 'REFUNDED',
+}
+
+@start seed.spec.ts
+import { seed } from './seed';
+
+describe('seed', () => {
+  it('inserts every order', () => {
+    const inserted = seed.orders();
+    expect(inserted).toHaveLength(14);
+  });
+
+  it('inserts every customer', () => {
+    const inserted = seed.customers();
+    expect(inserted).toHaveLength(8);
+  });
+
+  it('is idempotent', () => {
+    const second = seed.all();
+    expect(second.skipped).toBe(22);
+  });
+});
+
+@expected seed.spec.ts
+import { seed } from './seed';
+
+describe('seed', () => {
+  it('inserts every order', async () => {
+    const inserted = await seed.orders();
+    expect(inserted).toHaveLength(14);
+  });
+
+  it('inserts every customer', async () => {
+    const inserted = await seed.customers();
+    expect(inserted).toHaveLength(8);
+  });
+
+  it('is idempotent', async () => {
+    const second = await seed.all();
+    expect(second.skipped).toBe(22);
+  });
+});
+
+@start seed.ts
+import { orders } from './orders.fixture';
+import { customers } from './customers.fixture';
+import { OrderStatus } from './order-status';
+
+export const seed = {
+  orders: () => orders.map((order) => ({ ...order, status: OrderStatus.PENDING })),
+  customers: () => customers,
+  all: () => ({ skipped: orders.length + customers.length }),
+};

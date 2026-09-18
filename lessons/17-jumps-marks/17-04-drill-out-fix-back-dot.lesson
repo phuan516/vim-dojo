@@ -1,0 +1,81 @@
+@meta
+id: 17-04
+title: Drill — out, fix, back, dot
+chapter: 17
+type: drill
+skills: jump-back
+par: 28
+minutes: 5
+reps: 8
+vscode: F2 rename, which is fair, but it does not exist in a log or a markdown file
+open: retry.config.ts
+
+@brief
+Eight times: `MAX_RETRIES` is declared on line 1 and used once at the
+bottom. Rename both to `RETRY_LIMIT`. Start from the declaration, jump
+to the use, change it, come back, and let the dot command change the
+one you are standing on.
+
+Two changes, one typed. The rhythm you are after is star, change,
+`Ctrl-O`, dot.
+
+@keys
+| `*` | jump to the next occurrence of the word under the cursor |
+| `ciw` | change the word |
+| `Ctrl-O` | back to where `*` started, exact column |
+| `.` | repeat the change |
+
+@hints
+`2w` gets you onto `MAX_RETRIES` from the start of line 1. `*` is a
+jump, so `Ctrl-O` knows the way back.
+--
+`Ctrl-O` returns you to the same character `*` left from, which is
+inside the word, which is all `.` needs to repeat `ciw`.
+
+@solution
+    2w * ciwRETRY_LIMIT<Esc> Ctrl-O . :wq<Enter>
+
+Twenty-four keystrokes, eleven of them the new name. The important
+part is the pair in the middle: `Ctrl-O` then `.`. Because `Ctrl-O`
+restores the exact column, the cursor is back inside the word and `.`
+repeats the whole `ciw` change without you locating anything.
+
+This is a two-site rename. For six sites you would reach for `:%s`,
+which chapter 14 gave you. For two or three sites in different parts of
+a file, jump, change, `Ctrl-O`, dot is faster than typing the
+substitute command and does not risk touching a fourth site you had
+not noticed.
+
+@start retry.config.ts
+export const MAX_RETRIES = 3;
+
+export const retryDelaysMs = [250, 500, 1000, 2000, 4000];
+
+export function delayFor(attempt: number) {
+  return retryDelaysMs[Math.min(attempt, retryDelaysMs.length - 1)];
+}
+
+export function shouldRetry(attempt: number, status: number) {
+  if (status < 500) {
+    return false;
+  }
+
+  return attempt < MAX_RETRIES;
+}
+
+@expected retry.config.ts
+export const RETRY_LIMIT = 3;
+
+export const retryDelaysMs = [250, 500, 1000, 2000, 4000];
+
+export function delayFor(attempt: number) {
+  return retryDelaysMs[Math.min(attempt, retryDelaysMs.length - 1)];
+}
+
+export function shouldRetry(attempt: number, status: number) {
+  if (status < 500) {
+    return false;
+  }
+
+  return attempt < RETRY_LIMIT;
+}

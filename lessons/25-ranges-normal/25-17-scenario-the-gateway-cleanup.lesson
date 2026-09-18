@@ -1,0 +1,187 @@
+@meta
+id: 25-17
+title: Scenario — what the old gateway left
+chapter: 25
+type: scenario
+skills: range-pattern, range-syntax, ex-normal
+par: 80
+minutes: 12
+vscode: four tabs, a lot of scrolling and selecting
+open: payment.service.ts errors.json migrations.sql README.md
+vimrc: set hidden
+
+@brief
+A ticket.
+
+    PAY-812  The legacy gateway was switched off on Friday. Delete what
+             it left behind and make the migration file runnable.
+
+Four buffers. `:bn` and `:bp` move between them.
+
+  1. payment.service.ts — `legacySettle` is dead with the gateway. The
+     method goes, and so does the blank line above it, so the file reads
+     as though it had never been there.
+
+  2. errors.json — the two `PAYMENT_LEGACY_*` codes are retired. They sit
+     next to each other. Both lines go; every other code stays.
+
+  3. migrations.sql — six statements, none of them terminated. Every line
+     needs a semicolon on the end. There are no blank lines in the file.
+
+  4. README.md — history. It mentions the legacy gateway because the
+     gateway existed. Do not touch it.
+
+Every edit in this ticket can be done with a range and a command, from
+wherever the cursor happens to be. Nothing here needs a visual selection
+or a count of lines.
+
+@keys
+| `:.-1,/^  }/d` | from the line above the cursor to the next two-space `}` |
+| `:/pat/;+1d` | the next match and the line under it |
+| `:%normal A;` | press `A;` on every line |
+| `:bn` `:bp` | next and previous buffer |
+| `:wqa` | write everything and quit |
+
+@hints
+Do them in buffer order and you never go backwards. The first one is the
+mixed range from earlier in the chapter: search to the signature, then
+delete from `.-1` to the method's own closing brace.
+--
+For the two error codes, a comma range would resolve `+1` against the
+cursor, which is still on line 1. A semicolon resolves it against the
+match. That is the difference the two separators exist for.
+--
+The SQL file is one `:%normal`. The README needs nothing at all — just
+`:wqa` at the end, which leaves an unmodified buffer alone.
+--
+`/legacySettle` Enter, `:.-1,/^  }/d` Enter, `:bn`, `:/LEGACY/;+1d` Enter,
+`:bn`, `:%normal A;` Enter, `:wqa` Enter.
+
+@solution
+    /legacySettle<Enter>  :.-1,/^  }/d<Enter>
+    :bn<Enter>            :/LEGACY/;+1d<Enter>
+    :bn<Enter>            :%normal A;<Enter>
+    :wqa<Enter>
+
+Sixty-six keystrokes for three files, and the cursor was on line 1 of
+two of them the whole time.
+
+The `;` in `:/LEGACY/;+1d` is the piece most people get wrong first.
+Written with a comma, `+1` means "one below the cursor" — line 2 — and
+the range comes out backwards, so vim asks whether to swap it. The
+semicolon moves the cursor to the first address before working out the
+second, which is what "the match and the line after it" actually means.
+Comma for two independent addresses, semicolon when the second one is
+relative to the first.
+
+`:%normal A;` on the SQL is the whole reason to know `:normal`. The
+alternatives are a macro — record, then `6@q`, and count the lines — or
+`:%s/$/;/`, which is fine here and stops being fine the moment the edit
+is not expressible as a substitution. `:normal` has no such limit: if you
+can do it to one line with the keyboard, you can do it to a range.
+
+The README is the part of the ticket that is graded and has no keys. Most
+of what a cleanup touches is not what the cleanup is about, and knowing
+which buffer to leave alone is a skill like any other. `:wqa` writes only
+what changed, so an untouched buffer stays untouched.
+
+@start payment.service.ts
+import { injectable, inject } from 'tsyringe';
+import { paymentGateway } from '../gateways';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async settle(paymentId: string) {
+    const result = await paymentGateway.settle(paymentId);
+
+    if (!result.ok) {
+      throw exception('PAYMENT_SETTLEMENT_FAILED');
+    }
+
+    return result;
+  }
+
+  public async legacySettle(paymentId: string) {
+    const result = await paymentGateway.settleLegacy(paymentId);
+
+    return result;
+  }
+
+  public async status() {
+    return paymentGateway.status();
+  }
+}
+
+@expected payment.service.ts
+import { injectable, inject } from 'tsyringe';
+import { paymentGateway } from '../gateways';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async settle(paymentId: string) {
+    const result = await paymentGateway.settle(paymentId);
+
+    if (!result.ok) {
+      throw exception('PAYMENT_SETTLEMENT_FAILED');
+    }
+
+    return result;
+  }
+
+  public async status() {
+    return paymentGateway.status();
+  }
+}
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "PAYMENT_LEGACY_DECLINED": { "statusCode": 402, "sentry": false },
+  "PAYMENT_LEGACY_UNREACHABLE": { "statusCode": 502, "sentry": true },
+  "PAYMENT_SETTLEMENT_FAILED": { "statusCode": 502, "sentry": true },
+  "PAYMENT_REFUND_FAILED": { "statusCode": 502, "sentry": true },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false }
+}
+
+@expected errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "PAYMENT_SETTLEMENT_FAILED": { "statusCode": 502, "sentry": true },
+  "PAYMENT_REFUND_FAILED": { "statusCode": 502, "sentry": true },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false }
+}
+
+@start migrations.sql
+ALTER TABLE payments DROP COLUMN legacy_reference
+ALTER TABLE payments DROP COLUMN legacy_gateway_id
+DROP INDEX payments_legacy_reference_idx
+DELETE FROM gateways WHERE name = 'legacy'
+UPDATE orders SET gateway = 'payment' WHERE gateway = 'legacy'
+ALTER TABLE refunds ALTER COLUMN gateway SET DEFAULT 'payment'
+
+@expected migrations.sql
+ALTER TABLE payments DROP COLUMN legacy_reference;
+ALTER TABLE payments DROP COLUMN legacy_gateway_id;
+DROP INDEX payments_legacy_reference_idx;
+DELETE FROM gateways WHERE name = 'legacy';
+UPDATE orders SET gateway = 'payment' WHERE gateway = 'legacy';
+ALTER TABLE refunds ALTER COLUMN gateway SET DEFAULT 'payment';
+
+@start README.md
+# Payments service
+
+Settles, refunds and reconciles payments for the orders service.
+
+## History
+
+The service talked to the legacy gateway from 2019 until March 2026.
+The `legacySettle` path and the `PAYMENT_LEGACY_*` codes date from that
+period and were removed in PAY-812.
+
+## Running it
+
+`npm run dev` after `npm run db:migrate`.

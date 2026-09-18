@@ -1,0 +1,80 @@
+@meta
+id: 02-11
+title: U puts the whole line back
+chapter: 02
+type: lesson
+skills: undo
+par: 84
+minutes: 5
+vscode: Ctrl+Z, several times, carefully
+open: notes.md
+
+@brief
+`u` walks back one change at a time. Sometimes you do not want to count —
+you have fiddled with one line four or five times and you want it back the
+way it was. Capital `U` does that in a single key: undo every change made
+to the last line you changed, in one go.
+
+It only works while you stay on that line. Touch another line and the
+window closes.
+
+The payments notes need one sentence added. But first, mess a line up.
+In order:
+
+  1. On the line about refunds, append ` (maybe)`. `Esc`.
+
+  2. Still on that line, append ` (check)`. `Esc`.
+
+  3. Still on that line, append ` (ask finance)`. `Esc`.
+
+  4. All three were thinking out loud. Put the line back with one key.
+
+  5. Now do the real work: append ` See the finance runbook.` to the
+     chargebacks line, and save.
+
+The refunds line must end up exactly as it started.
+
+@keys
+| `U` | undo all recent changes on the last changed line |
+| `u` | undo one change |
+| `Ctrl-R` | redo |
+
+@hints
+Three separate insert sessions on one line would take three `u` presses.
+`U` is one press for the same result, as long as you have not moved off
+the line.
+--
+`U` is capital. `u` and `U` are different commands, which is true of most
+letter pairs in vim.
+--
+After `U`, move down one line with `j` and do the append there. Do not
+press `U` again — a second `U` undoes the undo.
+
+@solution
+    jj $ a  (maybe) <Esc> $ a  (check) <Esc> $ a  (ask finance) <Esc>
+    U
+    j $ a  See the finance runbook. <Esc>
+    ZZ
+
+`U` is odd in a way worth knowing. It is itself a change, so `u` undoes
+it and gives you your mess back, and pressing `U` twice toggles between
+the two versions of the line. It also has no memory beyond one line: as
+soon as you edit somewhere else, the line you were fiddling with is
+frozen into the normal history and `U` will target the new line instead.
+
+In practice `U` earns its keep in exactly the situation above — retyping
+a value three times to see which reads best, then wanting the original.
+The rest of the time `u` with a count is more predictable, because it
+counts changes rather than guessing at your intent.
+
+@start notes.md
+# Payments notes
+
+Refunds settle in 3 to 5 working days.
+Chargebacks are handled by finance.
+
+@expected notes.md
+# Payments notes
+
+Refunds settle in 3 to 5 working days.
+Chargebacks are handled by finance. See the finance runbook.

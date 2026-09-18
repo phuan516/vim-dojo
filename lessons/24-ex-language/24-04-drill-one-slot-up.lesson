@@ -1,0 +1,50 @@
+@meta
+id: 24-04
+title: Drill — one slot up
+chapter: 24
+type: drill
+skills: ex-move
+par: 13
+minutes: 4
+reps: 8
+vscode: Alt-Up
+open: registry.ts
+
+@brief
+Eight times: the `CustomerRepository` registration on line 4 belongs
+above `CustomerProvider` on line 3, because a provider must not be
+registered before its repository. Go to line 4, bubble it up, save.
+
+`:m-2` and nothing else. By the end it should feel like one key.
+
+@keys
+| `4G` | to line 4 |
+| `:m-2` | the current line, one slot up |
+
+@hints
+Cursor on the line, then `:m-2`. The `-2` is the line the text lands
+after: two above you, so you end up one above where you were.
+--
+`4G:m-2` and Enter, `:wq`.
+
+@solution
+    4G :m-2<Enter>  :wq<Enter>
+
+Eleven keystrokes. The alternatives are `ddkP`, which goes through the
+unnamed register and clobbers whatever you had in it, and `:4m2`, which
+needs you to read two line numbers. `:m-2` needs neither, which is why
+it is the one that survives contact with a real file.
+
+@start registry.ts
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('CustomerRepository', { useClass: CustomerRepository });
+container.register('OrderResolver', { useClass: OrderResolver });
+
+@expected registry.ts
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerRepository', { useClass: CustomerRepository });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('OrderResolver', { useClass: OrderResolver });

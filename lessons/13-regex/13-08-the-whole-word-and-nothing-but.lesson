@@ -1,0 +1,108 @@
+@meta
+id: 13-08
+title: The whole word and nothing but
+chapter: 13
+type: lesson
+skills: regex-anchors
+par: 33
+minutes: 5
+vscode: Ctrl+F, the "Match Whole Word" toggle, replace two by hand
+open: invoice.ts
+
+@brief
+The local called `total` in `buildInvoice` is being renamed `amountDue`,
+and the field it becomes in the returned object takes the same name. Two
+edits — the declaration and the shorthand property on the return line.
+
+`/total` gets you nowhere useful: `subtotal`, `totalDiscount` and
+`totals` all sit above the declaration, and every one of them contains
+`total`. `*` would sort that out, but `*` needs the cursor on the word,
+and the word is the thing you are trying to reach.
+
+`*` works by wrapping the word in two anchors. You can type them
+yourself.
+
+@keys
+| `\<` | the start of a word — a position, like `^` |
+| `\>` | the end of a word |
+| `/\<total\>` | `total` as a whole word, what `*` would have searched for |
+| `cw` | change to the end of the word |
+| `n` `.` | next whole-word match, same change |
+
+@hints
+Rule out `subtotal` and `totalDiscount` by saying that the word has to
+start *and* stop where `total` does.
+--
+`\<` matches the boundary at the start of a word and `\>` the one at
+the end. Neither consumes a character. Wrap the word in them.
+--
+`/\<total\>` `Enter` skips everything with letters attached and lands
+on the declaration. `cwamountDue`, `Esc`, then `n.` for the return
+line.
+
+@solution
+/\<total\><Enter>  cwamountDue<Esc>  n.  :wq<Enter>
+
+Twenty-nine keystrokes, and the four decoys were never visited.
+
+`\<` and `\>` are word anchors. A word boundary is the point between a
+word character and a non-word character — the same definition of
+"word" that `w`, `iw` and `*` use: letters, digits and underscore. So
+`\<total\>` refuses `subtotal` because `b` and `t` are both word
+characters and there is no boundary between them, and it refuses
+`totalDiscount` for the same reason at the other end. It accepts
+`order.total` and `{ total }` and `total;` because a dot, a space and a
+semicolon all make a boundary.
+
+When you press `*`, vim builds exactly this: `\<word\>`, using the word
+under the cursor. That is why `*` never matched inside a longer name in
+chapter 12. Typing the anchors yourself is what you do when the word is
+not under your cursor, or when you want only one side — `\<get` for
+"anything starting with get", `Id\>` for "anything ending in Id".
+
+The two anchors are the escaped kind: `\<` not `<`, because a plain `<`
+is a common character in code and vim keeps it literal. The chapter has
+a lesson coming on why some of these need a backslash and some do not,
+and what to do about it.
+
+@start invoice.ts
+import { VAT_RATE } from './invoice.constants';
+import { Order } from '../order/order.entity';
+
+export type InvoiceLine = {
+  sku: string;
+  quantity: number;
+  subtotal: number;
+  discount: number;
+};
+
+export function buildInvoice(order: Order, lines: InvoiceLine[]) {
+  const subtotal = lines.reduce((sum, line) => sum + line.subtotal, 0);
+  const totalDiscount = lines.reduce((sum, line) => sum + line.discount, 0);
+  const totals = { subtotal, totalDiscount };
+  const vat = Math.round((subtotal - totalDiscount) * VAT_RATE);
+  const total = subtotal - totalDiscount + vat;
+
+  return { orderId: order.id, currency: order.currency, totals, vat, total };
+}
+
+@expected invoice.ts
+import { VAT_RATE } from './invoice.constants';
+import { Order } from '../order/order.entity';
+
+export type InvoiceLine = {
+  sku: string;
+  quantity: number;
+  subtotal: number;
+  discount: number;
+};
+
+export function buildInvoice(order: Order, lines: InvoiceLine[]) {
+  const subtotal = lines.reduce((sum, line) => sum + line.subtotal, 0);
+  const totalDiscount = lines.reduce((sum, line) => sum + line.discount, 0);
+  const totals = { subtotal, totalDiscount };
+  const vat = Math.round((subtotal - totalDiscount) * VAT_RATE);
+  const amountDue = subtotal - totalDiscount + vat;
+
+  return { orderId: order.id, currency: order.currency, totals, vat, amountDue };
+}

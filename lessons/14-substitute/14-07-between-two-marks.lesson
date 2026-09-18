@@ -1,0 +1,101 @@
+@meta
+id: 14-07
+title: Between two marks
+chapter: 14
+type: lesson
+skills: sub-range
+par: 64
+minutes: 6
+vscode: select the staging block, Ctrl-H in selection
+open: environments.ts
+
+@brief
+Staging has moved into its own DNS zone. Every host in the `STAGING`
+block that ends in `.internal` now ends in `.staging.internal`. The
+`PRODUCTION` block underneath is line for line identical and must not
+change.
+
+The block is in the middle of the file, so neither `%` nor `.,$` fits,
+and you are not going to count lines. Mark where the block starts,
+mark where it ends, and give the substitute the two marks as its range.
+Chapter 9 used a mark as the target of a delete; here it is the edge of
+a range.
+
+The dot in `.internal` is a regex character. Say what you mean.
+
+@keys
+| `ma` | set mark `a` on this line |
+| `:'a,'bs/old/new/` `Enter` | substitute from the line of mark `a` to the line of mark `b` |
+| `}` | jump to the next blank line — the end of the block |
+| `\.` | a literal dot in a pattern |
+
+@hints
+Search to the `STAGING` line, drop a mark there. Get to the end of the
+block and drop another. Then the range is the two marks.
+--
+`ma` sets mark `a`. In a range, a mark is written `'a`, so the range
+from mark `a` to mark `b` is `'a,'b`. The blank line after the block
+is a fine place for `b`; there is nothing on it to change.
+--
+`/STAGING` `Enter`, `ma`, `}`, `mb`, then
+`:'a,'bs/\.internal/.staging.internal/` and Enter. The `g` is not
+needed; each line has one host.
+
+@solution
+    /STAGING<Enter>  ma  }  mb  :'a,'bs/\.internal/.staging.internal/<Enter>  :wq<Enter>
+
+Fifty-six keystrokes, and the two marks were set by motions you
+already own, not by counting.
+
+A mark as a range address is written with a leading apostrophe: `'a`
+is the line mark `a` is on. `'a,'b` is therefore the same shape as
+`8,19`, with the numbers looked up for you. Everything about the range
+stays true if lines are added above the block, which is the weakness
+`8,19` had. Vim keeps a few marks of its own that work the same way:
+`'<` and `'>` are the start and end of the last visual selection, and
+chapter 22 will show you that selecting a block and pressing `:` fills
+in `'<,'>` automatically. Until then, `a` and `b` are your hands.
+
+The escaped dot is not decoration. `.internal` as a pattern means "any
+character, then internal", which happens to match the same five lines
+here and would happily match `xinternal` or `-internal` in a file
+where those existed. Chapter 13 taught you the difference; this is
+where you keep honouring it even when it would not have bitten you.
+
+@start environments.ts
+// Connection strings per environment. Secrets are injected at boot.
+
+export const STAGING = {
+  database: 'mysql://database.internal:3306/orders',
+  rabbit: 'amqp://rabbit.internal:5672/payments',
+  cache: 'redis://cache.internal:6379',
+  gateway: 'https://gateway.internal/graphql',
+  email: 'smtp://mail.internal:587',
+};
+
+export const PRODUCTION = {
+  database: 'mysql://database.internal:3306/orders',
+  rabbit: 'amqp://rabbit.internal:5672/payments',
+  cache: 'redis://cache.internal:6379',
+  gateway: 'https://gateway.internal/graphql',
+  email: 'smtp://mail.internal:587',
+};
+
+@expected environments.ts
+// Connection strings per environment. Secrets are injected at boot.
+
+export const STAGING = {
+  database: 'mysql://database.staging.internal:3306/orders',
+  rabbit: 'amqp://rabbit.staging.internal:5672/payments',
+  cache: 'redis://cache.staging.internal:6379',
+  gateway: 'https://gateway.staging.internal/graphql',
+  email: 'smtp://mail.staging.internal:587',
+};
+
+export const PRODUCTION = {
+  database: 'mysql://database.internal:3306/orders',
+  rabbit: 'amqp://rabbit.internal:5672/payments',
+  cache: 'redis://cache.internal:6379',
+  gateway: 'https://gateway.internal/graphql',
+  email: 'smtp://mail.internal:587',
+};

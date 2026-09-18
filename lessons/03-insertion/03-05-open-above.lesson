@@ -1,0 +1,87 @@
+@meta
+id: 03-05
+title: Open a line above
+chapter: 03
+type: lesson
+skills: open-O
+par: 50
+minutes: 4
+vscode: click at the start of line one, type, press Enter
+open: payment.service.ts
+
+@brief
+The import of `injectable` is missing, so the decorator below has nothing
+to bind to. It belongs above the existing import, on the first line of the
+file:
+
+    import { injectable } from 'tsyringe';
+
+Line one is an awkward place to add something above when you think in
+clicks and Enters, because there is no line above to click on. Vim has a
+key for it, and it is the capital of the one you learned last lesson.
+
+@keys
+| `o` | open a line below |
+| `O` | open a line above |
+| `Esc` | out |
+| `u` | undo, if you open one too many |
+
+@hints
+Same key as last time, but you want the new line on the other side of the
+cursor. Try the capital.
+--
+`O` opens a line above the current one and puts you in insert mode on it.
+On line one that gives you a new first line, which is exactly the problem
+you have.
+--
+The cursor already starts on line one, so you do not need to move. `O`,
+type the import, `Esc`, `:wq`.
+
+@solution
+    O import { injectable } from 'tsyringe'; <Esc> :wq<Enter>
+
+Forty-four keystrokes, thirty-eight of them the import itself. That ratio
+is the goal for the rest of your vim career: the overhead of getting into
+position rounds to nothing, and almost everything you press is content.
+
+`o` and `O` are a pair in the same way as `i`/`I` and `a`/`A`: lowercase
+goes the direction you read, capital goes the other way. Adding an import
+at the top of a file, a comment above a function, or a guard clause above
+the code it guards — all `O`.
+
+One habit to build now: after `O` or `o`, press `Esc` as soon as the line
+is typed. Do not press Enter to "get out of the way" and leave a blank
+line behind. The undo in your hands is `u`, and it costs nothing.
+
+@start payment.service.ts
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string) {
+    const response = await this.http.post(`/refunds`, { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@expected payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string) {
+    const response = await this.http.post(`/refunds`, { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}

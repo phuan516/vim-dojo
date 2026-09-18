@@ -1,0 +1,79 @@
+@meta
+id: 30-05
+title: Drill — out to the definition and back
+chapter: 30
+type: drill
+skills: ctags
+par: 34
+minutes: 5
+reps: 8
+vscode: F12, read, Alt-Left
+vimrc: set hidden
+open: src/domain/order/order.provider.ts
+
+@brief
+The call to `issueRefund` is missing its `await`. Before you add one you
+want to be sure the method really is async — so go and look, then come
+back and fix the call.
+
+Eight times: cursor onto the name, out to the definition, back, add
+`await`, save. Nothing to work out. The point is that the round trip
+stops feeling like a detour.
+
+@keys
+| `Ctrl-]` | to the definition of the word under the cursor |
+| `Ctrl-T` | back |
+| `^` | first non-blank of the line |
+
+@hints
+`/issueRefund` `Enter` puts the cursor on the name, which is what
+`Ctrl-]` needs.
+--
+`Ctrl-T` lands you back on the same character you left, so `^i` is
+enough to get in front of the call.
+
+@solution
+    /issueRefund<Enter>  Ctrl-]  Ctrl-T  ^ i await  <Esc>  :wqa<Enter>
+
+By the eighth rep the out-and-back should cost you no thought at all.
+That matters more than it sounds: the reason people guess at an API
+instead of reading it is that reading it feels expensive. Two keys each
+way is cheap enough that you stop guessing.
+
+@start tags
+!_TAG_FILE_FORMAT	2	//
+!_TAG_FILE_SORTED	1	//
+OrderProvider	src/domain/order/order.provider.ts	/^export class OrderProvider {$/;"	c
+PaymentService	src/infrastructure/services/payment.service.ts	/^export class PaymentService {$/;"	c
+issueRefund	src/infrastructure/services/payment.service.ts	/^  public async issueRefund(orderId: string) {$/;"	m	class:PaymentService
+
+@start src/domain/order/order.provider.ts
+export class OrderProvider {
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    this.paymentService.issueRefund(order.id);
+
+    return order;
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+export class OrderProvider {
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    await this.paymentService.issueRefund(order.id);
+
+    return order;
+  }
+}
+
+@start src/infrastructure/services/payment.service.ts
+export class PaymentService {
+  public async issueRefund(orderId: string) {
+    const response = await this.http.post('/refunds', { orderId });
+
+    return response.data.receiptId;
+  }
+}

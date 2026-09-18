@@ -1,0 +1,81 @@
+@meta
+id: 05-11
+title: Counts going backwards and to ends
+chapter: 05
+type: lesson
+skills: word-counts, word-b, word-e
+par: 45
+minutes: 6
+vscode: clicking twice, in two different places
+open: order.provider.ts
+
+@brief
+A count works on any of the six motions, not just `w`. `3b` is three
+words back. `2e` is two word-ends forward. Nothing new to learn — but
+which one you count matters, because the cheap route to a target is
+usually not the obvious direction.
+
+Two changes to this file.
+
+Credits come off the total before discounts do. Line three should read:
+
+    const total = order.net + order.tax - order.credit - order.discount;
+
+And the total is returned in minor units, so line five should read:
+
+    return total * 100;
+
+The first target is far from the start of its line and close to the end.
+Approach it from the side that costs least.
+
+@keys
+| `3b` | three words back |
+| `2e` | two word-ends forward |
+| `$` | end of the line |
+| `0` | first column of the line |
+| `i` `a` | insert before, append after |
+
+@hints
+For line three, count from the start and then count from the end. One of
+those numbers is much smaller.
+--
+From `$`, `b` visits `discount`, then the dot, then `order`. Three
+presses, and the third is where the new term goes.
+--
+`2j$3b` then `i`, type `order.credit - `, `Esc`. Then `2j0`, `2e` to reach
+the end of `total`, `a`, type ` * 100`, `Esc`, `:wq`.
+
+@solution
+    2j $ 3b  i order.credit -  <Esc>   2j 0 2e  a * 100<Esc>  :wq<Enter>
+
+The first edit is the lesson. Counted from the start of the line, the
+insertion point is the eleventh word. Counted from the end it is the
+third. Same place, one press versus a number you would have had to check
+twice.
+
+So before you count, look at both ends. Targets near the right edge of a
+line belong to `$` and `b`; targets near the left belong to `w` and `e`.
+This sounds obvious written down and is routinely ignored at speed.
+
+The second edit shows the other half: `0` resets you to a known place, so
+a small count is reliable. Counting from wherever the cursor happened to
+be left is how people end up pressing a motion, squinting, and pressing
+it again.
+
+@start order.provider.ts
+export class OrderProvider {
+  public async total(order: Order) {
+    const total = order.net + order.tax - order.discount;
+
+    return total;
+  }
+}
+
+@expected order.provider.ts
+export class OrderProvider {
+  public async total(order: Order) {
+    const total = order.net + order.tax - order.credit - order.discount;
+
+    return total * 100;
+  }
+}

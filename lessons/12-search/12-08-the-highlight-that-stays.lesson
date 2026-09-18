@@ -1,0 +1,141 @@
+@meta
+id: 12-08
+title: Every match, lit up at once
+chapter: 12
+type: lesson
+skills: search-slash, search-next
+par: 40
+minutes: 5
+vscode: the find box showing 7 of 7
+vimrc: set hlsearch
+open: service.config.ts
+
+@brief
+Seven service blocks, seven timeouts, all of them called `timeoutMs`. The
+payments gateway has started taking up to twenty seconds under load, so
+its timeout — and only its timeout — goes from 3000 to 30000.
+
+This lesson is about seeing rather than moving. With match highlighting
+on, one search paints every occurrence in the file at once, which turns
+"how many are there and which one is mine" from a counting exercise into
+a glance.
+
+The other half of it is turning the paint off again. Highlighting that
+outstays its welcome makes a file unreadable, and there is a command for
+clearing it that does not forget the pattern.
+
+@keys
+| `/text` `Enter` | search, and with `hlsearch` on, light up every match |
+| `:noh` `Enter` | clear the highlighting, keep the pattern |
+| `:set hlsearch` / `:set nohlsearch` | turn the feature itself on and off |
+| `$` `i` | end of line, insert before the cursor |
+
+@hints
+Two searches, not one. Find the block first, then the setting inside it —
+the highlight shows you all seven so you can see which one you are on.
+--
+`/payments` `Enter` puts you in the right block. `/timeoutMs` `Enter`
+from there moves forward to the next one, which is the one you want.
+Then it is a single character to insert.
+--
+On the timeout line, `$` sits on the comma; `i0` inserts the extra zero
+just before it. Finish with `:noh` `Enter` so the file is readable again,
+then save.
+
+@solution
+/payments<Enter>  /timeoutMs<Enter>  $i0<Esc>  :noh<Enter>  :wq<Enter>
+
+Two searches used as one coarse move and one fine move: get to the
+neighbourhood, then get to the line. That is how most vim navigation
+actually looks, and it is why sloppy short patterns are fine.
+
+`hlsearch` is the setting that lights up every match, and it is the
+closest thing vim has to the find box's "7 of 7" counter. You will want
+it on permanently. What you will not want is the highlight sticking
+around for the rest of the afternoon, so learn `:noh` in the same breath.
+It clears the highlighting until your next search; it does not clear the
+pattern, so `n` still works afterwards.
+
+`:set nohlsearch` is a different thing — that turns the feature off
+altogether, and then you have to remember you did. `:noh` is the one you
+want ninety-nine times out of a hundred, which is why most people bind it
+to a single key. There is a line for exactly that in the starter vimrc
+this dojo ships with: Ctrl-L clears the highlight and redraws the screen.
+
+@start service.config.ts
+export const serviceConfig = {
+  gateway: {
+    baseUrl: 'https://gateway.internal',
+    timeoutMs: 2000,
+    retries: 2,
+  },
+  orders: {
+    baseUrl: 'https://orders.internal',
+    timeoutMs: 4000,
+    retries: 1,
+  },
+  customers: {
+    baseUrl: 'https://customers.internal',
+    timeoutMs: 4000,
+    retries: 1,
+  },
+  payments: {
+    baseUrl: 'https://payments.internal',
+    timeoutMs: 3000,
+    retries: 3,
+  },
+  payouts: {
+    baseUrl: 'https://payouts.internal',
+    timeoutMs: 8000,
+    retries: 1,
+  },
+  search: {
+    baseUrl: 'https://search.internal',
+    timeoutMs: 1500,
+    retries: 0,
+  },
+  email: {
+    baseUrl: 'https://email.internal',
+    timeoutMs: 5000,
+    retries: 2,
+  },
+};
+
+@expected service.config.ts
+export const serviceConfig = {
+  gateway: {
+    baseUrl: 'https://gateway.internal',
+    timeoutMs: 2000,
+    retries: 2,
+  },
+  orders: {
+    baseUrl: 'https://orders.internal',
+    timeoutMs: 4000,
+    retries: 1,
+  },
+  customers: {
+    baseUrl: 'https://customers.internal',
+    timeoutMs: 4000,
+    retries: 1,
+  },
+  payments: {
+    baseUrl: 'https://payments.internal',
+    timeoutMs: 30000,
+    retries: 3,
+  },
+  payouts: {
+    baseUrl: 'https://payouts.internal',
+    timeoutMs: 8000,
+    retries: 1,
+  },
+  search: {
+    baseUrl: 'https://search.internal',
+    timeoutMs: 1500,
+    retries: 0,
+  },
+  email: {
+    baseUrl: 'https://email.internal',
+    timeoutMs: 5000,
+    retries: 2,
+  },
+};

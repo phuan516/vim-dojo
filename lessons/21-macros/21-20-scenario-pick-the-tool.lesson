@@ -1,0 +1,298 @@
+@meta
+id: 21-20
+title: Scenario — pick the tool
+chapter: 21
+type: scenario
+skills: macro-record, macro-count, sub-basic, cgn, global-normal
+par: 175
+minutes: 15
+vscode: four files, four different kinds of find-and-replace, and a lot of clicking No
+open: order.provider.ts order.resolver.ts order.resolver.spec.ts errors.ts order.entity.ts
+
+@brief
+A ticket, not an exercise.
+
+    ORD-530  Finish the custId rename, make the resolver spec async,
+             and flag the 5xx errors for Sentry.
+
+Five files are open. `:bn` moves through them in order; `:wqa` at
+the end.
+
+  1. order.provider.ts — `custId` becomes `customerId`. Every one of
+     them; the entity already uses `customerId`.
+
+  2. order.resolver.ts — the same rename, except that the GraphQL
+     argument is still called `custId` and the schema is not changing
+     in this ticket. So `args: { custId: string }` and `args.custId`
+     stay. The local variables and the calls into the provider change.
+
+  3. order.resolver.spec.ts — four tests still call the resolver
+     synchronously. `async` on the `it(` line, `await` after the `=`
+     on the line below. The `custId` inside the test arguments is the
+     GraphQL argument and stays.
+
+  4. errors.ts — every entry whose status code is 5xx gets
+     `sentry: true`. The 4xx entries keep `sentry: false`.
+
+  5. order.entity.ts — reference only. Leave it alone.
+
+Each file wants a different tool. You have four: a substitute, `cgn`
+with `.`, a macro, and `:g`. Each has one place where it is the
+obvious choice and three where it is a struggle.
+
+@keys
+| `:%s/old/new/g` | every occurrence, no questions asked |
+| `cgn` then `.` and `n` | change this match, change the next, skip the next |
+| `:%s/old/new/gc` | the same job, asking each time |
+| `qa` … `q`, `99@a` | a macro, until it fails |
+| `:g/pattern/s/old/new/` | a substitute on only the lines that match |
+
+@hints
+When every occurrence changes the same way, do not think. `:%s` is the
+tool and anything else is slower.
+--
+When most occurrences change and a few do not, you need to see each
+one. `cgn` and `.` give you that, with `n` to skip. `:%s///gc` is the
+same idea from the command line.
+--
+When the edit touches two lines and has an `Esc` in the middle, it is
+a macro. When it is one line and can be named with a pattern, `:g`
+with a substitute or `:g` with `normal` is less to type than a
+recording.
+--
+Provider: `:%s/custId/customerId/g`. Resolver: `/custId`, `n`, then
+`cgncustomerId` `Esc`, then `nn.` three times. Spec: the search
+macro from lesson 7. Errors: `:g/statusCode: 5/s/false/true/`.
+
+@solution
+A route, file by file.
+
+**order.provider.ts** — `:%s/custId/customerId/g`. Seven occurrences,
+all of them change, nothing to look at. Twenty-five keystrokes.
+
+**order.resolver.ts** — `/custId` lands on the argument type, which
+stays. `n` to the local variable, `cgncustomerId` and `Esc`. From
+there each pair is one to skip and one to change: `nn.` three times.
+`:%s/custId/customerId/gc` with `n y n y n y n y` costs the same and
+is fine too. The wrong tool here is the bare `:%s`, which changes the
+argument name and breaks the API.
+
+**order.resolver.spec.ts** — `qa/it(.*, () =><Enter>f(;iasync <Esc>j0f=wiawait <Esc>q`
+then `99@a`. Two lines per test with an `Esc` in between is the shape
+a substitute cannot do and `:g//normal` can only do with `Ctrl-V Esc`
+on the command line.
+
+**errors.ts** — `:g/statusCode: 5/s/false/true/`. One line per
+target, a pattern that names the line, a one-word change on it. A
+macro would work and would take twice as many keys to record.
+
+**order.entity.ts** — nothing. `:wqa`.
+
+About a hundred and fifty keystrokes.
+
+The judgement, stated once so you can carry it out of this chapter:
+
+- Every occurrence, same change: `:s`.
+- Most occurrences, a few exceptions you must see: `cgn` and `.`, or
+  `:s` with `c`.
+- Whole lines you can name with a pattern, one change each: `:g`
+  with `s` or with `normal`.
+- Anything with an `Esc` in the middle, anything that spans lines,
+  anything you would rather do once by hand and not think about
+  again: a macro. Recursive if it has a guard, counted if it does not,
+  and driven by a search when the targets are scattered.
+
+None of these is better. The skill is recognising the shape of the
+edit before your hands start.
+
+@start order.provider.ts
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+export class OrderProvider {
+  constructor(protected orderRepository: OrderRepository) {}
+
+  public async findByCustomer(custId: string) {
+    const orders = await this.orderRepository.findMany({ where: { custId } });
+
+    if (!orders.length) {
+      throw exception('ORDER_NOT_FOUND', { custId });
+    }
+
+    return orders;
+  }
+
+  public async countForCustomer(custId: string) {
+    return this.orderRepository.count({ where: { custId } });
+  }
+
+  public async latestForCustomer(custId: string) {
+    const [latest] = await this.orderRepository.findMany({
+      where: { custId },
+      orderBy: { placedAt: 'desc' },
+      take: 1,
+    });
+
+    return latest;
+  }
+}
+
+@expected order.provider.ts
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+export class OrderProvider {
+  constructor(protected orderRepository: OrderRepository) {}
+
+  public async findByCustomer(customerId: string) {
+    const orders = await this.orderRepository.findMany({ where: { customerId } });
+
+    if (!orders.length) {
+      throw exception('ORDER_NOT_FOUND', { customerId });
+    }
+
+    return orders;
+  }
+
+  public async countForCustomer(customerId: string) {
+    return this.orderRepository.count({ where: { customerId } });
+  }
+
+  public async latestForCustomer(customerId: string) {
+    const [latest] = await this.orderRepository.findMany({
+      where: { customerId },
+      orderBy: { placedAt: 'desc' },
+      take: 1,
+    });
+
+    return latest;
+  }
+}
+
+@start order.resolver.ts
+import { OrderProvider } from './order.provider';
+
+export class OrderResolver {
+  constructor(protected orderProvider: OrderProvider) {}
+
+  public async orders(args: { custId: string }) {
+    const custId = args.custId;
+
+    return this.orderProvider.findByCustomer(custId);
+  }
+
+  public async orderCount(args: { custId: string }) {
+    const custId = args.custId;
+
+    return this.orderProvider.countForCustomer(custId);
+  }
+}
+
+@expected order.resolver.ts
+import { OrderProvider } from './order.provider';
+
+export class OrderResolver {
+  constructor(protected orderProvider: OrderProvider) {}
+
+  public async orders(args: { custId: string }) {
+    const customerId = args.custId;
+
+    return this.orderProvider.findByCustomer(customerId);
+  }
+
+  public async orderCount(args: { custId: string }) {
+    const customerId = args.custId;
+
+    return this.orderProvider.countForCustomer(customerId);
+  }
+}
+
+@start order.resolver.spec.ts
+import { OrderResolver } from './order.resolver';
+
+describe('OrderResolver', () => {
+  it('lists orders for a customer', () => {
+    const result = resolver.orders({ custId: 'cus_7' });
+    expect(result).toHaveLength(3);
+  });
+
+  it('returns an empty list for an unknown customer', () => {
+    const result = resolver.orders({ custId: 'cus_999' });
+    expect(result).toEqual([]);
+  });
+
+  it('counts orders for a customer', () => {
+    const count = resolver.orderCount({ custId: 'cus_7' });
+    expect(count).toBe(3);
+  });
+
+  it('counts zero for an unknown customer', () => {
+    const count = resolver.orderCount({ custId: 'cus_999' });
+    expect(count).toBe(0);
+  });
+});
+
+@expected order.resolver.spec.ts
+import { OrderResolver } from './order.resolver';
+
+describe('OrderResolver', () => {
+  it('lists orders for a customer', async () => {
+    const result = await resolver.orders({ custId: 'cus_7' });
+    expect(result).toHaveLength(3);
+  });
+
+  it('returns an empty list for an unknown customer', async () => {
+    const result = await resolver.orders({ custId: 'cus_999' });
+    expect(result).toEqual([]);
+  });
+
+  it('counts orders for a customer', async () => {
+    const count = await resolver.orderCount({ custId: 'cus_7' });
+    expect(count).toBe(3);
+  });
+
+  it('counts zero for an unknown customer', async () => {
+    const count = await resolver.orderCount({ custId: 'cus_999' });
+    expect(count).toBe(0);
+  });
+});
+
+@start errors.ts
+export const errors = {
+  ORDER_NOT_FOUND: { statusCode: 404, sentry: false },
+  ORDER_ALREADY_SHIPPED: { statusCode: 409, sentry: false },
+  CUSTOMER_NOT_FOUND: { statusCode: 404, sentry: false },
+  PAYMENT_DECLINED: { statusCode: 402, sentry: false },
+  PAYMENT_GATEWAY_TIMEOUT: { statusCode: 504, sentry: false },
+  REFUND_FAILED: { statusCode: 502, sentry: false },
+  REFUND_WINDOW_EXPIRED: { statusCode: 409, sentry: false },
+  EMAIL_DELIVERY_FAILED: { statusCode: 502, sentry: false },
+  RATE_LIMITED: { statusCode: 429, sentry: false },
+  INTERNAL: { statusCode: 500, sentry: false },
+};
+
+@expected errors.ts
+export const errors = {
+  ORDER_NOT_FOUND: { statusCode: 404, sentry: false },
+  ORDER_ALREADY_SHIPPED: { statusCode: 409, sentry: false },
+  CUSTOMER_NOT_FOUND: { statusCode: 404, sentry: false },
+  PAYMENT_DECLINED: { statusCode: 402, sentry: false },
+  PAYMENT_GATEWAY_TIMEOUT: { statusCode: 504, sentry: true },
+  REFUND_FAILED: { statusCode: 502, sentry: true },
+  REFUND_WINDOW_EXPIRED: { statusCode: 409, sentry: false },
+  EMAIL_DELIVERY_FAILED: { statusCode: 502, sentry: true },
+  RATE_LIMITED: { statusCode: 429, sentry: false },
+  INTERNAL: { statusCode: 500, sentry: true },
+};
+
+@start order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  placedAt: Date;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';

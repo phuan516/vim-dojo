@@ -1,0 +1,101 @@
+@meta
+id: 22-17
+title: Change a column
+chapter: 22
+type: lesson
+skills: visual-block
+par: 26
+minutes: 5
+vscode: Alt+click on each let, Ctrl+Shift+Right, type const
+open: order.spec.ts
+
+@brief
+`c` on a block deletes the rectangle and opens insert mode at its left
+edge on the first line; on `Esc`, what you typed replaces the rectangle
+on every line. The width of what you type does not have to match the
+width of the block.
+
+The seven stubs in the test setup are declared with `let` and never
+reassigned; the linter wants `const`. Change the seven `let` to `const`.
+Only those. The `deleteOrder` test further down contains the letters
+`let` too, which is why a blind substitute is not the tool.
+
+@keys
+| `Ctrl-V` | start a block |
+| `e` | in block mode, extend the block to the end of the word |
+| `c` | change the block: delete it, insert on every line |
+
+@hints
+Put the cursor on the `l` of the first `let`. `Ctrl-V`, six `j` for
+the seven lines, then `e` to make the block exactly the width of
+`let`.
+--
+`c` deletes the seven `let`s and leaves you in insert on the first
+line. Type `const`, `Esc`.
+--
+`/\<let` `Enter`, `Ctrl-V`, `6j`, `e`, `cconst`, `Esc`.
+
+@solution
+    /\<let<Enter> Ctrl-V 6 j e c const <Esc> :wq<Enter>
+
+Twenty-two keystrokes. `:s/let/const/` over the same lines would have
+been fewer, and on this file it would also have been correct, because
+the substitute is scoped to the selection and `deleteOrder` is outside
+it. The block is the tool for when the column is what you can see and
+the pattern is what you would have to think about. Both are right; the
+block is the one you will not second-guess.
+
+`e`, `w`, `f` and `$` all work to set a block's width, the same as they
+set a character-wise selection's length.
+
+@start order.spec.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+
+describe('OrderProvider', () => {
+  let orderRepository = stub<OrderRepository>();
+  let customerRepository = stub<CustomerRepository>();
+  let paymentService = stub<PaymentService>();
+  let emailService = stub<EmailService>();
+  let logger = stub<Logger>();
+  let clock = stub<Clock>();
+  let provider = new OrderProvider(orderRepository, paymentService, emailService);
+
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
+  it('deleteOrder removes the order and its lines', async () => {
+    reveal(orderRepository).delete.mockResolvedValue(undefined);
+
+    await provider.deleteOrder('ord_1042');
+
+    expect(reveal(orderRepository).delete).toHaveBeenCalledWith({ where: { id: 'ord_1042' } });
+  });
+});
+
+@expected order.spec.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const customerRepository = stub<CustomerRepository>();
+  const paymentService = stub<PaymentService>();
+  const emailService = stub<EmailService>();
+  const logger = stub<Logger>();
+  const clock = stub<Clock>();
+  const provider = new OrderProvider(orderRepository, paymentService, emailService);
+
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
+  it('deleteOrder removes the order and its lines', async () => {
+    reveal(orderRepository).delete.mockResolvedValue(undefined);
+
+    await provider.deleteOrder('ord_1042');
+
+    expect(reveal(orderRepository).delete).toHaveBeenCalledWith({ where: { id: 'ord_1042' } });
+  });
+});

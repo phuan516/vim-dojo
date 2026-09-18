@@ -1,0 +1,95 @@
+@meta
+id: 11-11
+title: Next match, then dot
+chapter: 11
+type: lesson
+skills: dot-repeat, dot-design
+par: 24
+minutes: 5
+vscode: Ctrl+F for dead, then Enter and Ctrl+Shift+K five times
+open: flags.ts
+
+@brief
+Five feature flags in this file are marked `// dead`. The release train
+cannot leave with them in. Delete those five lines and leave the other
+ten alone.
+
+They are scattered, and counting `j` presses between them would be slow
+and easy to get wrong. What you want is to travel by what the lines say
+rather than by where they are.
+
+`/word` and `Enter` jumps to the next line containing that word, and `n`
+jumps to the one after that. Chapter 12 does searching properly. Here it
+is only a way to move, and the interesting part is what happens when you
+alternate it with `.`.
+
+@keys
+| `/dead` `Enter` | jump to the next line containing `dead` |
+| `n` | the next one after that |
+| `dd` | delete the whole line |
+| `.` | repeat the delete |
+
+@hints
+Do not count lines. Search for the marker instead, and delete the line you
+land on.
+--
+`n` is to searching what `;` is to `f` — it repeats the jump without you
+retyping the pattern. And like `;`, it leaves the dot register alone.
+--
+`/dead` `Enter`, then `dd`. After that the file is five keystrokes of
+`n.`, `n.`, `n.`, `n.` away from done.
+
+@solution
+    /dead<Enter>  dd   n.  n.  n.  n.
+
+`n.` is `;.` with the whole file in range instead of one line. Same idea,
+wider net: the search finds the next place the edit is needed, the dot
+performs it, and neither key knows or cares about the other.
+
+Two things make this better than the find-and-replace you would have
+reached for in VS Code. The first is that the edit is not limited to the
+text you searched for. You searched for `dead` and you deleted an entire
+line — you could just as well have indented it, commented it out or
+changed the value three columns to its left. A replace can only replace.
+
+The second is that you see each match before you commit to it. Press `n`,
+look, and if this one is a false positive press `n` again instead of `.`.
+Nothing happens until you say so. That inspection step is what makes
+`n.` safe on a file you do not know well, and it is the whole subject of
+lesson 11-14.
+
+The cost is that `n.` cannot be automatic: you have to press `.` once per
+match and count nothing. The next lesson removes even that.
+
+@start flags.ts
+export const flags = {
+  refundWindow30Days: true,
+  legacyRefundEndpoint: false, // dead
+  receiptTemplateV4: true,
+  batchReconcile: true,
+  cardTokenCache: false, // dead
+  sepaPayouts: false,
+  webhookSignatureCheck: true,
+  legacyCustomerSearch: false, // dead
+  orderTimelineApi: true,
+  emailDigest: false,
+  ledgerShadowWrites: false, // dead
+  refundWebhookRetry: true,
+  csvExportV2: true,
+  legacyStatusStrings: false, // dead
+  paymentRetryBackoff: true,
+};
+
+@expected flags.ts
+export const flags = {
+  refundWindow30Days: true,
+  receiptTemplateV4: true,
+  batchReconcile: true,
+  sepaPayouts: false,
+  webhookSignatureCheck: true,
+  orderTimelineApi: true,
+  emailDigest: false,
+  refundWebhookRetry: true,
+  csvExportV2: true,
+  paymentRetryBackoff: true,
+};

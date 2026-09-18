@@ -1,0 +1,101 @@
+@meta
+id: 02-13
+title: Undo by the clock, not the count
+chapter: 02
+type: lesson
+skills: undo, redo, undo-branches
+par: 91
+minutes: 6
+vscode: nothing — there is no equivalent
+open: subscription.md
+
+@brief
+Counting changes works when there are three of them. After twenty minutes
+of editing you have no idea how many there were, but you do know two other
+things: roughly how long ago the file was good, and when you last wrote
+it. Vim can undo by both.
+
+`:earlier 10s` rewinds ten seconds of editing. `:earlier 5m` rewinds five
+minutes. `:later` goes the other way. And the useful one: `:earlier 1f`
+rewinds to how the file looked at the previous *write*, however many
+changes ago that was.
+
+The subscription rules are being edited live during a call. In order:
+
+  1. Append ` (calendar days)` to the Trial line. Write the file.
+
+  2. Append ` then cancels` to the Renewal line.
+
+  3. Append ` and day 14` to the Dunning line.
+
+  4. The call ends with "ignore everything after we saved". Go back to the
+     state the file was in at your write, in one command, without counting
+     anything.
+
+  5. Then someone adds: keep the renewal note, it was right. Step forward
+     one change.
+
+Save. Trial and Renewal carry their additions, Dunning does not.
+
+@keys
+| `:earlier 1f` | back to the state at the previous file write |
+| `:earlier 30s` | back thirty seconds of editing |
+| `:later 1` | forward one change |
+| `:later 1f` | forward to the next write |
+| `g-` `g+` | back and forward one state, without the command line |
+
+@hints
+Step 4 is one command and the `f` in it stands for file write, not for
+anything to do with counts.
+--
+Step 5 goes forward again. The opposite of `:earlier` is `:later`, and
+with a plain number it counts changes.
+--
+`:earlier 1f<Enter>` then `:later 1<Enter>`, then write and quit. After
+the rewind vim considers the buffer unmodified, because it matches what is
+on disk — that is how you know the rewind landed where you asked.
+
+@solution
+    jj $ a  (calendar days) <Esc> :w<Enter>
+    j $ a  then cancels <Esc>
+    j $ a  and day 14 <Esc>
+    :earlier 1f<Enter>
+    :later 1<Enter>
+    ZZ
+
+`:earlier 1f` is the command to remember from this chapter. It is `:q!`
+without quitting and without losing the chance to change your mind, and it
+turns every `:w` you type into a save point you can return to. Write
+often, and this gets more useful the more you do it.
+
+The time based forms are for the other situation — where you cannot say
+how many changes ago it was, only that it was before lunch. `:earlier 1h`
+is a real thing to type, and vim will get it right.
+
+Two warnings. All of this lives in memory, so it dies when you quit. You
+can change that with two lines in a vimrc:
+
+    set undofile
+    set undodir=~/.vim/undo
+
+With those, vim writes the whole undo history to a file beside your undo
+directory when you save, and reloads it next time you open the file. Undo
+across days, across reboots. Chapter 28 builds the vimrc; know now that it
+is available, because the default is to lose everything on quit.
+
+And `:earlier` counts editing time, not wall clock time. Ten minutes at
+the editor with the last three spent reading is not `:earlier 10m`.
+
+@start subscription.md
+# Subscription billing
+
+- Trial is 14 days
+- Renewal retries twice
+- Dunning emails on day 3 and day 7
+
+@expected subscription.md
+# Subscription billing
+
+- Trial is 14 days (calendar days)
+- Renewal retries twice then cancels
+- Dunning emails on day 3 and day 7

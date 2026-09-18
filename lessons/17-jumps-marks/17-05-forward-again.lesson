@@ -1,0 +1,233 @@
+@meta
+id: 17-05
+title: Forward again with Ctrl-I
+chapter: 17
+type: lesson
+skills: jumplist
+par: 92
+minutes: 6
+vscode: Alt+Left, then Alt+Right
+open: order.provider.ts
+
+@brief
+`notifyCustomer`, at the bottom of the class, always sends the
+`order_confirmation` template. It needs to take the template as a
+parameter instead.
+
+Search for `notifyCustomer` and you land on the only call, in `create`.
+Step to the definition and add `template: string` to its signature. Go
+back to the call and pass `'order_confirmation'`. Then, still needing
+to finish the definition, go *forward* again to it and change the
+hardcoded `template: 'order_confirmation',` in the body to the
+shorthand `template,`.
+
+You have already been to the definition once. Vim has not forgotten it
+just because you pressed `Ctrl-O`. All three edits are graded.
+
+@keys
+| `Ctrl-O` | back one jump |
+| `Ctrl-I` | forward one jump, undoing a `Ctrl-O`; it is the Tab key |
+| `n` | next match |
+| `dt,` | delete up to the comma |
+
+@hints
+After `Ctrl-O`, the jumplist still holds the position you came back
+from. There is a key that goes the other way.
+--
+`Ctrl-I` is forward through the jumplist. On every keyboard it is the
+same key as Tab; vim cannot tell them apart.
+--
+`/notifyCustomer` Enter, `n`, `f)i, template: string` Esc. `Ctrl-O`,
+`f)i, 'order_confirmation'` Esc. Then `Tab` puts you back on the
+signature; `5j` `0f:` `dt,` finishes the body.
+
+@solution
+    /notifyCustomer<Enter> n f)i, template: string<Esc>
+    Ctrl-O f)i, 'order_confirmation'<Esc>
+    Ctrl-I 5j 0f:dt, :wq<Enter>
+
+`Ctrl-O` and `Ctrl-I` are the browser's back and forward buttons. Going
+back does not throw the entry away; it moves your pointer down the
+list, and `Ctrl-I` moves it up again. `:jumps` shows this: the `>` sits
+in the middle of the list after a `Ctrl-O`, with entries on both sides
+of it.
+
+The thing to notice is what `Ctrl-I` saved you. Without it you would
+have searched for the definition a second time, and typed the same
+eleven characters again, to reach a place vim already knew. Any time
+you think "I was just there", the answer is one of these two keys.
+
+A note on the Tab key. Terminals send the same byte for Tab and
+`Ctrl-I`, so if you ever map Tab to something else, you lose
+`Ctrl-I` with it. Vim 9 has a `<C-I>` and `<Tab>` distinction in some
+terminals, but do not rely on it. Leave Tab alone in normal mode.
+
+The `0f:` before `dt,` is there because `Ctrl-I` restored the column
+you left from, which was the end of the signature, and `5j` kept that
+column. Jumps are exact both ways.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { Order } from './order.entity';
+import { OrderRepository } from './order.repository';
+import { CustomerProvider } from '../customer/customer.provider';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerProvider) protected customerProvider: CustomerProvider,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(customerId: string) {
+    await this.customerProvider.findOne(customerId);
+
+    return this.orderRepository.findByCustomer({ customerId });
+  }
+
+  public async create(args: { customerId: string; total: number }) {
+    const customer = await this.customerProvider.findOne(args.customerId);
+
+    const order = await this.orderRepository.create({
+      values: { customerId: customer.id, total: args.total, status: 'PENDING' },
+    });
+
+    await this.notifyCustomer(order);
+
+    return order;
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_NOT_PENDING');
+    }
+
+    await this.orderRepository.update({ where: { id }, values: { status: 'SHIPPED' } });
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async notifyCustomer(order: Order) {
+    const customer = await this.customerProvider.findOne(order.customerId);
+
+    return this.emailService.send({
+      to: customer.email,
+      template: 'order_confirmation',
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { Order } from './order.entity';
+import { OrderRepository } from './order.repository';
+import { CustomerProvider } from '../customer/customer.provider';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerProvider) protected customerProvider: CustomerProvider,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(customerId: string) {
+    await this.customerProvider.findOne(customerId);
+
+    return this.orderRepository.findByCustomer({ customerId });
+  }
+
+  public async create(args: { customerId: string; total: number }) {
+    const customer = await this.customerProvider.findOne(args.customerId);
+
+    const order = await this.orderRepository.create({
+      values: { customerId: customer.id, total: args.total, status: 'PENDING' },
+    });
+
+    await this.notifyCustomer(order, 'order_confirmation');
+
+    return order;
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_NOT_PENDING');
+    }
+
+    await this.orderRepository.update({ where: { id }, values: { status: 'SHIPPED' } });
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async notifyCustomer(order: Order, template: string) {
+    const customer = await this.customerProvider.findOne(order.customerId);
+
+    return this.emailService.send({
+      to: customer.email,
+      template,
+    });
+  }
+}

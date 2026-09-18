@@ -1,0 +1,64 @@
+@meta
+id: 08-02
+title: Counts, and the backwards one
+chapter: 08
+type: lesson
+skills: delete-d
+par: 16
+minutes: 4
+vscode: select the digits with the mouse and press Delete
+open: config.ts
+
+@brief
+Counts worked on motions in chapter four: `5j` is five lines down. They
+work on verbs too, and they mean exactly what you would expect.
+
+Somebody pasted an extra three zeros into the timeout and typed the retry
+limit three times over. The file should read `30000` and `5`.
+
+Two ways in. One deletes forwards from where you stand; the other deletes
+backwards, which is useful when the easiest thing to land on is the
+character *after* the mess.
+
+@keys
+| `3x` | delete three characters from the cursor forwards |
+| `X` | delete the character before the cursor |
+| `2X` | delete the two characters before the cursor |
+| `f0` | forward to the next `0` |
+
+@hints
+Both edits are a run of characters, not one character. A count in front
+of `x` takes the whole run in one press.
+--
+For the retry limit the easy landing spot is the comma at the end of the
+line, and the digits you want gone are behind it. `X` deletes backwards.
+--
+`f0` lands on the first zero of the timeout, then `3x`. Then `j`, `$` to
+the comma, and `2X`.
+
+@solution
+    j f0 3x  j $ 2X  :wq<Enter>
+
+Thirteen keystrokes. Two ideas are worth keeping.
+
+First, a count in front of a verb multiplies the verb, and it never has
+to be exact — `3x` and `xxx` do the same thing, but `3x` is one decision
+instead of three, and one `u` undoes it.
+
+Second, `X` exists because landing on the character *after* something is
+often easier than landing on the thing itself. `$` is a free, reliable
+anchor. `2X` from there needs no aiming at all. Picking the cheap anchor
+and deleting towards the target is a habit that pays off for the rest of
+vim.
+
+@start config.ts
+export const config = {
+  timeoutMs: 30000000,
+  retryLimit: 555,
+};
+
+@expected config.ts
+export const config = {
+  timeoutMs: 30000,
+  retryLimit: 5,
+};

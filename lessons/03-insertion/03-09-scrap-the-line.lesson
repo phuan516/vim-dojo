@@ -1,0 +1,81 @@
+@meta
+id: 03-09
+title: Scrap the line and type it again
+chapter: 03
+type: lesson
+skills: insert-ctrl-w
+par: 92
+minutes: 5
+vscode: triple-click the line, retype it
+open: order.provider.ts
+
+@brief
+The day calculation is wrong twice over: it reads the wrong field, and it
+divides milliseconds by a thousand, which gives seconds, not days. The
+line should be:
+
+    const days = (Date.now() - order.placedAt.getTime()) / 86_400_000;
+
+Almost nothing of the original survives, so patching it word by word is
+not worth it. Throw the line away and type it again — without leaving
+insert mode, and without losing the indentation.
+
+@keys
+| `A` | append at the end of the line |
+| `Ctrl-W` | delete the word before the cursor |
+| `Ctrl-U` | delete everything before the cursor on this line |
+| `Esc` | out |
+
+@hints
+`Ctrl-W` is the word-sized version. There is a line-sized one next to it
+in the same family.
+--
+`Ctrl-U` clears the line back to the indent. Put the cursor at the end of
+the line first, so "everything before the cursor" means the whole line.
+--
+Four `j` down to the line, `A` to get to the end of it in insert mode,
+`Ctrl-U` to empty it, then type the replacement and `Esc`.
+
+@solution
+    j j j j A <Ctrl-U> const days = (Date.now() - order.placedAt.getTime()) / 86_400_000; <Esc> :wq<Enter>
+
+Seventy-seven keystrokes, sixty-six of them the new line.
+
+`A` then `Ctrl-U` is the pre-chapter-8 way to say "replace this line". It
+keeps the indentation — `Ctrl-U` stops at the first non-blank, the same
+place `I` starts from — so you retype the code and not the whitespace.
+There is a proper normal-mode key for this, `cc`, and it arrives in
+chapter 8. Until then this is the cheap version, and it is still worth
+knowing afterwards for the times you are already typing.
+
+The third key in that family is `Ctrl-R`. It pastes the contents of a
+register without leaving insert mode, which is how you get a yanked line,
+a filename or the last search back into your typing. Registers are
+chapter 20's whole subject, so leave it alone for now — just file away
+that insert mode can read from them.
+
+Notice what all three have in common: they fix what you are *currently
+typing*. That is the honest job of insert mode. Anything that is fixing
+text that was already in the file wants a normal-mode command instead.
+
+@start order.provider.ts
+@injectable()
+export class OrderProvider {
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+    const days = (Date.now() - order.createdAt.getTime()) / 1000;
+
+    return days;
+  }
+}
+
+@expected order.provider.ts
+@injectable()
+export class OrderProvider {
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+    const days = (Date.now() - order.placedAt.getTime()) / 86_400_000;
+
+    return days;
+  }
+}

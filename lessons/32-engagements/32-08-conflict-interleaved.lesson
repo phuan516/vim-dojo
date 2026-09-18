@@ -1,0 +1,230 @@
+@meta
+id: 32-08
+title: Conflict — the same eight lines
+chapter: 32
+type: scenario
+skills: conflict-resolution, register-named, range-pattern, global-delete
+par: 85
+minutes: 12
+vscode: three-way merge editor, drag lines between panes
+open: src/domain/order/order.provider.ts src/configuration/errors/default.json src/domain/order/order.resolver.ts
+vimrc: set hidden
+
+@brief
+Second merge, and this one is not "accept both".
+
+    $ git merge main
+    Auto-merging src/domain/order/order.provider.ts
+    CONFLICT (content): Merge conflict in src/domain/order/order.provider.ts
+    CONFLICT (content): Merge conflict in src/configuration/errors/default.json
+
+Both branches rewrote the middle of `cancel`. `main` added an audit call
+after the refund. Your branch made cancel idempotent, so a second cancel
+returns the order instead of refunding it again. The two changes are
+compatible; git just cannot see that, because they overlap line for line.
+
+The merged `cancel` keeps the shipped guard, then your idempotency guard,
+then the refund, then `main`'s audit call — in that order. `main`'s
+constructor change came through cleanly, so `auditService` is already
+injected; if the audit line does not survive, nothing uses it and the
+build goes red.
+
+The JSON conflict is the easy kind. Both codes are wanted, `main`'s
+first, and there is no blank line to preserve.
+
+The resolver is open for reference and does not change.
+
+@keys
+| `ma` | drop mark a on this line |
+| `"ayy` | yank this line into register a |
+| `"ap` | put register a back |
+| `:'a,/^=/d` | delete from mark a down to the `=======` line |
+| `:g/^[<>=]\{7\}/d` | delete every marker line |
+
+@hints
+You are keeping almost all of one side and exactly one line of the other.
+Decide which side that is before you delete anything: it is the side with
+more of the merged result in it.
+--
+The one line you need from `main` is the audit call. Get it out of the
+way first — yank it into a named register — and then the whole HEAD block
+becomes something you can delete in one command.
+--
+`/^<<<` `Enter` `ma` marks the top of the mess. `/auditService` `Enter`
+`"ayy` saves the line. `:'a,/^=/d` removes the marker, the HEAD block and
+the separator together. `/^>>>` `Enter` `dd` takes the last marker, `k`
+puts you on the refund line and `"ap` drops the audit call back after it.
+
+@solution
+`/^<<<` `Enter` `ma` `/auditService` `Enter` `"ayy` `:'a,/^=/d` `Enter`
+`/^>>>` `Enter` `dd` `k` `"ap`, then `:bn` `:g/^[<>=]\{7\}/d` `:wqa`.
+74 keystrokes.
+
+Three things in here are worth taking away.
+
+**Rescue the minority side first.** When one side is nearly the answer
+and the other contributes a line or two, pull those lines into a named
+register before you start deleting. After that the conflict is a
+delete-everything-between-the-markers job, which is one command. Trying
+to delete around the line you want to keep is where people end up with
+six `dd`s and a mis-count.
+
+**Use a named register, not the unnamed one.** `"ayy` survives every `dd`
+that follows. A plain `yy` would be gone the moment you delete the first
+line, and you would not notice until `p` put the wrong thing back.
+
+**A mark is cheaper than a count.** `ma` on the `<<<<<<<` line, then
+`:'a,/^=/d` reads as "from where the conflict started to the separator"
+regardless of how many lines are in between. Neither number appears in
+the command, so neither number can be wrong.
+
+The JSON is a reminder from the last merge: when both sides are adding
+lines to a list and no spacing has to be preserved,
+`:g/^[<>=]\{7\}/d` removes all three markers in one go and leaves the two
+new lines in the order git wrote them, which is `main`'s first.
+
+Last thing, and it is not a keystroke: read the merged method top to
+bottom before you save. Both sides compiling is not the same as the
+result being right. The order of the idempotency guard and the refund is
+the entire point of your branch, and a merge that puts the refund first
+passes review and quietly refunds twice.
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { AuditService } from '../../infrastructure/services/audit.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(AuditService) protected auditService: AuditService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+<<<<<<< HEAD
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+    await this.auditService.record('order.cancelled', order.id);
+=======
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    if (order.status === 'CANCELLED') {
+      return order;
+    }
+
+    await this.paymentService.refund(order.id);
+>>>>>>> feature/cancel-idempotent
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { AuditService } from '../../infrastructure/services/audit.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(AuditService) protected auditService: AuditService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    if (order.status === 'CANCELLED') {
+      return order;
+    }
+
+    await this.paymentService.refund(order.id);
+    await this.auditService.record('order.cancelled', order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+<<<<<<< HEAD
+  "ORDER_AUDIT_FAILED": { "statusCode": 502, "sentry": true },
+=======
+  "ORDER_CANCEL_TOO_LATE": { "statusCode": 409, "sentry": false },
+>>>>>>> feature/cancel-idempotent
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@expected src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "ORDER_AUDIT_FAILED": { "statusCode": 502, "sentry": true },
+  "ORDER_CANCEL_TOO_LATE": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}

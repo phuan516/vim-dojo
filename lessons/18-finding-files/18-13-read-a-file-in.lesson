@@ -1,0 +1,95 @@
+@meta
+id: 18-13
+title: Read a file in
+chapter: 18
+type: lesson
+skills: edit-file, wildmenu
+par: 59
+minutes: 4
+vscode: open the other file, select all, copy, come back, paste
+vimrc: set wildmenu wildmode=longest:full,full
+open: README.md
+
+@brief
+The README has an "Error codes" section with an empty `json` code
+block. It should contain the current contents of
+`src/configuration/errors/default.json`, exactly as they are in that
+file.
+
+Do not open the JSON, copy it and paste it. `:r path` reads a file and
+inserts its lines below the cursor line, in place, without leaving the
+buffer. Put the cursor on the opening fence line and read the file in.
+The JSON file itself must not change.
+
+@keys
+| `:r path` | read a file in, below the current line |
+| `:0r path` | read it in above the first line |
+| `:r %:h/other` | modifiers work here too |
+
+@hints
+Get the cursor onto the line that reads ```` ```json ````, then `:r`
+and the path. Tab completes it.
+--
+`/json` Enter finds the fence. The path is
+`src/configuration/errors/default.json`; `s<Tab>c<Tab>e<Tab>d<Tab>`
+spells it.
+--
+`/json` Enter, `:r src/configuration/errors/default.json` Enter, `:wq`.
+
+@solution
+    /json<Enter> :r s<Tab>c<Tab>e<Tab>d<Tab><Enter> :wq<Enter>
+
+`:r` is the underrated one. Pulling a fixture into a test, a snippet
+into a doc, a licence header into a new file: every time the other file
+is going in whole, `:r` is one command where copy and paste is four
+buffer switches. `:0r` puts it at the very top, which is what a header
+wants.
+
+Chapter 26 gives `:r` a second life: `:r !command` reads a shell
+command's output in the same way.
+
+@start README.md
+# Orders service
+
+Handles orders, customers and refunds for the storefront.
+
+## Error codes
+
+```json
+```
+
+Each code maps to an HTTP status. `sentry: true` means an alert fires.
+
+@expected README.md
+# Orders service
+
+Handles orders, customers and refunds for the storefront.
+
+## Error codes
+
+```json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+```
+
+Each code maps to an HTTP status. `sentry: true` means an alert fires.
+
+@start src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@start src/configuration/registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('OrderProvider', { useClass: OrderProvider });

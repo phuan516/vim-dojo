@@ -1,0 +1,159 @@
+@meta
+id: 18-14
+title: The argument list
+chapter: 18
+type: lesson
+skills: arglist
+par: 97
+minutes: 6
+vscode: open each file from the sidebar in turn
+open: README.md
+
+@brief
+Refunds are getting their own status. `OrderStatus` gains
+`'REFUNDED'` at the end of the union, and the resolver's `cancelOrder`
+must pass `'REFUNDED'` as a second argument to `orderProvider.cancel`.
+Two of the four order files change; the provider and repository do not.
+
+When you started vim with several files on the command line, chapter 16
+showed you `:bn` walking through them. That list of files is the
+argument list, and it is not fixed at startup. `:args src/domain/order/*.ts`
+replaces it with every match of the glob and opens the first one.
+`:next` and `:prev` step through it, `:first` and `:last` jump to the
+ends, and `:args` on its own shows where you are.
+
+The README stays as it is.
+
+@keys
+| `:args glob` | set the argument list from a glob, open the first |
+| `:args` | show the list, current file in brackets |
+| `:n` `:next` | next file in the list |
+| `:prev` `:N` | previous |
+| `:first` `:last` | either end |
+| `:wn` | write, then next |
+| `:wqa` | write everything, quit |
+
+@hints
+`:args src/domain/order/*.ts` gives you four files in alphabetical
+order. The entity is first.
+--
+Edit the entity, then `:wn` to write it and move on. `:n` skips a file
+you do not need. The resolver is last, so `:last` gets there in one.
+--
+Entity: `G$i | 'REFUNDED'` Esc. `:wn`. `:last`. Resolver: `/cancel(`
+Enter, `f)`, `i, 'REFUNDED'` Esc. `:wq`.
+
+@solution
+    :args src/domain/order/*.ts<Enter>
+    G$ i | 'REFUNDED' <Esc> :wn<Enter>
+    :last<Enter> /cancel(<Enter> f) i, 'REFUNDED' <Esc> :wq<Enter>
+
+The argument list is a to-do list of files. Buffers accumulate
+everything you have ever opened; the arglist holds only what you meant
+to work through, in the order you meant to do it. `:args` shows it with
+the current one in square brackets, so you always know how far along
+you are.
+
+The same glob works for `:argadd`, which appends without replacing. And
+in chapter 25, `:argdo` runs a command over every file in the list,
+which is when the arglist stops being a convenience and becomes a tool.
+
+`:wq` on the last file quits cleanly. `:wq` with files still unvisited
+gets you E173, "more files to edit", which is vim making sure you did
+not forget one. `:wqa` overrides it.
+
+@start README.md
+# Orders service
+
+Order statuses: PENDING, SHIPPED, CANCELLED, and now REFUNDED once the
+payment gateway confirms the money has gone back.
+
+@start src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@expected src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED' | 'REFUNDED';
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { OrderStatus } from './order.entity';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  public async cancel(id: string, status: OrderStatus = 'CANCELLED') {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status },
+    });
+  }
+}
+
+@start src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+    };
+  }
+}
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@expected src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id, 'REFUNDED');
+  }
+}

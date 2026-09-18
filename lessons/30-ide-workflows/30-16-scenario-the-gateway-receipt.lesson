@@ -1,0 +1,230 @@
+@meta
+id: 30-16
+title: Scenario — the gateway receipt
+chapter: 30
+type: scenario
+skills: ctags, diagnostics, rename-symbol, cfdo
+par: 295
+minutes: 18
+vscode: Problems panel, F12, F2, and a careful look at the diff
+vimrc: set errorformat=%-G\ %.%#,%f(%l\\,%c):\ error\ %m hidden
+open: src/domain/order/order.resolver.ts
+
+@brief
+A ticket, three jobs, no language server.
+
+    ORD-733  The payments gateway now returns a receipt reference with
+             every refund and finance need it stored. The type-check is
+             also red, and while you are in there, PaymentService.refund
+             is misnamed: it does not send money, it asks the gateway to
+             issue a refund.
+
+  1. **The red build.** `tsc.log` is provided, two errors. Fix both.
+
+  2. **The receipt.** The gateway response type is `RefundResponse`. You
+     do not know which file it is in; the provided `tags` file does. Add
+
+         receiptId: string;
+
+     to its `data` object, under `reference`. Then have
+     `PaymentService.refund` return `response.data.receiptId` rather
+     than the whole `data` object.
+
+  3. **The rename.** `PaymentService.refund` becomes `issueRefund`,
+     definition and callers. The endpoint `'/refunds'` and the routing
+     key `'payment.refund'` in the producer are wire contracts and do
+     not change.
+
+Do the rename last. It is the only job that makes the tags file stale,
+and jobs one and two both want to use it.
+
+@keys
+| `:cfile file` `:cn` | the errors, one after another |
+| `:tag name` | to a definition anywhere in the tree |
+| `Ctrl-T` | back where you came from |
+| `:vimgrep /\<name\>/ src/**/*.ts` | every whole-word hit |
+| `:cfdo %s/old/new/g \| update` | rename across the files that matched |
+| `%s/pat/new/ge` | the `e` flag: no error in files with no match |
+
+@hints
+Take the errors first: `:cfile tsc.log` lands on the first, `:cn` on
+the second. Neither needs more than a few keystrokes.
+--
+`:tag RefundResponse` goes to the type. `o` under the `reference` line
+supplies the indentation for you, and `Ctrl-T` brings you back to the
+service to change the `return`.
+--
+For the rename, `\<refund\>` never matches `refunds`, so the endpoint
+looks after itself. The routing key does not: `'payment.refund'` has a
+word boundary in exactly the wrong place.
+--
+Rename everything, then put the routing key back with a second pass —
+the same two-step as the rename lesson. Finish with `:wqa`, because the
+type file was edited by hand and is not in any list.
+
+@solution
+    :cfile tsc.log<Enter>  ciw id <Esc>  :cn<Enter>  f' x f' x
+    :tag RefundResponse<Enter>  /reference<Enter>  o receiptId: string; <Esc>
+    Ctrl-T  /response\.data<Enter>  f; i .receiptId <Esc>
+    :vimgrep /\<refund\>/ src/**/*.ts<Enter>
+    :cfdo %s/\<refund\>/issueRefund/g | update<Enter>
+    :cfdo %s/'payment\.issueRefund'/'payment.refund'/ge | update<Enter>
+    :wqa<Enter>
+
+Around 250 keystrokes, and not one of them is a file you had to go and
+find by hand.
+
+The order matters more than the keys. Tags first, rename last: a rename
+moves every definition it touches, and until `ctags -R src` runs again
+the index points at lines that have changed underneath it. Vim degrades
+politely — the tag address is a search pattern, so a definition that has
+only moved is still found, and one that has been renamed is not found at
+all. That failure is loud, which is the best kind.
+
+The three tools each answered a different question, and it is worth
+naming them:
+
+  · the quickfix list answered "what is broken" — and it came from a
+    file, so it works the same from a saved log, a CI artefact, `:make`
+    or a server plugin
+  · the tags file answered "where does this live" — from an index a
+    shell command wrote in a second
+  · `:vimgrep` and `:cfdo` answered "everywhere this name appears" —
+    and needed you to know the difference between a name and a string,
+    which is the one thing they cannot work out for themselves
+
+That is go-to-definition, the problems panel and rename symbol, on a
+machine with no plugins, no server and no network. Set up a language
+server in the projects where it earns its keep. Keep these, because
+they are what is there when it does not.
+
+@start tsc.log
+src/domain/order/order.resolver.ts(7,44): error TS2339: Property 'orderId' does not exist on type '{ id: string; }'.
+src/infrastructure/services/payment.service.ts(7,9): error TS2367: This comparison appears to be unintentional because the types 'number' and 'string' have no overlap.
+  src/infrastructure/services/payment.types.ts(3,3): 'status' is declared here.
+
+@start tags
+!_TAG_FILE_FORMAT	2	//
+!_TAG_FILE_SORTED	1	//
+EmailProducer	src/domain/order/order.producer.ts	/^export class EmailProducer {$/;"	c
+OrderProvider	src/domain/order/order.provider.ts	/^export class OrderProvider {$/;"	c
+OrderResolver	src/domain/order/order.resolver.ts	/^export class OrderResolver {$/;"	c
+PaymentService	src/infrastructure/services/payment.service.ts	/^export class PaymentService {$/;"	c
+RefundResponse	src/infrastructure/services/payment.types.ts	/^export type RefundResponse = {$/;"	t
+cancel	src/domain/order/order.provider.ts	/^  public async cancel(id: string) {$/;"	m	class:OrderProvider
+refund	src/infrastructure/services/payment.service.ts	/^  public async refund(orderId: string) {$/;"	m	class:PaymentService
+
+@start src/domain/order/order.resolver.ts
+import { OrderProvider } from './order.provider';
+
+export class OrderResolver {
+  constructor(protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.orderId);
+  }
+}
+
+@expected src/domain/order/order.resolver.ts
+import { OrderProvider } from './order.provider';
+
+export class OrderResolver {
+  constructor(protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+}
+
+@start src/infrastructure/services/payment.service.ts
+import { RefundResponse } from './payment.types';
+
+export class PaymentService {
+  public async refund(orderId: string) {
+    const response: RefundResponse = await this.http.post('/refunds', { orderId });
+
+    if (response.status !== '200') {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@expected src/infrastructure/services/payment.service.ts
+import { RefundResponse } from './payment.types';
+
+export class PaymentService {
+  public async issueRefund(orderId: string) {
+    const response: RefundResponse = await this.http.post('/refunds', { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data.receiptId;
+  }
+}
+
+@start src/infrastructure/services/payment.types.ts
+export type RefundResponse = {
+  status: number;
+  data: {
+    reference: string;
+  };
+};
+
+@expected src/infrastructure/services/payment.types.ts
+export type RefundResponse = {
+  status: number;
+  data: {
+    reference: string;
+    receiptId: string;
+  };
+};
+
+@start src/domain/order/order.provider.ts
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+export class OrderProvider {
+  constructor(protected paymentService: PaymentService) {}
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    const receiptId = await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED', refundReceipt: receiptId },
+    });
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+export class OrderProvider {
+  constructor(protected paymentService: PaymentService) {}
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    const receiptId = await this.paymentService.issueRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED', refundReceipt: receiptId },
+    });
+  }
+}
+
+@start src/domain/order/order.producer.ts
+export class EmailProducer {
+  public async publish(orderId: string) {
+    return this.channel.publish({
+      routingKey: 'payment.refund',
+      payload: { orderId },
+    });
+  }
+}

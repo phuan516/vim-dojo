@@ -1,0 +1,82 @@
+@meta
+id: 26-02
+title: Filter a range, not the file
+chapter: 26
+type: lesson
+skills: filter-bang
+par: 21
+minutes: 4
+vscode: select the block, then hope an extension has a command for it
+open: event-allowlist.md
+
+@brief
+The allow list in the middle of this document is a configuration block
+inside a document that is mostly prose. Three keys got added twice. Sort
+the block and drop the duplicates, and leave every other line — the
+heading, the paragraph above, the note below — exactly as it is.
+
+`:%` would have taken the prose with it and sorted the heading into the
+middle of the keys. The block runs from line 6 to line 13.
+
+@keys
+| `:6,13!cmd` | filter lines 6 to 13 only |
+| `sort -u` | sort and keep one of each duplicate line |
+| `:.,+5!cmd` | the same idea with a relative range |
+
+@hints
+The range in front of the `!` is an ordinary ex range. Everything chapter
+25 taught about addressing applies here unchanged.
+--
+`sort` has a `-u` flag that does what `:sort u` does — duplicates are
+dropped after the sort, so the two copies always end up adjacent first.
+--
+`:6,13!sort -u` and Enter, then `:wq`.
+
+@solution
+    :6,13!sort -u<Enter>  :wq<Enter>
+
+Note what happened to the line count. Eight lines went in and five came
+out, and vim did not mind in the slightest. A filter is not a
+line-for-line transformation: the lines you selected are removed and the
+command's output is inserted in their place. `grep` filters give you
+fewer lines, `awk` can give you more, and both are ordinary uses.
+
+That is also why the range matters more here than it does with `:s`. A
+substitute with a range too wide might change a line you did not mean to
+change. A *filter* with a range too wide feeds the wrong lines to a
+program that will happily rewrite all of them.
+
+Two habits keep this safe. Pick the range off the line numbers, or mark
+the block and use `:'a,'b!cmd`. And when it goes wrong — it will — press
+`u` once.
+
+@start event-allowlist.md
+# Webhook allow list
+
+The gateway drops any event whose routing key is not in this block.
+Keep it sorted, one key per line, no duplicates.
+
+order.placed
+payment.captured
+order.placed
+customer.created
+payment.captured
+order.shipped
+customer.created
+order.cancelled
+
+Anything below this line is notes, not configuration.
+
+@expected event-allowlist.md
+# Webhook allow list
+
+The gateway drops any event whose routing key is not in this block.
+Keep it sorted, one key per line, no duplicates.
+
+customer.created
+order.cancelled
+order.placed
+order.shipped
+payment.captured
+
+Anything below this line is notes, not configuration.

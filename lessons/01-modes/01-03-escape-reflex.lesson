@@ -1,0 +1,51 @@
+@meta
+id: 01-03
+title: Drill — the Escape reflex
+chapter: 01
+type: drill
+skills: esc, insert-a, mode-awareness, survival-motion
+par: 18
+minutes: 5
+reps: 8
+vscode: nothing — this muscle does not exist there
+open: todo.md
+
+@brief
+Eight times: add ` done` to the end of the line, leave insert mode, save,
+quit. Nothing to work out. The only goal is that the sequence stops being
+a decision and becomes a reflex.
+
+Watch `-- INSERT --` at the bottom of the screen appear and disappear.
+By rep eight you should be pressing `Esc` before you have finished
+thinking about it.
+
+@keys
+| `$` | end of the line |
+| `a` | append after the cursor |
+| `Esc` | out |
+| `:wq` | save and quit |
+
+@hints
+`$a` puts you in insert mode at the very end of the line, in two keys.
+--
+Do not pause to check the mode indicator before pressing `Esc`. Press
+`Esc` and then look. That is the reflex you want.
+
+@solution
+    $ a  done <Esc> :wq<Enter>
+
+Vim users press `Esc` constantly, often when they are already in normal
+mode, and it costs nothing. The failure mode you are drilling out is the
+opposite one: typing a command like `dd` while still in insert mode and
+finding the letters in your file.
+
+If reaching for `Esc` with your little finger hurts, you are not the first.
+Many people remap it later — `jk` typed quickly is the usual choice.
+Chapter 27 covers mappings. Learn it the plain way first so you can sit
+down at anyone's machine.
+
+@start todo.md
+Reconcile the payment batch
+
+@expected todo.md
+Reconcile the payment batch done

@@ -1,0 +1,114 @@
+@meta
+id: 27-18
+title: One key, two jobs
+chapter: 27
+type: lesson
+skills: mapping, buffer-switch
+par: 118
+minutes: 8
+vscode: a "when" clause in keybindings.json, if you can work out the syntax
+open: refund.entity.ts RELEASE.md
+
+@brief
+Two buffers, two repetitive jobs.
+
+`refund.entity.ts` is missing a semicolon on each of its five fields.
+`RELEASE.md` needs `- ` in front of each of its five notes.
+
+Both are worth a mapping and neither is worth a second key, because you
+will never want the semicolon one while you are in the markdown. Add
+`<buffer>` to a mapping and it exists only in the buffer you defined it
+in — which is how the same key can mean the right thing in every file
+type, and how filetype plugins give you per-language keys without
+fighting each other for the keyboard.
+
+Use `-` in both buffers. Define it twice, once per buffer.
+
+For the TypeScript one, make it a `:s` command rather than an insert, and
+put `<silent>` on it so it does not report a substitution on every line.
+
+@keys
+| `:nnoremap <buffer> - …` | a mapping that exists in this buffer only |
+| `:nnoremap <silent> - …` | run it without echoing the command or its output |
+| `:nmap <buffer>` | list this buffer's normal-mode mappings |
+| `:nunmap <buffer> -` | remove this buffer's one, leaving any global one |
+| `:map <buffer> <LocalLeader>x` | the usual home for a per-filetype key |
+
+@hints
+Nothing stops you binding `-` twice, as long as each one is marked
+`<buffer>`. Define the first, use it, switch, define the second.
+--
+`<buffer>` and `<silent>` go between the command and the key, in either
+order, each in angle brackets.
+--
+`:nnoremap <buffer> <silent> - :s/$/;/<CR>` `Enter`, then `2G` and
+`-j` five times. `:bn`, then
+`:nnoremap <buffer> - I- <Esc>` `Enter`, `2G` and `-j` five times, `:wqa`.
+
+@solution
+    :nnoremap <buffer> <silent> - :s/$/;/<CR><Enter>
+    2G  -j-j-j-j-
+    :bn<Enter>
+    :nnoremap <buffer> - I- <Esc><Enter>
+    2G  -j-j-j-j-  :wqa<Enter>
+
+A hundred and three keystrokes, most of them the two definitions.
+
+`<buffer>` is the mapping equivalent of `setlocal`, and it has the same
+place in a config: a mapping that only makes sense for one language goes
+in `after/ftplugin/<lang>.vim` with `<buffer>` on it, next to the
+`setlocal` lines from earlier in this chapter. Vim then installs it on
+every buffer of that type and nowhere else, and you never think about it
+again.
+
+Buffer-local mappings win over global ones, which is the useful way round.
+Map `<leader>t` globally to "run the test file", then give the Python
+ftplugin a `<buffer>` version that runs pytest instead, and the key does
+the right thing everywhere without a single `if`.
+
+`<silent>` suppresses the echo of a mapping's command line and its output.
+Without it, the TypeScript mapping prints a substitution report for every
+line you touch, the messages pile up, and eventually vim stops to show you
+a `-- More --` prompt in the middle of your edit. Any mapping whose
+right-hand side starts with `:` wants `<silent>`. Mappings that stay in
+normal mode do not need it.
+
+The other flags you will meet: `<expr>` evaluates the right-hand side as an
+expression rather than typing it, `<nowait>` stops vim waiting to see
+whether you meant a longer mapping, and `<unique>` refuses to overwrite an
+existing binding — which is how a well-behaved plugin avoids stealing a
+key you already use.
+
+@start refund.entity.ts
+export type Refund = {
+  id: string
+  orderId: string
+  amountPence: number
+  reason: string
+  createdAt: Date
+}
+
+@expected refund.entity.ts
+export type Refund = {
+  id: string;
+  orderId: string;
+  amountPence: number;
+  reason: string;
+  createdAt: Date;
+}
+
+@start RELEASE.md
+# Release 2026.09.2
+refunds outside the window record a reason
+the export job streams instead of buffering
+customer search includes archived records
+webhook signatures are re-read on rotate
+invoice totals round half up
+
+@expected RELEASE.md
+# Release 2026.09.2
+- refunds outside the window record a reason
+- the export job streams instead of buffering
+- customer search includes archived records
+- webhook signatures are re-read on rotate
+- invoice totals round half up

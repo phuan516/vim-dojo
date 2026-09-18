@@ -1,0 +1,123 @@
+@meta
+id: 04-08
+title: Drill — read the number, jump, edit
+chapter: 04
+type: drill
+skills: count-prefix, relativenumber
+par: 23
+minutes: 5
+reps: 10
+vscode: Ctrl-F, type FIXME, Escape, click
+open: order.provider.ts
+vimrc: set relativenumber
+
+@brief
+Ten times: put the ticket number on the FIXME comment. Append ` (ORD-418)`
+— a space, then the bracketed id — to the end of that comment line.
+
+Eyes find the comment, the margin gives you the distance, your hand types
+the count. Do not count lines yourself, do not press `j` twice, and do not
+touch an arrow key — twenty-nine lines of it is exactly the habit this
+chapter is here to break.
+
+@keys
+| `29j` | down twenty-nine lines |
+| `A` | append at the end of the line |
+
+@hints
+The margin already says how far it is. You are only reading a number off
+the screen.
+--
+Read, jump, edit. Three moments. If any rep has a fourth, you moved twice
+and the rep does not count.
+
+@solution
+    29j A  (ORD-418) <Esc> :wq<Enter>
+
+Nineteen keystrokes, ten of them the ticket id.
+
+By the last rep you should notice something odd and good: you stop
+reading the number consciously. The margin says 29, your fingers type
+`29j`, and no number goes through your head on the way. That is the point
+at which relative numbers start paying for themselves, and it takes about
+this many repetitions to arrive.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    // FIXME refunds are not idempotent yet
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    // FIXME refunds are not idempotent yet (ORD-418)
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}

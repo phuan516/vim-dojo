@@ -1,0 +1,129 @@
+@meta
+id: 25-09
+title: Mixing addresses in one range
+chapter: 25
+type: lesson
+skills: range-syntax, range-pattern
+par: 36
+minutes: 6
+vscode: click above the method, scroll, shift-click its closing brace, Delete
+open: customer.provider.ts
+
+@brief
+`legacyExport` has not been called since the reporting service moved off
+JSON dumps. Delete the method and the blank line above it, so the file
+reads as if it had never been there.
+
+The two ends of a range do not have to be the same kind of address. Here
+the top of what you want is one line above the cursor and the bottom is a
+line you can only describe by searching. So: `.-1` on the left, a pattern
+on the right.
+
+The closing brace of a method sits at two spaces of indent. `^  }` picks
+it out and will not match the class's own brace in column 1.
+
+@keys
+| `:.-1,/^  }/d` | from the line above the cursor to the next two-space `}` |
+| `:.,/pat/y` | yank from here down to a match |
+| `:?pat?,.d` | delete from a match above down to here |
+
+@hints
+Search to the `legacyExport` signature first. That line is `.`, and it is
+the second line of what you want gone.
+--
+Left address: the line above the cursor. Right address: the method's own
+closing brace, found by pattern.
+--
+`/legacyExport` Enter, then `:.-1,/^  }/d` Enter, then `:wq`.
+
+@solution
+    /legacyExport<Enter>  :.-1,/^  }/d<Enter>  :wq<Enter>
+
+Thirty-one keystrokes. `dap` from chapter 10 would also have worked here,
+and on a tidy method it is fewer keys. It stops working the moment the
+body contains a blank line, because vim then sees two paragraphs.
+`.-1,/^  }/` does not care: it is anchored to the structure of the code
+rather than to the blank lines that happen to be in it.
+
+Each address in a comma-separated range is worked out from the cursor's
+position, independently. Both `.-1` and `/^  }/` are relative to the line
+you searched to, not to each other.
+
+The one exception is worth knowing. A semicolon instead of a comma moves
+the cursor to the first address before the second is resolved:
+
+    :/BEGIN/;/END/d       resolve END from BEGIN's line, not from here
+    :.;+5d                identical to :.,+5d, since . is where you are
+
+With two patterns, `;` is usually what you meant, and it is why
+`:/BEGIN/,/END/` can be surprising when an `END` sits above the cursor
+but below the `BEGIN`. `,` is right for the common case; reach for `;`
+when the second address only makes sense from the first.
+
+@start customer.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { CustomerRepository } from './customer.repository';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class CustomerProvider {
+  constructor(
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return customer;
+  }
+
+  public async legacyExport(id: string) {
+    const customer = await this.findOne(id);
+
+    return JSON.stringify(customer, null, 2);
+  }
+
+  public async archive(id: string) {
+    await this.findOne(id);
+
+    return this.customerRepository.update({
+      where: { id },
+      values: { archived: true },
+    });
+  }
+}
+
+@expected customer.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { CustomerRepository } from './customer.repository';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class CustomerProvider {
+  constructor(
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return customer;
+  }
+
+  public async archive(id: string) {
+    await this.findOne(id);
+
+    return this.customerRepository.update({
+      where: { id },
+      values: { archived: true },
+    });
+  }
+}

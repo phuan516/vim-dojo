@@ -1,0 +1,260 @@
+@meta
+id: 19-15
+title: Errors into the list
+chapter: 19
+type: lesson
+skills: make-errorformat
+par: 77
+minutes: 7
+vscode: the Problems panel
+vimrc: set errorformat=%f(%l\\,%c):\ %m hidden
+open: tsc-output.txt
+
+@brief
+The quickfix list was built for compiler errors; search results came
+later. In front of you is `tsc-output.txt`, the saved output of a `tsc`
+run: three errors, one per line, each in the form
+`file(line,col): message`. `:cfile tsc-output.txt` reads it into the
+quickfix list and jumps to the first error with the cursor on the exact
+column. `:cn` walks the rest. It is the Problems panel, except the
+cursor is put where the problem is.
+
+Vim has to be told the shape of a line to read a file, line and column
+out of it. That is `errorformat`, a small pattern language: `%f` file,
+`%l` line, `%c` column, `%m` message, and literal characters for the
+rest. For tsc it is `%f(%l,%c): %m`, and it is set for this lesson. The
+default `errorformat` knows gcc and a few others; it does not know
+tsc, and without the option every line would load as a message with
+no file behind it and `:cn` would have nowhere to go.
+
+Fix all three. Each is a short edit at the cursor, and the message
+tells you what it should be. The output file itself must not change.
+
+@keys
+| `:cfile file` | load errors from a file, jump to the first |
+| `:cgetfile file` | load without jumping |
+| `errorformat` | how to read `file`, `line`, `col` and `message` out of each line |
+| `%f %l %c %m` | file, line, column, message |
+
+@hints
+`:cfile tsc-output.txt`. The first error says `sendRefund` does not
+exist and suggests `issueRefund`; the cursor is on the word.
+--
+`ciw` and the suggested name, `:w`, `:cn`. Error two is `args.orderId`
+where the type only has `id`. Error three compares a number to a
+string: `'200'` should be `200`.
+--
+For the third the cursor lands at the start of the comparison. `f'`
+finds the opening quote, `x` removes it, `f'` `x` again for the other.
+`:wq`.
+
+@solution
+    :cfile tsc-output.txt<Enter>
+    ciw issueRefund <Esc> :w<Enter> :cn<Enter>
+    ciw id <Esc> :w<Enter> :cn<Enter>
+    f' x f' x :wq<Enter>
+
+`errorformat` is a scanf for compiler output. `%f(%l,%c): %m` says:
+some file, a paren, a line number, a comma, a column, a paren, a colon,
+a space, and the rest is the message. Writing it down takes two
+layers of escaping. Inside the option a bare comma separates
+alternative formats, so a literal comma is `\,`; and `:set` itself
+strips one backslash and stops at an unescaped space, so the line in a
+vimrc reads `set errorformat=%f(%l\\,%c):\ %m`. That is the one to put
+in `after/ftplugin/typescript.vim` if you want it permanently, or use
+`:compiler tsc`, which ships with vim and sets it for you.
+
+`:cfile` jumps to the first error. `:cgetfile` loads the same list
+without moving, for when you want `:copen` and a read before touching
+anything. Both take any file in the right format, which is what makes
+a saved build log or a CI artefact just as usable as a live run.
+
+The next lesson runs the build from inside vim instead of reading a
+file.
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.sendRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.issueRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.orderId);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@expected src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@start src/domain/payment/payment.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { PaymentRepository } from './payment.repository';
+import { PaymentProducer } from './payment.producer';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class PaymentProvider {
+  constructor(
+    @inject(PaymentRepository) protected paymentRepository: PaymentRepository,
+    @inject(PaymentProducer) protected paymentProducer: PaymentProducer,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async reverse(id: string) {
+    const payment = await this.paymentRepository.findOne({ where: { id } });
+
+    if (!payment) {
+      throw exception('PAYMENT_NOT_FOUND');
+    }
+
+    const receipt = await this.paymentService.issueRefund(payment.orderId);
+
+    await this.paymentProducer.refundIssued({ paymentId: id, receipt });
+
+    return receipt;
+  }
+}
+
+@start src/infrastructure/services/payment.service.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { HttpClient } from '../http/http.client';
+
+@injectable()
+export class PaymentService {
+  constructor(@inject(HttpClient) protected http: HttpClient) {}
+
+  public async issueRefund(orderId: string) {
+    const response = await this.http.post('/issueRefund', { orderId });
+
+    if (response.status !== '200') {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@expected src/infrastructure/services/payment.service.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { HttpClient } from '../http/http.client';
+
+@injectable()
+export class PaymentService {
+  constructor(@inject(HttpClient) protected http: HttpClient) {}
+
+  public async issueRefund(orderId: string) {
+    const response = await this.http.post('/issueRefund', { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@start tsc-output.txt
+src/domain/order/order.provider.ts(30,31): error TS2551: Property 'sendRefund' does not exist on type 'PaymentService'. Did you mean 'issueRefund'?
+src/domain/order/order.resolver.ts(9,44): error TS2339: Property 'orderId' does not exist on type '{ id: string; }'.
+src/infrastructure/services/payment.service.ts(12,9): error TS2367: This comparison appears to be unintentional because the types 'number' and 'string' have no overlap.

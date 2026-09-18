@@ -1,0 +1,111 @@
+@meta
+id: 20-03
+title: A register with a name
+chapter: 20
+type: lesson
+skills: register-named
+par: 53
+minutes: 5
+vscode: a clipboard manager, if you have one installed
+open: payment.service.ts
+
+@brief
+Vim has twenty-six registers named `a` to `z`, and any yank, delete or
+put can be pointed at one of them by typing `"` and the letter first.
+`"ayy` yanks the line into `a`. `"ap` puts it back. Nothing else touches
+`a` until you tell it to, so a named register is where you keep
+something you will need later, while the unnamed register churns
+through everything else you do in between.
+
+`capture` needs the same status guard `refund` has: the three-line
+`if` block, with a blank line before it, after its own `const response`
+line. Its code is `CAPTURE_FAILED`. The `legacy` call in `capture` is
+dead and has to go.
+
+Pick the guard up into a named register first, then do the delete, then
+put. The unnamed register can do what it likes.
+
+@keys
+| `"ayy` | yank the line into register `a` |
+| `"a4yy` | four lines into `a` |
+| `"ap` `"aP` | put from `a`, after or before |
+| `"add` | delete the line into `a` |
+| `:reg a` | show what is in `a` |
+
+@hints
+The register letter goes between the `"` and the command, and the count
+goes after it: `"a3yy`.
+--
+`/if (` Enter finds the guard. `k` steps up to the blank line above it
+and `"a4yy` takes the blank and the guard together. `/legacy` Enter,
+`dd`, and you are on the blank line under `const response`. `"aP` puts
+the four lines above it.
+--
+The pasted block still says `REFUND_FAILED`. `/REF` Enter from where
+the put left you lands on it, and `ct_` changes up to the underscore.
+
+@solution
+    /if (<Enter> k "a4yy  /legacy<Enter> dd  "aP  /REF<Enter> ct_CAPTURE<Esc>  :wq<Enter>
+
+`"0` would have worked here too, because the guard was the last yank.
+The difference is intent. `"0` is a safety net: it happens to hold the
+last yank whatever else you did. A named register is a shelf you put
+something on deliberately, and it holds it until you replace it, through
+any number of yanks and deletes and across every file you open in this
+session.
+
+Two things people get wrong at first. The `"` is the double-quote key,
+typed once, not twice. And it goes *before* the command, including
+before any count: `"a3yy`, not `3"ayy` (which also works, as it happens,
+but stop reading vim's leniency as a rule).
+
+@start payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string) {
+    const response = await this.http.post(`/refunds`, { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+
+  public async capture(orderId: string, amount: number) {
+    const response = await this.http.post(`/captures`, { orderId, amount });
+    const legacy = await this.http.post(`/v1/captures`, { orderId, amount });
+
+    return response.data;
+  }
+}
+
+@expected payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string) {
+    const response = await this.http.post(`/refunds`, { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+
+  public async capture(orderId: string, amount: number) {
+    const response = await this.http.post(`/captures`, { orderId, amount });
+
+    if (response.status !== 200) {
+      throw exception('CAPTURE_FAILED');
+    }
+
+    return response.data;
+  }
+}

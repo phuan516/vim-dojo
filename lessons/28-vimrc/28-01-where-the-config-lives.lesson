@@ -1,0 +1,84 @@
+@meta
+id: 28-01
+title: Where your config actually lives
+chapter: 28
+type: lesson
+skills: vimrc-structure
+par: 21
+minutes: 4
+vscode: Ctrl-Shift-P, "Open User Settings (JSON)"
+open: .vimrc
+
+@brief
+Everything chapter 27 taught you — `:set`, mappings, autocommands — lasts
+until you quit. A vimrc is the same commands written down, so vim runs
+them for you at startup. That is the whole idea. There is no separate
+configuration language.
+
+On Linux and macOS the file is `~/.vimrc`, and anything larger than a
+single file goes in `~/.vim/`. Vim records which file it read in
+`$MYVIMRC`, so `:e $MYVIMRC` opens your config from inside any session
+without you having to remember the path, and `:scriptnames` lists every
+file vim has sourced, in the order it sourced them, with your vimrc near
+the top.
+
+The file in front of you stands in for your real `~/.vimrc`. The dojo
+grades a copy, so nothing you do in this chapter can break the config you
+edit with tomorrow.
+
+It has three settings. Add a fourth, `showcmd`, below `ruler`. It puts
+the half-typed command in the bottom right corner, so when you press `2d`
+and forget what comes next, the screen tells you vim is still waiting.
+
+@keys
+| `:e $MYVIMRC` | open the vimrc this session loaded |
+| `:scriptnames` | every file vim has sourced, in order |
+| `:echo $MYVIMRC` | print the path |
+| `o` | open a line below and start typing |
+
+@hints
+The new line goes at the bottom of the file. `G` gets you there.
+--
+`o` opens a line below the cursor and puts you in insert mode. No need
+to go to the end of the last line first.
+--
+`Go` then `set showcmd`, then Esc and `:wq`.
+
+@solution
+    G o set showcmd <Esc> :wq<Enter>
+
+One line, one reason for it. That is the rhythm of this whole chapter.
+
+Two things worth knowing about load order, because they explain most
+"why is my config being ignored" questions:
+
+- Vim reads the *first* vimrc it finds and then stops looking. On this
+  machine that is `~/.vimrc`. If `~/.vim/vimrc` also exists it is not
+  read, which catches people out when they move their config.
+- After your vimrc, vim loads filetype plugins and indent files from
+  `$VIMRUNTIME` — so a `set shiftwidth=4` in your vimrc can be quietly
+  overridden a moment later by the ftplugin for the language you opened.
+  That is not a bug and it is not yours to fight; chapter lesson 28-13
+  shows where per-language settings actually belong.
+
+It is also worth noticing how little there is here. Your whole editor
+configuration is one file in your home directory, which is why you can
+copy it to a server, or into a container, and have your own editor
+waiting for you there. Keep that portability in mind as the file grows.
+
+`:scriptnames` is how you see both of those for yourself rather than
+guessing. Run it now and then in a real session; the list is shorter than
+you expect.
+
+@start .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set number
+set ruler
+
+@expected .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set number
+set ruler
+set showcmd

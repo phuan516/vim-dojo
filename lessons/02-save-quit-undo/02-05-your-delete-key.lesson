@@ -1,0 +1,86 @@
+@meta
+id: 02-05
+title: u is the key you are missing
+chapter: 02
+type: lesson
+skills: undo
+par: 97
+minutes: 5
+vscode: Ctrl+Z
+open: CHANGELOG.md
+
+@brief
+So far you can add text and you can save. You cannot remove anything —
+the delete operators are three chapters away. That sounds like a hole,
+and for one keystroke it is not: `u` undoes the last change, and until
+chapter 8 it is the only eraser you have.
+
+The changelog needs a note about audit logging. Do this in order, and do
+the wrong step deliberately — it is the lesson.
+
+  1. Put the cursor on the 2.13 bullet, the last line of the file, and
+     append to it:
+
+         and are written to the audit log
+
+     so the line reads
+
+         - Orders can be cancelled before they ship and are written to the audit log
+
+  2. Wrong line. Audit logging shipped in 2.14, not 2.13. Undo it.
+
+  3. Put the same text on the 2.14 bullet instead, and save.
+
+Undo has to give you back the 2.13 line exactly as it was, including the
+space before `and`. You have no way to fix it by hand if it does not.
+
+@keys
+| `u` | undo the last change |
+| `:undo` | the same thing, spelled out |
+
+@hints
+`u` is pressed in normal mode, so `Esc` out of insert first. In insert
+mode it just types the letter u.
+--
+One `u` undoes the whole append, not one character of it. Everything you
+typed between `a` and `Esc` is a single change.
+--
+After the undo the cursor is sitting on the line that changed back, which
+is the 2.13 bullet. The 2.14 bullet is three rows up: `kkk`.
+
+@solution
+    jjjjjj $ a  and are written to the audit log <Esc>
+    u
+    kkk $ a  and are written to the audit log <Esc>
+    ZZ
+
+One keystroke removed thirty-three characters cleanly. That is why vim
+users make a mess without worrying: the cost of being wrong is `u`.
+
+Two details that pay off later. Vim's undo is per buffer and lives in
+memory, so every file you have open has its own independent history.
+And `u` is not a fixed number of undos — vim keeps a thousand by default,
+so "undo as far back as you like" is close enough to true.
+
+Do not confuse `u` with `:q!`. `:q!` throws away everything since the
+last write, all at once, and ends the session. `u` walks back one change
+at a time and you keep editing. In this lesson `:q!` would have cost you
+the correct edit too, because you had not written it yet.
+
+@start CHANGELOG.md
+# Changelog
+
+## 2.14
+- Refunds now respect the thirty day window
+
+## 2.13
+- Orders can be cancelled before they ship
+
+@expected CHANGELOG.md
+# Changelog
+
+## 2.14
+- Refunds now respect the thirty day window and are written to the audit log
+
+## 2.13
+- Orders can be cancelled before they ship

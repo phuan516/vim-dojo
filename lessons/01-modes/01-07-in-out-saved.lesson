@@ -1,0 +1,50 @@
+@meta
+id: 01-07
+title: Drill — in, out, saved
+chapter: 01
+type: drill
+skills: cmdline, insert-i, esc, mode-awareness
+par: 13
+minutes: 5
+reps: 8
+vscode: click at the start of the line, type, Ctrl-S
+open: queue.md
+
+@brief
+Eight times: put `- ` at the front of the line, leave insert mode, write
+the file with `:w`, then quit with `:q`. Two separate commands, not `:wq`.
+
+You are drilling the colon. By the last rep the `w` and the `q` should
+feel like two different decisions, because that is what they are.
+
+@keys
+| `i` | insert to the left of the cursor |
+| `Esc` | out |
+| `:w` | write |
+| `:q` | quit |
+
+@hints
+The cursor already starts in column one. There is nowhere to move to.
+--
+`i- ` `Esc` `:w` Enter `:q` Enter. Run the whole thing without looking at
+the screen on the last three reps.
+
+@solution
+    i - <space> <Esc> :w<Enter> :q<Enter>
+
+Ten keystrokes, and only three of them are the edit.
+
+The reason to drill `:w` on its own is that saving is not the same event
+as finishing. A vim session on a file you are actually working on has one
+`:q` and dozens of `:w`. Wiring them together in your hands as `:wq` is
+how people end up quitting a file they meant to keep open.
+
+If a `:q` ever refuses, look at the message. It means the buffer changed
+since the last write, and you either forgot the `:w` or made an edit you
+did not notice making.
+
+@start queue.md
+Retry the failed payout batch
+
+@expected queue.md
+- Retry the failed payout batch

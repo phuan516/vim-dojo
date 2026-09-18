@@ -1,0 +1,63 @@
+@meta
+id: 21-04
+title: Drill — record, count, play
+chapter: 21
+type: drill
+skills: macro-record, macro-count
+par: 44
+minutes: 5
+reps: 8
+vscode: six cursors and two rounds of typing
+open: refund.spec.ts
+
+@brief
+Six bare calls in a test need wrapping:
+
+    isRefundable(recentOrder)    →    expect(isRefundable(recentOrder)).toBe(true);
+
+Record on the first, count the rest. Eight times, until `qa` and `q`
+stop being decisions.
+
+@keys
+| `qa` … `q` | record |
+| `5@a` | play five times |
+| `^` `A` | start of line, append at the end |
+
+@hints
+`^iexpect(` and `Esc`, `A).toBe(true);` and `Esc`, `j`. That is the
+whole recording.
+--
+Two lines down to the first call, record, then `5@a`. Do not count the
+lines on the screen; you know there are six.
+
+@solution
+    2j  qa ^iexpect( <Esc> A).toBe(true); <Esc> j q   5@a   :wq<Enter>
+
+Thirty-six keystrokes. The aim of the drill is the shape: position,
+`qa`, edit, `j`, `q`, count, `@a`. When that is one motion in your
+hands you stop thinking about macros as a feature and start reaching
+for them the moment you see the second identical line.
+
+@start refund.spec.ts
+describe('isRefundable', () => {
+  it('accepts orders inside the window', () => {
+    isRefundable(recentOrder)
+    isRefundable(paidOrder)
+    isRefundable(packedOrder)
+    isRefundable(shippedOrder)
+    isRefundable(deliveredOrder)
+    isRefundable(giftOrder)
+  });
+});
+
+@expected refund.spec.ts
+describe('isRefundable', () => {
+  it('accepts orders inside the window', () => {
+    expect(isRefundable(recentOrder)).toBe(true);
+    expect(isRefundable(paidOrder)).toBe(true);
+    expect(isRefundable(packedOrder)).toBe(true);
+    expect(isRefundable(shippedOrder)).toBe(true);
+    expect(isRefundable(deliveredOrder)).toBe(true);
+    expect(isRefundable(giftOrder)).toBe(true);
+  });
+});

@@ -1,0 +1,173 @@
+@meta
+id: 23-01
+title: Let the buffer finish the word
+chapter: 23
+type: lesson
+skills: complete-keyword
+par: 76
+minutes: 5
+vscode: IntelliSense pops up as you type; you press Tab
+open: order.provider.ts
+
+@brief
+`findByCustomer` checks the customer exists and then stops at a bare
+`return`. Finish it:
+
+    return this.orderRepository.findByCustomer({ customerId: customer.id });
+
+Every identifier on that line already exists somewhere in this file. Vim
+has no language server here, but it does have the file, and any word in
+the buffer can be completed from its first few letters. Par is set so
+that typing the line out in full goes over it; the point of this lesson
+is to feel how cheap a long name becomes when you only type its start.
+
+@keys
+| `Ctrl-N` (insert mode) | complete the word from the buffer, searching forward |
+| `Ctrl-N` again | next candidate |
+| `Ctrl-P` | previous candidate |
+| `Ctrl-Y` | accept the highlighted candidate and stay in insert mode |
+| `Ctrl-E` | cancel, back to what you typed |
+
+@hints
+`/return$` puts you on the bare `return`. `A` to append, then type
+` this.orderR` and press `Ctrl-N` while still in insert mode.
+--
+When only one word in the file starts with `orderR`, it is inserted
+straight away. Keep typing: `.findByC` `Ctrl-N`, `({ customerI`
+`Ctrl-N`, and so on. A key that is not part of the menu simply accepts
+what is there and carries on.
+--
+`Esc` also accepts the highlighted candidate. So does `Ctrl-Y`. Only
+`Ctrl-E` throws it away.
+
+@solution
+    /return$<Enter>
+    A this.orderR<Ctrl-N>.findByC<Ctrl-N>({ customerI<Ctrl-N>: customer.id });<Esc>
+    :wq<Enter>
+
+Sixty-seven keystrokes. Typing the line in full is eighty-one, and the gap
+grows with every long name a codebase has, which in a TypeScript
+service is all of them.
+
+How it commits: `Ctrl-N` inserts the first match immediately. If several
+words match, a menu opens with the first one highlighted; `Ctrl-N` and
+`Ctrl-P` move through it. Typing any ordinary character — a dot, a
+bracket, a space — accepts the highlighted word and inserts the
+character, so in the common case you never press anything to confirm.
+`Esc` accepts and leaves insert mode. `Ctrl-Y` accepts and stays.
+`Ctrl-E` is the only key that backs out.
+
+Where the words come from: the current buffer first, scanning forward
+from the cursor and wrapping, then other open buffers. That is why
+`orderR` finds `orderRepository` rather than the `OrderRepository`
+type: the property is used a few lines below the cursor and the type
+is only at the top of the file. Note that your `ignorecase` setting
+applies to completion too, so a lowercase prefix can match a
+capitalised word when nothing closer fits.
+
+There is a whole family behind `Ctrl-X`: `Ctrl-X Ctrl-L` for whole
+lines and `Ctrl-X Ctrl-F` for filenames come next. `Ctrl-X Ctrl-O`,
+omni completion, is the one that knows types and signatures — it needs
+a language server, which is chapter 30.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { CustomerRepository } from '../customer/customer.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(customerId: string) {
+    const customer = await this.customerRepository.findOne({ where: { id: customerId } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { CustomerRepository } from '../customer/customer.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(customerId: string) {
+    const customer = await this.customerRepository.findOne({ where: { id: customerId } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return this.orderRepository.findByCustomer({ customerId: customer.id });
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}

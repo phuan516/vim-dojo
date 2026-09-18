@@ -1,0 +1,146 @@
+@meta
+id: 29-02
+title: Loaded now, or loaded when you ask
+chapter: 29
+type: lesson
+skills: packadd
+par: 33
+minutes: 5
+vscode: an extension's activation events, written by somebody else
+open: migration.sql
+vimrc: set packpath^=. | packloadall!
+
+@brief
+This lesson ships two packages, both of them real files in this directory:
+
+    pack/dojo/start/sortimports/plugin/sortimports.vim
+    pack/dojo/opt/casing/plugin/casing.vim
+
+The first is in `start` and was loaded before you saw the screen. The
+second is in `opt` and has not been loaded at all. `:Snake` does not
+exist yet; try it and vim will say so.
+
+`opt` is for plugins you want on the machine but not in every session —
+heavy ones, ones with mappings that get in your way, ones you use once a
+month. You load them by name, when you want them.
+
+The migration writes camelCase column names. The database uses snake_case
+everywhere else. Load the casing plugin and let it fix the whole file. It
+sorts out any camelCase word in the range you give it, and its range
+defaults to the whole file.
+
+@keys
+| `:packadd {name}` | load a package from `pack/*/opt/{name}` right now |
+| `:packadd! {name}` | the form for a vimrc: load it, but not while `-u NONE` |
+| `:Snake` | what `pack/dojo/opt/casing` defines, once it is loaded |
+
+@hints
+The package directory is called `casing`. `:packadd` takes that name —
+not a path, not a filename.
+--
+`:packadd casing`, then the command it defines. Read
+`pack/dojo/opt/casing/plugin/casing.vim` if you want to know the range it
+takes before you point it at the file.
+--
+`:packadd casing` `Enter`, then `:%Snake` `Enter`. The `%` is the whole
+file, the same `%` as in `:%s`.
+
+@solution
+    :packadd casing<Enter>  :%Snake<Enter>  :wq<Enter>
+
+`:packadd` does two things, both boring and both worth knowing. It adds
+the package's directory to `runtimepath`, and it sources every `plugin/*.vim`
+underneath. After that the package is indistinguishable from one in
+`start`, because `start` is just `:packadd` run for you at startup by
+`:packloadall`.
+
+Which means the split is entirely yours to decide. A rule that works:
+
+  - `start` — anything whose absence you would notice within a minute.
+    Surround, commentary, your colour scheme.
+  - `opt` — anything you invoke deliberately. A database client, a
+    profiler, a language plugin for the one project that uses it.
+
+In a vimrc you write `packadd! name` with the bang, which registers the
+directory but defers sourcing until after your vimrc has finished. Without
+the bang, a package loaded from a vimrc gets sourced in the middle of your
+config, before the options it reads have been set. That is the origin of a
+lot of "it works when I run it by hand but not at startup" bug reports.
+
+Lazy loading, which plugin managers sell hard, is `:packadd` on a trigger.
+An autocommand on `FileType sql` that runs `packadd casing` is the whole
+idea, in one line, with no manager involved.
+
+@start pack/dojo/start/sortimports/plugin/sortimports.vim
+" dojo-sortimports.vim - sort an ES module import block by module path.
+" Shipped inside this lesson. You did not install it; the dojo did.
+
+if exists('g:loaded_dojo_sortimports')
+  finish
+endif
+let g:loaded_dojo_sortimports = 1
+
+function! s:sort_imports() abort
+  let first = 0
+  let last = 0
+  for n in range(1, line('$'))
+    if getline(n) =~# '^import '
+      let first = first == 0 ? n : first
+      let last = n
+    endif
+  endfor
+  if first == 0
+    echo 'SortImports: no import block found'
+    return
+  endif
+  execute first . ',' . last . 'sort /from /'
+endfunction
+
+command! SortImports call s:sort_imports()
+
+@start pack/dojo/opt/casing/plugin/casing.vim
+" dojo-casing.vim - rewrite camelCase identifiers as snake_case.
+" Shipped inside this lesson, in pack/dojo/opt, so it is NOT loaded until
+" you run :packadd casing.
+
+if exists('g:loaded_dojo_casing')
+  finish
+endif
+let g:loaded_dojo_casing = 1
+
+function! s:snake(first, last) abort
+  for n in range(a:first, a:last)
+    let line = getline(n)
+    let out = substitute(line, '\l\+\%(\u\l\+\)\+',
+          \ '\=tolower(substitute(submatch(0), "\\(\\l\\)\\(\\u\\)", "\\1_\\2", "g"))', 'g')
+    if out !=# line
+      call setline(n, out)
+    endif
+  endfor
+endfunction
+
+command! -range=% Snake call s:snake(<line1>, <line2>)
+
+@start migration.sql
+CREATE TABLE orders (
+  id CHAR(36) NOT NULL,
+  customerId CHAR(36) NOT NULL,
+  placedAt DATETIME NOT NULL,
+  totalMinor INT NOT NULL,
+  cancellationReason VARCHAR(64) NULL,
+  PRIMARY KEY (id)
+);
+
+CREATE INDEX orders_customerId_idx ON orders (customerId);
+
+@expected migration.sql
+CREATE TABLE orders (
+  id CHAR(36) NOT NULL,
+  customer_id CHAR(36) NOT NULL,
+  placed_at DATETIME NOT NULL,
+  total_minor INT NOT NULL,
+  cancellation_reason VARCHAR(64) NULL,
+  PRIMARY KEY (id)
+);
+
+CREATE INDEX orders_customer_id_idx ON orders (customer_id);

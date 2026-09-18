@@ -1,0 +1,89 @@
+@meta
+id: 14-19
+title: Number the steps
+chapter: 14
+type: lesson
+skills: sub-expression
+par: 40
+minutes: 6
+vscode: retype seven bullets as numbers, then renumber after inserting one
+open: RUNBOOK.md
+
+@brief
+The rollback runbook's steps are bullets, and the on-call engineer
+skipped one last week because bullets do not say "in this order".
+Turn the seven bullets into a numbered list, `1.` through `7.`, and
+leave the prose around them alone.
+
+An expression replacement can see more than the match. `line('.')`
+is the number of the line the match is on, and the bullets start on
+line 6. A little subtraction gives you the step number for free, and
+the result stays correct however many steps there are.
+
+@keys
+| `\=line('.')` | the current line number, as the replacement |
+| `\=line('.')-5 . '. '` | that number minus five, then a dot and a space — `.` joins strings |
+| `^- ` | a bullet at the start of a line — only the bullets match |
+
+@hints
+The pattern is the bullet marker anchored to the start of the line.
+The replacement is an expression built from the line number.
+--
+The first bullet is on line 6 and should become `1. `, so the number
+you want is the line number minus five. Join it to the text `'. '`
+with the `.` operator.
+--
+`:%s/^- /\=line('.')-5 . '. '/` and Enter. The range can be `%`
+because no other line starts with a bullet.
+
+@solution
+    :%s/^- /\=line('.')-5 . '. '/<Enter>  :wq<Enter>
+
+Thirty-four keystrokes for seven numbers you did not count.
+
+`line('.')` inside a `\=` replacement is evaluated separately for each
+match, with the cursor on that match's line, so it counts up as the
+substitute walks down the file. Subtracting the offset of the block is
+the usual trick. Chapter 25 will give you a way to avoid the
+arithmetic, and chapter 21's macros can renumber too, but this is the
+version that fits in one command and needs nothing you do not already
+have.
+
+The `.` between the number and the string is vim's concatenation
+operator, and the spaces around it matter: `5.'. '` can confuse the
+parser into looking for a decimal. Newer vim also accepts `..`, which
+is unambiguous and worth adopting. Either way, the expression is
+ordinary vimscript, and everything you learn about it in chapter 24
+will work inside a substitute.
+
+@start RUNBOOK.md
+# Rolling back a bad deploy
+
+Run these in order. Do not skip the queue check; a rollback with
+messages in flight loses them.
+
+- Announce the rollback in #payments-oncall
+- Pause the refund consumers: `./stop/refund-worker`
+- Wait for the queue to drain: `./scripts/queue-depth payments.refunds`
+- Roll the image back: `./deploy/rollback order-service`
+- Restart the consumers: `./start/refund-worker`
+- Confirm the version: `curl -s gateway.internal/health`
+- Close the incident and note the version you rolled back to
+
+The steps are not optional and the order is not negotiable.
+
+@expected RUNBOOK.md
+# Rolling back a bad deploy
+
+Run these in order. Do not skip the queue check; a rollback with
+messages in flight loses them.
+
+1. Announce the rollback in #payments-oncall
+2. Pause the refund consumers: `./stop/refund-worker`
+3. Wait for the queue to drain: `./scripts/queue-depth payments.refunds`
+4. Roll the image back: `./deploy/rollback order-service`
+5. Restart the consumers: `./start/refund-worker`
+6. Confirm the version: `curl -s gateway.internal/health`
+7. Close the incident and note the version you rolled back to
+
+The steps are not optional and the order is not negotiable.

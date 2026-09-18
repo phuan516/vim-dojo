@@ -1,0 +1,106 @@
+@meta
+id: 06-18
+title: Surgery on a dense provider
+chapter: 06
+type: lesson
+skills: find-f, find-t, repeat-semicolon, line-end
+par: 104
+minutes: 9
+vscode: nine clicks, and you will misplace two of them
+open: refund.provider.ts errors.json
+
+@brief
+The hardest line in this chapter is the third one, so read the whole job
+first.
+
+  1. The signature has lost all three spaces after its colons, and `reason`
+     is optional: `(orderId: string, amount: number, reason?: string)`.
+
+  2. The `findOne` call must also load the customer, and it is not
+     terminated. It should read:
+
+         findOne({ where: { id: orderId }, include: { customer: true } });
+
+     Note where the new text goes: directly after the inner `}` that closes
+     `{ id: orderId }`, and before the space in front of the outer `}`. The
+     line ends with two closing braces, so the brace you are aiming at is
+     not the nearest one.
+
+  3. The refund call passes the reason through, and is terminated:
+
+         refund(order.id, amount, reason);
+
+`errors.json` is open for reference and must be left exactly as it is. With
+two files open, vim refuses the first `:wq` with `E173: 1 more file to edit`;
+repeat it and it quits.
+
+Counts work on `t` and `T` the same way they work on `f` and `F`. That is
+the key to edit 2.
+
+@keys
+| `f:` `;` | the first colon, then each one after it |
+| `A` | append at the end of the line |
+| `2T}` | backward until just past the second `}` |
+| `F)` | backward onto the closing paren |
+| `i` `a` | insert before or after the cursor |
+
+@hints
+Take the signature with one `f:` and three `;` repeats. Two of those inserts
+add a space after the colon, one adds a `?` before it — and after the `?`
+the cursor is one character short of the colon it needs a space after, so a
+`;` from there finds that same colon again. Use it.
+--
+On the `findOne` line, terminate it first with `A` `;` `Esc`. You are now at
+the right-hand end with two braces to your left. The inner one is the second
+brace going backwards, and you want to land just past it, which is a
+backwards `t` with a count: `2T}`.
+--
+On the refund call, terminate it, then `F)` puts you on the closing paren
+and `i` writes the new argument in front of it.
+
+@solution
+    j f : a  <Esc> ; a  <Esc> ; i ? <Esc> ; a  <Esc>
+    j A ; <Esc> 2T} i , include: { customer: true } <Esc>
+    2j A ; <Esc> F ) i , reason <Esc> :wq<Enter>
+
+Around seventy-six keystrokes, fifty of which are the text you had to type
+anyway. Everything else is travel, and no piece of travel was longer than
+three keys.
+
+The `2T}` is the lesson. Faced with two closing braces the untrained instinct
+is to go to the end of the line and nudge left with `h` until it looks right,
+counting characters by eye and getting it wrong when the formatting changes.
+The trained instinct is to say what you mean: second brace, backwards, stop
+just past it. It is one motion, it is exact, and it stays exact if someone
+renames `orderId` to something twice as long.
+
+The other thing to take away is the `;` after the `?`. You inserted before
+the colon, so the cursor was still short of it, so a repeat of the find
+landed on the same colon rather than the next one — which happened to be
+precisely what you needed. Knowing where a find leaves the cursor is what
+lets you chain these without looking, and you now know it for all four keys:
+`f` and `F` land on, `t` and `T` land beside.
+
+@start refund.provider.ts
+export class RefundProvider {
+  public async refund(orderId:string, amount:number, reason:string) {
+    const order = await this.orderRepository.findOne({ where: { id: orderId } })
+
+    return this.paymentService.refund(order.id, amount)
+  }
+}
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@expected refund.provider.ts
+export class RefundProvider {
+  public async refund(orderId: string, amount: number, reason?: string) {
+    const order = await this.orderRepository.findOne({ where: { id: orderId }, include: { customer: true } });
+
+    return this.paymentService.refund(order.id, amount, reason);
+  }
+}

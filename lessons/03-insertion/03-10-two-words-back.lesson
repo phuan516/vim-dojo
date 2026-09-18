@@ -1,0 +1,49 @@
+@meta
+id: 03-10
+title: Drill — two words back
+chapter: 03
+type: drill
+skills: insert-ctrl-w
+reps: 8
+par: 30
+minutes: 5
+vscode: select the last two words with the mouse, retype them
+open: release-notes.md
+
+@brief
+Eight times: the last two words of the line are wrong. Refunds move to the
+production fleet, not the staging cluster. Get to the end of the line,
+take both words back, type the right ones.
+
+@keys
+| `A` | append at the end of the line |
+| `Ctrl-W` | delete the word before the cursor |
+| `Esc` | out |
+
+@hints
+Two presses of `Ctrl-W`, not one. The second one takes the word and the
+space in front of it.
+--
+Press them as a burst — `A` `Ctrl-W` `Ctrl-W` and then type. Do not stop
+to check the line between the two deletions.
+
+@solution
+    A <Ctrl-W> <Ctrl-W> production fleet <Esc> :wq<Enter>
+
+Twenty-four keystrokes; sixteen are the replacement text.
+
+Two `Ctrl-W` presses beat fifteen Backspaces, and more importantly they
+beat *counting*. You are not measuring how much to delete, you are saying
+"one word, another word" and the editor works out where the boundaries
+are. That is the same idea as the word motions in chapter 5, arriving
+early and in a smaller form.
+
+If you overshoot, `Ctrl-W` has no undo of its own inside insert mode —
+`Esc` then `u` throws away the whole insert, which is usually what you
+want anyway.
+
+@start release-notes.md
+Refunds move to the staging cluster
+
+@expected release-notes.md
+Refunds move to the production fleet

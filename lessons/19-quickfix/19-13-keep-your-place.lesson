@@ -1,0 +1,343 @@
+@meta
+id: 19-13
+title: Keep your place
+chapter: 19
+type: lesson
+skills: location-list, cdo
+par: 145
+minutes: 8
+vscode: two searches in one panel, the first one gone
+vimrc: set hidden smartcase
+open: README.md
+
+@brief
+Three `FIXME` comments under `src`. Each needs reading: the ones whose
+ticket is closed go, the one still open stays. ORD-290 is closed.
+ORD-402 is open. Load them into the location list and start walking.
+
+The first FIXME asks for a rename that is now safe to do:
+`PaymentProducer.refundIssued` becomes `refundCompleted`, in the
+producer, both providers and the order provider's test. That is a
+`:vimgrep` and a `:cdo`, and running `:vimgrep` replaces the quickfix
+list. It does not touch the location list. When the rename is done,
+`:lne` picks the FIXME walk up exactly where you left it, in the same
+window.
+
+Do the rename when the FIXME tells you to. Delete the two closed
+FIXMEs. Leave the open one. The event type `RefundIssuedEvent` is a
+type name, not the method, and keeps its name.
+
+@keys
+| `:lvimgrep` `:lne` | a walk that belongs to this window |
+| `:vimgrep` `:cdo` | a job that uses the quickfix list, and replaces it |
+
+@hints
+`:lvimgrep /FIXME/ **/*.ts` lands on the first one, in the order
+provider. Read it, `dd`, `:w`.
+--
+`:vimgrep /refundIssued/ **/*.ts` and
+`:cdo s/refundIssued/refundCompleted/g | update`. The quickfix list is
+now the rename. The location list is still the FIXMEs.
+--
+`:lne`. The next FIXME is ORD-402 and stays. `:lne` again: ORD-290,
+`dd`, `:wq`.
+
+@solution
+    :lvimgrep /FIXME/ **/*.ts<Enter>  dd :w<Enter>
+    :vimgrep /refundIssued/ **/*.ts<Enter>  :cdo s/refundIssued/refundCompleted/g | update<Enter>
+    :lne<Enter>  :lne<Enter>  dd :wq<Enter>
+
+Two lists, two jobs, and neither trod on the other. The walk needed a
+human at every stop, so it went in the location list, which is the
+list for things you are doing by hand in this window. The rename was
+mechanical and global, so it went through quickfix, which any command
+may overwrite at any time.
+
+Notice that `:lne` still knew it was on entry one of three, and that
+entry three still pointed at the right line even though the `:cdo` had
+rewritten a line in the same file. Both lists are live: edits shift
+their entries, and each remembers its own position.
+
+The other way to survive a replaced quickfix list is to get the old one
+back, which lesson 18 covers. Having two lists is simpler when you know
+in advance that you will be interrupted.
+
+@start README.md
+# Orders service
+
+Cancelling an order refunds it through `PaymentService.sendRefund`, which
+is named after the gateway's `/sendRefund` endpoint. A refund the gateway
+rejects raises `REFUND_FAILED`. Refund events go out on the
+`payment.sendRefund` routing key, which the ledger service consumes.
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { PaymentProducer } from '../payment/payment.producer';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(PaymentProducer) protected paymentProducer: PaymentProducer,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.sendRefund(order.id);
+    // FIXME ORD-290: rename PaymentProducer.refundIssued to refundCompleted once the ledger consumer is live
+    await this.paymentProducer.refundIssued({ paymentId: order.id, receipt: 'pending' });
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { PaymentProducer } from '../payment/payment.producer';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(PaymentProducer) protected paymentProducer: PaymentProducer,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.sendRefund(order.id);
+    await this.paymentProducer.refundCompleted({ paymentId: order.id, receipt: 'pending' });
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start src/domain/order/order.provider.test.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { PaymentProducer } from '../payment/payment.producer';
+import { orderFactory } from '../../../test/factories/order.factory';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const paymentProducer = stub<PaymentProducer>();
+  const provider = new OrderProvider(orderRepository, paymentService, paymentProducer);
+
+  afterEach(() => jest.resetAllMocks());
+
+  it('refunds a pending order when it is cancelled', async () => {
+    const order = orderFactory({ status: 'PENDING' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    reveal(paymentService).sendRefund.mockResolvedValue(undefined);
+
+    await provider.cancel(order.id);
+
+    expect(paymentService.sendRefund).toHaveBeenCalledWith(order.id);
+    expect(paymentProducer.refundIssued).toHaveBeenCalled();
+  });
+
+  it('refuses to cancel a shipped order', async () => {
+    const order = orderFactory({ status: 'SHIPPED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+
+    await expect(provider.cancel(order.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+    expect(paymentService.sendRefund).not.toHaveBeenCalled();
+  });
+});
+
+@expected src/domain/order/order.provider.test.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { PaymentProducer } from '../payment/payment.producer';
+import { orderFactory } from '../../../test/factories/order.factory';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const paymentProducer = stub<PaymentProducer>();
+  const provider = new OrderProvider(orderRepository, paymentService, paymentProducer);
+
+  afterEach(() => jest.resetAllMocks());
+
+  it('refunds a pending order when it is cancelled', async () => {
+    const order = orderFactory({ status: 'PENDING' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    reveal(paymentService).sendRefund.mockResolvedValue(undefined);
+
+    await provider.cancel(order.id);
+
+    expect(paymentService.sendRefund).toHaveBeenCalledWith(order.id);
+    expect(paymentProducer.refundCompleted).toHaveBeenCalled();
+  });
+
+  it('refuses to cancel a shipped order', async () => {
+    const order = orderFactory({ status: 'SHIPPED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+
+    await expect(provider.cancel(order.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+    expect(paymentService.sendRefund).not.toHaveBeenCalled();
+  });
+});
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    // FIXME ORD-402: reject when the caller is not the order's customer
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@start src/domain/payment/payment.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { PaymentRepository } from './payment.repository';
+import { PaymentProducer } from './payment.producer';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class PaymentProvider {
+  constructor(
+    @inject(PaymentRepository) protected paymentRepository: PaymentRepository,
+    @inject(PaymentProducer) protected paymentProducer: PaymentProducer,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async reverse(id: string) {
+    const payment = await this.paymentRepository.findOne({ where: { id } });
+
+    if (!payment) {
+      throw exception('PAYMENT_NOT_FOUND');
+    }
+
+    const receipt = await this.paymentService.sendRefund(payment.orderId);
+
+    // FIXME ORD-290: drop the receipt from the event once the ledger consumer is live
+    await this.paymentProducer.refundIssued({ paymentId: id, receipt });
+
+    return receipt;
+  }
+}
+
+@expected src/domain/payment/payment.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { PaymentRepository } from './payment.repository';
+import { PaymentProducer } from './payment.producer';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class PaymentProvider {
+  constructor(
+    @inject(PaymentRepository) protected paymentRepository: PaymentRepository,
+    @inject(PaymentProducer) protected paymentProducer: PaymentProducer,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async reverse(id: string) {
+    const payment = await this.paymentRepository.findOne({ where: { id } });
+
+    if (!payment) {
+      throw exception('PAYMENT_NOT_FOUND');
+    }
+
+    const receipt = await this.paymentService.sendRefund(payment.orderId);
+
+    await this.paymentProducer.refundCompleted({ paymentId: id, receipt });
+
+    return receipt;
+  }
+}
+
+@start src/domain/payment/payment.producer.ts
+import { injectable, inject } from 'tsyringe';
+import { Channel } from '../../infrastructure/rabbit/channel';
+
+type RefundIssuedEvent = {
+  paymentId: string;
+  receipt: string;
+};
+
+@injectable()
+export class PaymentProducer {
+  constructor(@inject(Channel) protected channel: Channel) {}
+
+  public async refundIssued(event: RefundIssuedEvent) {
+    await this.channel.publish('payments', 'payment.sendRefund', event);
+  }
+}
+
+@expected src/domain/payment/payment.producer.ts
+import { injectable, inject } from 'tsyringe';
+import { Channel } from '../../infrastructure/rabbit/channel';
+
+type RefundIssuedEvent = {
+  paymentId: string;
+  receipt: string;
+};
+
+@injectable()
+export class PaymentProducer {
+  constructor(@inject(Channel) protected channel: Channel) {}
+
+  public async refundCompleted(event: RefundIssuedEvent) {
+    await this.channel.publish('payments', 'payment.sendRefund', event);
+  }
+}

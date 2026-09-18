@@ -1,0 +1,80 @@
+@meta
+id: 24-09
+title: Join lines by range
+chapter: 24
+type: lesson
+skills: ex-join
+par: 20
+minutes: 4
+vscode: End, Delete, Delete, fix the spacing by hand
+open: RUNBOOK.md
+
+@brief
+Somebody hard-wrapped the runbook and broke two things. The sentence on
+lines 3 to 5 should be one line. The `curl` URL on lines 9 and 10 was
+split in the middle of `replay`, and it has to be one line with
+nothing inserted at the break, because it is a URL.
+
+`j` is join. With a range it joins all the lines in the range into one,
+putting a single space between them and dropping leading whitespace,
+which is what you want for prose. `j!` joins without touching anything:
+no space, no trimming, the lines simply glued end to end. That is what
+you want for a URL, a base64 blob, or anything else where a space is a
+bug.
+
+@keys
+| `:3,5j` | join lines 3 to 5 into one, with spaces |
+| `:9,10j!` | join lines 9 and 10 exactly as they are |
+| `:j 3` | join the current line with the two below it |
+
+@hints
+Two commands, one for each break. Line numbers in front. Do the sentence
+first: after it the file is two lines shorter and the URL has moved.
+--
+The plain form inserts a space at each join. The bang form inserts
+nothing. Read the URL and decide which one it needs.
+--
+`:3,5j` Enter. The URL is now on lines 7 and 8: `:7,8j!` Enter. `:wq`.
+
+@solution
+    :3,5j<Enter>  :7,8j!<Enter>  :wq<Enter>
+
+Seventeen keystrokes.
+
+`:3,5j` is `3J` from chapter 8 with a range instead of a count, and
+`:j!` is `gJ`. The gain over the normal-mode versions is the same as it
+has been all chapter: you do not have to be on the line, and the range
+can be anything an address can express. Where the range form really
+earns its place is inside `:g`. `:g/^- /j` joins every continuation
+line onto its bullet. `:g/,$/j` joins every line that ends in a comma
+onto the next. Both are one command for the whole file, and neither is
+expressible with `J`.
+
+The trailing count is the other form: `:j 3` joins three lines starting
+at the current one, and `:5j 3` starts at line 5. It is the count `3J`
+uses, spelled as an argument.
+
+@start RUNBOOK.md
+# Refund runbook
+
+When a refund fails the payment service records the attempt
+and raises REFUND_FAILED,
+which Sentry picks up within a minute.
+
+To replay it, call the gateway directly:
+
+    curl -X POST https://gateway.internal/v2/refunds/re
+play?orderId=ord_1002&reason=REFUND_FAILED
+
+Then mark the order as refunded in the admin.
+
+@expected RUNBOOK.md
+# Refund runbook
+
+When a refund fails the payment service records the attempt and raises REFUND_FAILED, which Sentry picks up within a minute.
+
+To replay it, call the gateway directly:
+
+    curl -X POST https://gateway.internal/v2/refunds/replay?orderId=ord_1002&reason=REFUND_FAILED
+
+Then mark the order as refunded in the admin.

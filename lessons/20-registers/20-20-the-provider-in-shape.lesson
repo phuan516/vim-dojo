@@ -1,0 +1,195 @@
+@meta
+id: 20-20
+title: Scenario — the provider in shape
+chapter: 20
+type: scenario
+skills: register-named, register-blackhole, register-expression, register-zero, op-to-mark, marks-set, dot-repeat
+par: 140
+minutes: 14
+vscode: a calculator, a lot of Ctrl-X and Ctrl-V, and a reviewer who spots the debug line
+open: order.provider.ts
+
+@brief
+A ticket, not an exercise.
+
+    ORD-433  OrderProvider is out of shape.
+             1. Methods in lifecycle order: findOne, cancel, settle.
+             2. settle must refuse an order that is already SETTLED,
+                the same way cancel refuses one that is SHIPPED. The
+                code is ORDER_ALREADY_SETTLED. Replace the TODO.
+             3. The debug line in cancel goes.
+             4. REFUND_WINDOW_MS becomes a plain number. The build
+                step cannot fold `30 * 86_400_000` in a decorator.
+
+One file. Nothing in it is retyped that already exists: the `settle`
+method moves whole, the guard is a copy of the one in `cancel` with two
+words changed, and the number is computed, not looked up. Every line
+that is not mentioned stays exactly as it is.
+
+@keys
+| `ma` then `"ad'a` | mark a line, delete from it to here into `a` |
+| `"aP` | put the register above the cursor line |
+| `"_dd` then `P` | delete into nothing, then the plain put still holds the yank |
+| `Ctrl-R =` | compute inside insert mode |
+| `cw` then `.` | change a word, repeat on the next match |
+
+@hints
+Do the number first: it is on line 6 and `ct;` changes everything up to
+the semicolon. Type the multiplication into the expression register
+instead of the answer.
+--
+`settle` is thirteen lines, blank line above included. Mark the blank
+line, `/async find` Enter, `kk` to the method's closing brace, and
+`"ad'a` takes the lot into `a`. `G"aP` puts it above the class's last
+brace, blank line and all.
+--
+Yank the three-line guard from `cancel`, `"_dd` the TODO, `P`. The
+put block still says `SHIPPED` twice: `/SHIPPED` Enter, `cwSETTLED`,
+`n`, `.`.
+--
+`/debug` Enter, `"_dd`. Plain `dd` is fine here too; by this point
+there is nothing left to put.
+
+@solution
+One route that measures 121 keystrokes.
+
+**The number.** `/= 30` Enter, `w`, `ct;`, `Ctrl-R =30*86400000` Enter,
+`Esc`. The literal `86_400_000` is not an expression vim understands,
+so the underscores go.
+
+**The move.** `/settle(` Enter, `k`, `ma`. `/async find` Enter, `kk`,
+`"ad'a`. `G`, `"aP`. The register carries the blank line at the top of
+the block, so the spacing is right at the destination and the blank
+that was below `settle` closes the gap it left.
+
+**The guard.** `/if (order` Enter — it wraps to `cancel`, the only
+`if (order` left — `3yy`. `/TODO` Enter, `"_dd`, `P`. Then `/SHIPPED`
+Enter, `cwSETTLED`, `Esc`, `n`, `.`.
+
+**The debug line.** `/debug` Enter, `"_dd`. `:wq`.
+
+Three registers did the work: `a` held a method across a jump to the
+end of the file, `"_` kept the TODO out of the way of the guard you had
+just yanked, and `=` did the multiplication. The unnamed register was
+used once, on purpose, for the put right after the yank.
+
+That is the shape of register use in real editing. Name the things you
+must not lose. Throw away the things you do not want. Let the unnamed
+register do everything that is yank-then-put with nothing in between.
+Chapter 21 adds one more register to the list, `q`, and it changes what
+the letters can hold from text to keystrokes.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+const REFUND_WINDOW_MS = 30 * 86_400_000;
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async settle(id: string, total: number) {
+    const order = await this.findOne(id);
+
+    // TODO: same guard as cancel
+
+    await this.paymentService.capture(order.id, total);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SETTLED', total },
+    });
+  }
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+    this.logger.debug('cancel', id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    if (Date.now() - order.placedAt.getTime() <= REFUND_WINDOW_MS) {
+      await this.paymentService.refund(order.id);
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+const REFUND_WINDOW_MS = 2592000000;
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    if (Date.now() - order.placedAt.getTime() <= REFUND_WINDOW_MS) {
+      await this.paymentService.refund(order.id);
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async settle(id: string, total: number) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SETTLED') {
+      throw exception('ORDER_ALREADY_SETTLED');
+    }
+
+    await this.paymentService.capture(order.id, total);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SETTLED', total },
+    });
+  }
+}

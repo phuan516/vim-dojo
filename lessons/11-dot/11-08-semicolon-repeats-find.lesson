@@ -1,0 +1,71 @@
+@meta
+id: 11-08
+title: Semicolon does it again for finds
+chapter: 11
+type: lesson
+skills: dot-repeat
+par: 24
+minutes: 5
+vscode: click twice in a long line and hope you hit the right one
+open: refund.ts
+
+@brief
+One long signature, four default values in it. Finance want two of them
+changed:
+
+    currency   'GBP'  ->  'EUR'
+    retries    3      ->  5
+
+Both edits sit just past an `=`, and there are four of those on the line.
+`f=` gets you to the first. The question is how you get to the third and
+then the fourth without counting them by eye and without going back to
+the start of the line.
+
+`.` repeats the last change. There is a separate key that repeats the
+last `f`, `t`, `F` or `T` you made, and it is worth as much.
+
+@keys
+| `f=` | forward to the next `=` |
+| `;` | repeat that find, in the same direction |
+| `,` | repeat it backwards — for when `;` goes one too far |
+| `3;` | repeat the find three times |
+| `ci'` | change inside the quotes |
+| `r5` | replace the character under the cursor with `5` |
+
+@hints
+Do not count the equals signs and do not click. Land on the first one and
+then walk.
+--
+`;` repeats the last `f`. It keeps working after you have edited
+something, because an edit does not change what vim last searched for on
+the line.
+--
+`f=` then `;;` puts you at the currency default. Change it, then a single
+`;` carries on to the retries default from wherever the edit left you.
+
+@solution
+    f= ;; w ci'EUR<Esc>   ;  w r5
+
+Two searches typed, four hops made.
+
+`f`, `t`, `F` and `T` all leave their target behind in a small memory of
+their own, and `;` re-runs it while `,` runs it the other way. That memory
+is completely separate from the one `.` uses, so the two never interfere:
+an edit does not cost you your find, and a find does not cost you your
+repeat. In the next lesson that independence turns into a two-key loop
+that eats a whole line.
+
+`;` also takes a count, so `f=3;` would have got you to the fourth `=` in
+one go. Use the count when you can see the number at a glance and `;` when
+you cannot. Miscounting costs you an undo; overshooting with `;` costs you
+a `,`.
+
+@start refund.ts
+export function buildRefund(orderId = '', amount = 0, currency = 'GBP', retries = 3) {
+  return { orderId, amount, currency, retries };
+}
+
+@expected refund.ts
+export function buildRefund(orderId = '', amount = 0, currency = 'EUR', retries = 5) {
+  return { orderId, amount, currency, retries };
+}

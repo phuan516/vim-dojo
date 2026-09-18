@@ -1,0 +1,114 @@
+@meta
+id: 22-06
+title: Grow the selection a level
+chapter: 22
+type: lesson
+skills: visual-char
+par: 33
+minutes: 5
+vscode: Shift+Alt+Right, Shift+Alt+Right, Shift+Alt+Right, type
+open: order.provider.ts
+
+@brief
+`ci(` changes what is inside the nearest brackets. When the cursor is
+inside a call that is inside another call, "nearest" means the inner
+one, and to reach the outer one you have to move the cursor out first.
+
+In visual mode a text object can be pressed again. `vi(` selects inside
+the innermost brackets; a second `i(` grows the selection to include
+those brackets; a third grows it to the inside of the next pair out.
+Each press is one level. You watch it grow and stop when it is right.
+
+The payment service's `refund` now takes the whole order. Change the
+call in `cancel` to:
+
+    return this.paymentService.refund(order);
+
+The cursor starts in the middle of the inner `Math.round(...)` call —
+that is where a search for `total` would leave you — and the whole
+argument list has to go.
+
+@keys
+| `vi(` | select inside the nearest brackets |
+| `i(` again | grow the selection one level outward |
+| `a(` | grow it to include the brackets |
+| `c` | change the selection |
+
+@hints
+Search for `total *` to land inside the inner call. `vi(` lights up
+`order.total * 100`. That is one level too deep.
+--
+Press `i(` again. Now the brackets are included. Once more, and the
+selection is everything inside `refund(...)`.
+--
+`/total \*` `Enter`, `vi(i(i(`, then `c`, type `order`, `Esc`.
+
+@solution
+    /total \*<Enter> v i ( i ( i ( c order <Esc> :wq<Enter>
+
+Twenty-eight keystrokes, and nothing to count or to move. This is the one
+thing text objects do in visual mode that they cannot do after an
+operator: repeat. `ci(` commits to a level; `vi(` lets you climb. The
+same works for `i{` in nested blocks, `it` in nested tags, and `ip`
+when one paragraph is not enough.
+
+`a(` grows the same way but includes the brackets at each step. The
+first `a(` gives `(order.total * 100)`; the second gives the whole
+`(order.id, Math.round(...))`. Use whichever leaves you with exactly
+the region you want to replace.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async cancel(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    return this.paymentService.refund(order.id, Math.round(order.total * 100));
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async cancel(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    return this.paymentService.refund(order);
+  }
+}

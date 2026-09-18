@@ -1,0 +1,375 @@
+@meta
+id: 19-20
+title: Scenario — the red build
+chapter: 19
+type: scenario
+skills: make-errorformat, quickfix-nav, dot-repeat, global-delete
+par: 101
+minutes: 12
+vscode: click each Problem, fix, Replace All for the logs and hope
+vimrc: set errorformat=%f(%l\\,%c):\ %m hidden
+open: tsc-output.txt
+
+@brief
+A ticket, not an exercise.
+
+    ORD-560  Order.total was renamed Order.amount in the entity and the
+             migration, and nothing else was. CI is red; the tsc output
+             is in tsc-output.txt. Make it green. The GraphQL field is
+             still called total, because the API contract does not
+             change. The database column is still called total, so
+             record.total stays. And while the order provider is open,
+             the console.log lines that went in during the incident
+             come out.
+
+Six errors, one for every place the old name is still read as a
+property of `Order`. Every one of them is fixed by turning that one
+word into `amount`, and nothing else on those lines changes: `total:`
+stays as an object key where it names the API field, `record.total`
+stays as the column. The tsc column points at the word that is wrong,
+never at the ones that are right.
+
+Which tool is a decision. `:cdo s/total/amount/g` would be fast and
+wrong: it would rename the column and the API field on the same lines.
+`:g` works inside one file and these errors are in four. What fits is
+the walk: the compiler put the cursor on the word, `ciw` changes it,
+and chapter 11's `.` repeats that change at the next stop. The logs
+are the opposite shape, several lines in one file with nothing to
+decide, which is what `:g` is for.
+
+@keys
+| `:cfile` `:cn` | load the errors, step through them |
+| `ciw` then `.` | change the word here, repeat it at the next stop |
+| `:g/pattern/d` | delete every matching line in this file |
+
+@hints
+`:cfile tsc-output.txt`. First stop is the test factory call:
+`ciw amount`, `:w`, `:cn`.
+--
+From the second stop on, every fix is `.`. The three in the provider
+are consecutive; do the `:g/console\.log/d` while you are in that file
+and the remaining entries in it still land where they should.
+--
+`:w` before each `:cn`, or `hidden` is on and `:wqa` at the end covers
+it. Six errors, six stops, `:wq` after the last.
+--
+Par assumes `ciw` once and `.` five times, one `:g`, and a `:w` per
+file. Nothing here needs a visual selection or a register.
+
+@solution
+    :cfile tsc-output.txt<Enter>  ciw amount <Esc> :w<Enter>
+    :cn<Enter> .  :cn<Enter> .  :cn<Enter> .  :g/console\.log/d<Enter> :w<Enter>
+    :cn<Enter> . :w<Enter>  :cn<Enter> . :wq<Enter>
+
+Three tools were on the table and the ticket needed two of them. The
+question that picks between them is not "how many hits" but "how many
+decisions per hit". Zero decisions across many files: `:cdo`. Zero
+decisions inside one file: `:g` or `:%s`. One decision per hit, with
+the edit the same each time: the list plus `.`, which is what this
+was. One decision per hit with a different edit each time: the list on
+its own, as in lesson 3. Chapter 21 adds a macro to that ladder, for
+when the edit is the same but too long for `.` to hold.
+
+The `:g` in the middle of a walk was safe for the reason lesson 11
+gave: the remaining entries in that buffer moved with the lines. And
+the tsc columns were exact enough that no fix needed a motion first,
+which is the compiler doing the navigation and you doing only the
+edit. That division of labour is what the whole chapter was building
+toward: a list of places from a search, a grep, or a build, and your
+hands free for the part that needs a person.
+
+@start README.md
+# Orders service
+
+Cancelling an order refunds it through `PaymentService.sendRefund`, which
+is named after the gateway's `/sendRefund` endpoint. A refund the gateway
+rejects raises `REFUND_FAILED`. Refund events go out on the
+`payment.sendRefund` routing key, which the ledger service consumes.
+
+@start src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  amount: number;
+  placedAt: Date;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { formatMoney } from '../../shared/money';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    console.log('cancel', id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    if (order.total > 0) {
+      console.log('refunding', order.total);
+      await this.paymentService.issueRefund(order.id);
+    }
+
+    console.log('cancelled', id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async summary(id: string) {
+    const order = await this.findOne(id);
+
+    return { id: order.id, total: formatMoney(order.total) };
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { formatMoney } from '../../shared/money';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    if (order.amount > 0) {
+      await this.paymentService.issueRefund(order.id);
+    }
+
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async summary(id: string) {
+    const order = await this.findOne(id);
+
+    return { id: order.id, total: formatMoney(order.amount) };
+  }
+}
+
+@start src/domain/order/order.provider.test.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { orderFactory } from '../../../test/factories/order.factory';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const provider = new OrderProvider(orderRepository, paymentService);
+
+  afterEach(() => jest.resetAllMocks());
+
+  it('refunds a pending order when it is cancelled', async () => {
+    const order = orderFactory({ status: 'PENDING', total: 250 });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    reveal(paymentService).issueRefund.mockResolvedValue(undefined);
+
+    await provider.cancel(order.id);
+
+    expect(paymentService.issueRefund).toHaveBeenCalledWith(order.id);
+  });
+
+  it('refuses to cancel a shipped order', async () => {
+    const order = orderFactory({ status: 'SHIPPED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+
+    await expect(provider.cancel(order.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+    expect(paymentService.issueRefund).not.toHaveBeenCalled();
+  });
+});
+
+@expected src/domain/order/order.provider.test.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { orderFactory } from '../../../test/factories/order.factory';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const provider = new OrderProvider(orderRepository, paymentService);
+
+  afterEach(() => jest.resetAllMocks());
+
+  it('refunds a pending order when it is cancelled', async () => {
+    const order = orderFactory({ status: 'PENDING', amount: 250 });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    reveal(paymentService).issueRefund.mockResolvedValue(undefined);
+
+    await provider.cancel(order.id);
+
+    expect(paymentService.issueRefund).toHaveBeenCalledWith(order.id);
+  });
+
+  it('refuses to cancel a shipped order', async () => {
+    const order = orderFactory({ status: 'SHIPPED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+
+    await expect(provider.cancel(order.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+    expect(paymentService.issueRefund).not.toHaveBeenCalled();
+  });
+});
+
+@start src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      placedAt: record.placedAt,
+    };
+  }
+}
+
+@expected src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      amount: record.total,
+      placedAt: record.placedAt,
+    };
+  }
+}
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+
+  public async orderSummary(_: unknown, args: { id: string }) {
+    const order = await this.orderProvider.findOne(args.id);
+
+    return { id: order.id, status: order.status, total: order.total };
+  }
+}
+
+@expected src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+
+  public async orderSummary(_: unknown, args: { id: string }) {
+    const order = await this.orderProvider.findOne(args.id);
+
+    return { id: order.id, status: order.status, total: order.amount };
+  }
+}
+
+@start tsc-output.txt
+src/domain/order/order.provider.test.ts(15,53): error TS2353: Object literal may only specify known properties, and 'total' does not exist in type 'Partial<Order>'.
+src/domain/order/order.provider.ts(33,15): error TS2339: Property 'total' does not exist on type 'Order'.
+src/domain/order/order.provider.ts(34,38): error TS2339: Property 'total' does not exist on type 'Order'.
+src/domain/order/order.provider.ts(49,53): error TS2339: Property 'total' does not exist on type 'Order'.
+src/domain/order/order.repository.ts(21,7): error TS2353: Object literal may only specify known properties, and 'total' does not exist in type 'Order'.
+src/domain/order/order.resolver.ts(19,63): error TS2339: Property 'total' does not exist on type 'Order'.

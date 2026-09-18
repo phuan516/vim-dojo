@@ -1,0 +1,187 @@
+@meta
+id: 29-05
+title: Wrapping text in a pair you choose
+chapter: 29
+type: lesson
+skills: surround, packadd
+par: 48
+minutes: 5
+vscode: select the word, then hope the editor's auto-surround is on
+open: webhooks.md
+vimrc: set packpath^=. | packloadall!
+
+@brief
+The dojo ships a surround plugin with this lesson. It is sitting in
+`pack/dojo/start/surround/plugin/surround.vim` in this very directory, it
+is seventy lines of vimscript plus its comments, and it is real: you can read it, and the
+edit you make with it is graded like any other edit. You did not install
+it. Nothing was downloaded. That is the point of the chapter — a plugin is
+a file.
+
+What it gives you is one new verb: *surround*. Vim has verbs for deleting
+and changing text; it has none for putting a pair of characters around
+text, which is a thing developers do forty times a day. The plugin adds
+one.
+
+In webhooks.md, two identifiers are sitting in the prose as plain words.
+Both should be in backticks, the way every other code reference in this
+doc already is. Change nothing else.
+
+@keys
+| `ys{motion}{char}` | surround whatever the motion covers with `{char}` |
+| `ysiw"` | put double quotes around the word under the cursor |
+| `ysiw)` | put brackets around it — `(` and `)` both work |
+
+@hints
+The verb is `ys`, and like every vim verb it wants a motion. Which text
+object describes "this word"?
+--
+`ysiw` followed by the character you want. The backtick is a character
+like any other.
+--
+`/webhookSecret` `Enter`, then ``ysiw` ``, then search for the second one
+and do it again.
+
+@solution
+    /webhookSecret<Enter>  ysiw`  /retryLimit<Enter>  ysiw`  :wq<Enter>
+
+Read `ys` as "you surround". It takes a motion exactly the way `d` and `c`
+do, so everything you already know about motions transfers on day one:
+`ysiw` for a word, `ysi(` for what is inside brackets, `yst,` for
+everything up to the next comma, `ys$` to the end of the line.
+
+Open `pack/dojo/start/surround/plugin/surround.vim` and look at the last
+four lines. They are four mappings. The whole plugin is a couple of
+functions and four mappings, and vim sourced it at startup because of
+where the file sits — under a `pack/*/start/*/plugin/` directory on the
+`packpath`. That is vim's built-in package system, and it has needed no
+help from a plugin manager since vim 8.
+
+The real one is tpope's vim-surround. It is bigger than this because it
+handles tags, function calls, indentation and repeating with `.`, but the
+verbs are the ones you have just used.
+
+@start pack/dojo/start/surround/plugin/surround.vim
+" dojo-surround.vim - a small, honest surround plugin.
+" Shipped inside this lesson. You did not install it; the dojo did.
+"
+"   ds{char}           delete the surrounding pair
+"   cs{old}{new}       change one surrounding pair into another
+"   ys{motion}{char}   surround the text the motion covers
+"   {Visual}S{char}    surround the selection
+"
+" Brackets come in pairs: ( [ { < all give you the matching closer.
+" Anything else is used on both sides, so " gives "..." and ` gives `...`.
+
+if exists('g:loaded_dojo_surround')
+  finish
+endif
+let g:loaded_dojo_surround = 1
+
+let s:pairs = {
+      \ '(': '()', ')': '()',
+      \ '[': '[]', ']': '[]',
+      \ '{': '{}', '}': '{}',
+      \ '<': '<>', '>': '<>',
+      \ }
+
+function! s:delims(char) abort
+  return get(s:pairs, a:char, a:char . a:char)
+endfunction
+
+" The text between the pair, without the pair itself.
+function! s:inner(char) abort
+  let save = @z
+  let @z = ''
+  silent execute 'normal! "zyi' . a:char
+  let text = @z
+  let @z = save
+  return text
+endfunction
+
+" A visual selection covering the pair AND what is between it. vi" selects
+" the inside; o h o l then walks each end out by one character onto the
+" delimiters. Doing it this way rather than with va" matters: va" also
+" swallows the whitespace next to the string.
+function! s:select(char) abort
+  return 'vi' . a:char . 'ohol'
+endfunction
+
+function! s:replace(char, text) abort
+  let save = @z
+  let @z = a:text
+  silent execute 'normal! ' . s:select(a:char) . '"zp'
+  let @z = save
+endfunction
+
+function! s:ds(char) abort
+  let inner = s:inner(a:char)
+  if inner ==# ''
+    return
+  endif
+  call s:replace(a:char, inner)
+endfunction
+
+function! s:cs(old, new) abort
+  let inner = s:inner(a:old)
+  if inner ==# ''
+    return
+  endif
+  let d = s:delims(a:new)
+  call s:replace(a:old, d[0] . inner . d[1])
+endfunction
+
+function! s:ys(type) abort
+  let d = s:delims(nr2char(getchar()))
+  let save = @z
+  if a:type ==# 'line'
+    silent execute "normal! '[V']\"zy"
+    call setreg('z', d[0] . "\n" . @z . d[1], 'V')
+    silent execute "normal! '[V']\"zp"
+  else
+    silent execute "normal! `[v`]\"zy"
+    let @z = d[0] . @z . d[1]
+    silent execute "normal! `[v`]\"zp"
+  endif
+  let @z = save
+endfunction
+
+function! s:vs(char) abort
+  let d = s:delims(a:char)
+  let save = @z
+  silent execute 'normal! gv"zy'
+  let @z = d[0] . @z . d[1]
+  silent execute 'normal! gv"zp'
+  let @z = save
+endfunction
+
+nnoremap <silent> ds :<C-u>call <SID>ds(nr2char(getchar()))<CR>
+nnoremap <silent> cs :<C-u>call <SID>cs(nr2char(getchar()), nr2char(getchar()))<CR>
+nnoremap <silent> ys :<C-u>set operatorfunc=<SID>ys<CR>g@
+xnoremap <silent> S :<C-u>call <SID>vs(nr2char(getchar()))<CR>
+
+@start webhooks.md
+# Webhooks
+
+Every webhook we send is signed. The signature is in the
+`X-Order-Signature` header and is an HMAC of the raw body.
+
+The payload is signed with the webhookSecret from the environment. Verify
+it before you trust the body, and compare with a constant-time function,
+not `===`.
+
+Delivery is retried with backoff. Retries stop after retryLimit attempts
+and the event is written to `webhook_dead_letter`.
+
+@expected webhooks.md
+# Webhooks
+
+Every webhook we send is signed. The signature is in the
+`X-Order-Signature` header and is an HMAC of the raw body.
+
+The payload is signed with the `webhookSecret` from the environment. Verify
+it before you trust the body, and compare with a constant-time function,
+not `===`.
+
+Delivery is retried with backoff. Retries stop after `retryLimit` attempts
+and the event is written to `webhook_dead_letter`.

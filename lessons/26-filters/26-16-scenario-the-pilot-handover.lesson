@@ -1,0 +1,197 @@
+@meta
+id: 26-16
+title: Scenario — the pilot handover
+chapter: 26
+type: scenario
+skills: filter-bang, read-shell, write-shell, buffer-switch
+par: 95
+minutes: 14
+vscode: a spreadsheet, a JSON beautifier tab, a terminal and a lot of copying
+open: handover.md pilot-stores.csv gateway-event.json
+vimrc: set hidden
+
+@brief
+A ticket, not an exercise.
+
+    PAY-233  Hand the pilot rollout over before Friday. The store list
+             has been pasted into twice, the captured event is
+             unreadable, and the handover note is a skeleton.
+
+Three files, open as three buffers. `:bn` and `:bp` move between them.
+Not one line of this needs typing that a command could do instead.
+
+  1. pilot-stores.csv — the header stays on line 1. Every row below it
+     sorted, with the duplicate rows dropped. Two stores were pasted in
+     twice.
+
+  2. gateway-event.json — captured from the sandbox as one line.
+     Formatted, with every object's keys in alphabetical order, so that
+     it diffs cleanly against the fixture that is already in that shape.
+     This one needs `jq`.
+
+  3. handover.md — `count:` takes the number of pilot stores after the
+     duplicates are gone. Under `## Files in src/domain` goes the list of
+     files in that directory, one per line, as `ls` prints them. Do not
+     open those source files; changing one fails the check.
+
+Finish with `:wqa`.
+
+@keys
+| `:{range}!cmd` | filter a range through a command |
+| `:{range}w !cmd` | ask a command about a range, buffer unchanged |
+| `:{n}r !cmd` | insert a command's output after line n |
+| `:%!jq -S .` | format JSON with sorted keys |
+| `:bn` `:bp` | next and previous buffer |
+
+@hints
+Take the CSV first. Sorting and deduping the rows is one filter, and once
+it is done the count you need for the note is a fact rather than a guess.
+--
+The header must not be sorted into the middle, so the range starts at
+line 2 and runs to the end. `sort -u` does both halves of the job.
+--
+To count the rows without counting them: with the CSV in front of you,
+`:2,$w !wc -l` writes those lines to `wc` and prints the answer at the
+bottom of the screen. Nothing in the buffer changes.
+--
+For the file list, address the heading's line and read after it:
+`:{line}r !ls src/domain`. For the JSON, `:%!jq -S .` — and if the buffer
+empties, `jq` refused to parse it and `u` brings it back.
+
+@solution
+A route that measures 82 keystrokes.
+
+**pilot-stores.csv** — `:bn` to reach it. `:2,$!sort -u` sorts the rows
+and drops the two repeats in one pass; the header on line 1 is outside
+the range and does not move. Then `:2,$w !wc -l`, which says `6`. Note
+the shape of those two commands: same range, same `!`, and one of them
+rewrites the lines while the other only asks a question about them. The
+`w` is the entire difference.
+
+**gateway-event.json** — `:bn` again. `:%!jq -S .`. The `-S` is not
+decoration: the fixture it will be compared against is in sorted-key
+order, and a diff between two orderings of the same object is unreadable.
+
+**handover.md** — `:bn` wraps back round. `:10r !ls src/domain` puts the
+listing under the heading, `8G` then `A 6` and `Esc` fills in the count,
+and `:wqa` writes all three.
+
+Nothing here was new. What the ticket was testing is whether you reach
+for a command or for the keyboard. Every one of these jobs has an obvious
+manual version — retype the rows in order, reformat the JSON by hand,
+type the five file names out, count the stores with a finger on the
+screen — and each manual version is slower, and each one is wrong in a
+way you would not notice: a row missed, a key out of order, a file name
+misspelled, a count off by one because you forgot the header.
+
+The three commands in this chapter cover nearly everything you will ever
+want from the shell while editing. `:{range}!cmd` when the output should
+replace the lines. `:r !cmd` when it should be added. `:w !cmd` when you
+only want to know something. And `u` for when the command had other ideas.
+
+@start handover.md
+# Pilot rollout handover
+
+Everything the next person needs. The numbers in here are checked by
+hand, so they are wrong about as often as not.
+
+## Pilot stores
+
+count:
+
+## Files in src/domain
+
+## Notes
+
+The gateway client lives in another repo.
+
+@expected handover.md
+# Pilot rollout handover
+
+Everything the next person needs. The numbers in here are checked by
+hand, so they are wrong about as often as not.
+
+## Pilot stores
+
+count: 6
+
+## Files in src/domain
+customer.entity.ts
+customer.provider.ts
+order.entity.ts
+order.provider.ts
+order.repository.ts
+
+## Notes
+
+The gateway client lives in another repo.
+
+@start pilot-stores.csv
+store,currency,opened
+store-bristol,GBP,2026-02-11
+store-aberdeen,GBP,2026-01-04
+store-cardiff,GBP,2026-02-20
+store-bristol,GBP,2026-02-11
+store-exeter,GBP,2026-03-02
+store-dundee,GBP,2026-01-19
+store-aberdeen,GBP,2026-01-04
+store-glasgow,GBP,2026-03-09
+
+@expected pilot-stores.csv
+store,currency,opened
+store-aberdeen,GBP,2026-01-04
+store-bristol,GBP,2026-02-11
+store-cardiff,GBP,2026-02-20
+store-dundee,GBP,2026-01-19
+store-exeter,GBP,2026-03-02
+store-glasgow,GBP,2026-03-09
+
+@start gateway-event.json
+{"type":"pilot.store.opened","id":"evt_44c1","data":{"store":"store-glasgow","currency":"GBP","terminals":3},"created":1774300000,"attempts":[1]}
+
+@expected gateway-event.json
+{
+  "attempts": [
+    1
+  ],
+  "created": 1774300000,
+  "data": {
+    "currency": "GBP",
+    "store": "store-glasgow",
+    "terminals": 3
+  },
+  "id": "evt_44c1",
+  "type": "pilot.store.opened"
+}
+
+@start src/domain/customer.entity.ts
+export type Customer = {
+  id: string;
+  email: string;
+};
+
+@start src/domain/customer.provider.ts
+export class CustomerProvider {
+  public async findOne(id: string) {
+    return this.customerRepository.findOne({ where: { id } });
+  }
+}
+
+@start src/domain/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  total: number;
+};
+
+@start src/domain/order.provider.ts
+export class OrderProvider {
+  public async cancel(id: string) {
+    return this.orderRepository.update({ where: { id }, values: { status: 'CANCELLED' } });
+  }
+}
+
+@start src/domain/order.repository.ts
+export class OrderRepository extends BaseRepository<Order> {
+  protected model = 'order';
+}

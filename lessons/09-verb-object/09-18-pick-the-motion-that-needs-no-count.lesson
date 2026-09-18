@@ -1,0 +1,103 @@
+@meta
+id: 09-18
+title: Pick the motion that needs no count
+chapter: 09
+type: lesson
+skills: op-motion, op-linewise, op-counts
+par: 25
+minutes: 6
+vscode: three separate selections, three Deletes, one miscounted
+open: refund.service.ts
+
+@brief
+Three bits of rot in one service, all of them deletions:
+
+  1. The `// TODO drop the actor` comment on the `refund` line goes. The
+     call itself, semicolon included, stays as it is.
+  2. `refundLegacy` goes — the method and one of the blank lines around
+     it, leaving the usual single gap.
+  3. Everything below the closing brace of the class is dead since the
+     rewrite. It goes too.
+
+Every one of these can be done by counting lines or words. Do none of
+them that way.
+
+@keys
+| `d$` | to the end of the line |
+| `d}` | to the next blank line |
+| `dG` | to the end of the file |
+| `18G` | to line eighteen |
+
+@hints
+Three edits, three different extents: to the end of a line, to the end of
+a block, to the end of the file. There is a motion for each, and not one
+of them takes a number.
+--
+Work bottom-up. Deleting the tail of the file first means the line
+numbers above it never move, so the second and third jumps still mean
+what you worked out at the start.
+--
+`18G dG`, then `9G d}`, then `7G f/ d$`.
+
+@solution
+    18G dG    9G d}    7G f/ d$    :wq<Enter>
+
+Nineteen keystrokes for three deletions of wildly different sizes, and
+the only numbers involved were line numbers you could read off the gutter.
+
+That is the judgement this chapter is really about. Almost any edit can be
+expressed as a count — `d4j`, `d12w`, `3dd` — and counts are seductive
+because they always work, right up until the file changes by one line and
+they silently do the wrong thing. A motion that describes the *structure*
+does not have that failure mode. `dG` is correct however long the tail is.
+`d}` is correct however many lines the method grows to. `d$` is correct
+whatever the comment says.
+
+The habit to build: before you count, ask what the end of the thing you
+are deleting actually is. End of statement? `dt;`. End of argument list?
+`dt)`. End of block? `d}`. End of file? `dG`. Somewhere you can see but
+not describe? `ma` and `d'a`. Counting is what is left when the answer to
+that question is genuinely "four lines".
+
+Working bottom-up is the other habit. Every edit you make above the
+cursor invalidates the line numbers below it. Start at the bottom and the
+numbers you noted at the beginning stay true all the way through.
+
+@start refund.service.ts
+import { injectable } from 'tsyringe';
+import { GatewayClient } from './gateway.client';
+
+@injectable()
+export class RefundService {
+  public async refund(orderId: string, amount: number) {
+    return this.gateway.refund(orderId, amount, 'AUTO'); // TODO drop the actor
+  }
+
+  public async refundLegacy(orderId: string) {
+    return this.gateway.refundLegacy(orderId);
+  }
+
+  public async cancel(orderId: string) {
+    return this.gateway.cancel(orderId);
+  }
+}
+
+// everything below is dead since the rewrite
+export function reconcileByHand() {
+  return null;
+}
+
+@expected refund.service.ts
+import { injectable } from 'tsyringe';
+import { GatewayClient } from './gateway.client';
+
+@injectable()
+export class RefundService {
+  public async refund(orderId: string, amount: number) {
+    return this.gateway.refund(orderId, amount, 'AUTO');
+  }
+
+  public async cancel(orderId: string) {
+    return this.gateway.cancel(orderId);
+  }
+}

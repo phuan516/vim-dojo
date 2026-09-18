@@ -1,0 +1,102 @@
+@meta
+id: 13-10
+title: One or more, and why the backslash
+chapter: 13
+type: lesson
+skills: regex-quantifiers
+par: 17
+minutes: 5
+vscode: read the file top to bottom looking for a number
+open: .env.example
+
+@brief
+An example env file ships with the keys and no secrets: values are
+either blank or a harmless placeholder. Someone has committed a real
+port number into this one. Find the key whose entire value is a number
+and blank it — delete the value, keep the key and the equals sign.
+
+You know the shape: an equals sign, then digits, then the end of the
+line. `\d*$` looks right and is wrong — `*` allows *zero* digits, so
+`=\d*$` matches every blank value in the file, and the first blank value
+is on line one.
+
+You want "one or more". Vim has it, and it comes with a backslash.
+
+@keys
+| `\+` | one or more of the atom before it |
+| `*` | zero or more — no backslash |
+| `\{n,m}` | between n and m — next lesson but one |
+| `D` | delete from the cursor to the end of the line |
+
+@hints
+The blank values are the trap. Your pattern has to insist on at least
+one digit between the `=` and the end of the line.
+--
+`\+` is "one or more". `=\d\+$` is an equals sign, at least one digit,
+then the end of the line. Blank values do not qualify.
+--
+`/=\d\+$` `Enter` lands on the `=`. `l` onto the first digit, `D` to
+delete the rest of the line.
+
+@solution
+/=\d\+$<Enter>  lD  :wq<Enter>
+
+Fourteen keystrokes, and `VERSION=2.4.1` did not fool it either —
+`\d\+$` has to reach the end of the line through digits alone, and the
+dots stop it.
+
+Now the backslash. In most tools, `+` means "one or more" and `\+` is
+a literal plus. In vim's default dialect it is the other way round: `+`
+is a plain character and `\+` is the quantifier. The same is true of
+`?`, `{`, `(`, `)`, `|`, `<` and `>`. Only `.`, `*`, `[`, `^` and `$`
+are special without help.
+
+Vim calls this setting `magic`, and the reason is history: vi was built
+for editing prose and code, where a literal `+` or `(` turns up far
+more often than a quantifier, so those characters were kept literal by
+default and the regex meaning put behind a backslash. `*` and `.`
+were common enough as wildcards to earn the bare form.
+
+The result is that vim's patterns, written plainly, look wrong to
+anyone who has used regex anywhere else. `\d\+` instead of `\d+`,
+`\(a\|b\)` instead of `(a|b)`. It is not wrong, it is a different
+dialect, and there is a switch that turns the familiar one back on. It
+gets a lesson of its own shortly. Until then, learn the escaped forms;
+you will meet them in other people's vimrcs and in every vim answer on
+the internet.
+
+@start .env.example
+NODE_ENV=
+LOG_LEVEL=info
+DB_HOST=database
+DB_PORT=
+DB_NAME=orders
+DB_USER=
+DB_PASSWORD=
+RABBIT_URL=amqp://rabbit-1:5672/payments
+VERSION=2.4.1
+SMTP_HOST=
+SMTP_PORT=2525
+SMTP_USER=
+SMTP_PASSWORD=
+STRIPE_SECRET=
+STRIPE_WEBHOOK_SECRET=
+SENTRY_DSN=
+
+@expected .env.example
+NODE_ENV=
+LOG_LEVEL=info
+DB_HOST=database
+DB_PORT=
+DB_NAME=orders
+DB_USER=
+DB_PASSWORD=
+RABBIT_URL=amqp://rabbit-1:5672/payments
+VERSION=2.4.1
+SMTP_HOST=
+SMTP_PORT=
+SMTP_USER=
+SMTP_PASSWORD=
+STRIPE_SECRET=
+STRIPE_WEBHOOK_SECRET=
+SENTRY_DSN=

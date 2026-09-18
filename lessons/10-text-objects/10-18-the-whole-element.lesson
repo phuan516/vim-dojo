@@ -1,0 +1,92 @@
+@meta
+id: 10-18
+title: The whole element
+chapter: 10
+type: lesson
+skills: obj-tag, inner-vs-around
+par: 58
+minutes: 6
+vscode: select from the < of the opening tag to the > of the closing one
+open: OrderSummary.tsx
+
+@brief
+`at` is the element: opening tag, contents, closing tag. It is what you
+want when the element itself should stop existing, or should become a
+different element entirely.
+
+Two changes from the design review:
+
+  - the `(estimated)` note next to the delivery date goes. It is wrong
+    more often than it is right and support have asked for it to be
+    removed. The delivery date itself stays.
+  - the hand-rolled status span is replaced by the shared component:
+    `<Badge status={order.status} />`
+
+Leave the heading alone. Watch the spacing on the delivery line — the
+`<p>` should read as one sentence with no gap left behind.
+
+@keys
+| `at` | the element, tags included |
+| `dat` | delete it entirely |
+| `cat` | replace it with something else |
+| `it` `cit` | contents only, from the last lesson |
+
+@hints
+One of these elements is being deleted and the other is being replaced by
+a different element. Neither job is about the contents.
+--
+`dat` removes the whole element. `cat` removes it and leaves you in insert
+mode where it stood, which is what you want for the swap.
+--
+`2f(` lands you inside the note on the delivery line. `f{` lands you
+inside the span on the next one.
+
+@solution
+    7j 2f( dat
+    j 0 f{ cat <Badge status={order.status} /> <Esc>
+    :wq<Enter>
+
+Fifty-one keystrokes, thirty of them the new component.
+
+The `cat` half is the one to keep. Swapping an element for another
+element is a constant job in a React codebase — a `div` becomes a
+`section`, a hand-written control becomes the design system's version —
+and the naive way to do it is to delete the opening tag, delete the
+closing tag, and then find you have left the contents stranded in the
+middle. `cat` treats the element as one thing, because it is one thing.
+
+`dat` has a wrinkle worth meeting here rather than in a real branch. On
+an inline element like the note you just removed, it does exactly what
+you expect. On an element that sits alone on its own line, `dat` deletes
+the element but not the line it was on, so you are left with an empty
+line and its indent. That is not a bug — the object is the element, and
+the line is not part of it — but it means `dat` on a block element is
+usually followed by `dd`.
+
+@start OrderSummary.tsx
+import { Badge } from '../components/Badge';
+import { formatDate } from '../format';
+
+export function OrderSummary({ order }: Props) {
+  return (
+    <section className="order-summary">
+      <h2>Order summary</h2>
+      <p>Delivery {formatDate(order.eta)}<em>(estimated)</em></p>
+      <span className="badge badge-status">{order.status}</span>
+    </section>
+  );
+}
+
+@expected OrderSummary.tsx
+import { Badge } from '../components/Badge';
+import { formatDate } from '../format';
+
+export function OrderSummary({ order }: Props) {
+  return (
+    <section className="order-summary">
+      <h2>Order summary</h2>
+      <p>Delivery {formatDate(order.eta)}</p>
+      <Badge status={order.status} />
+    </section>
+  );
+}

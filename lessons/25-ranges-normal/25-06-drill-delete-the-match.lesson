@@ -1,0 +1,57 @@
+@meta
+id: 25-06
+title: Drill — delete the line that says it
+chapter: 25
+type: drill
+skills: range-pattern
+par: 18
+minutes: 4
+reps: 8
+vscode: Ctrl-F, Escape, Home, shift-Down, Delete
+open: errors.json
+
+@brief
+Eight times: the `PAYMENT_LEGACY_DECLINED` code was retired with the old
+gateway. Delete its line from the cursor on line 1, without moving.
+
+Name the line by its pattern, not by its number.
+
+@keys
+| `:/LEGACY/d` | delete the next line matching `LEGACY` |
+
+@hints
+One address, one command. The address is the search.
+--
+`:/LEGACY/d` Enter, `:wq`.
+
+@solution
+    :/LEGACY/d<Enter>  :wq<Enter>
+
+Fifteen keystrokes. Speed is not the point of this drill; not looking at
+the gutter is. When you can delete a line you can see without working out
+which number it is, you have stopped navigating and started describing,
+and every later command in this chapter takes the same description.
+
+Pick a fragment that is unique and short. `LEGACY` is six characters and
+matches one line; `PAYMENT` matches four.
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "BATCH_PAYLOAD_INVALID": { "statusCode": 422, "sentry": false },
+  "PAYMENT_LEGACY_DECLINED": { "statusCode": 402, "sentry": false },
+  "PAYMENT_REFUND_FAILED": { "statusCode": 502, "sentry": true },
+  "PAYMENT_GATEWAY_TIMEOUT": { "statusCode": 504, "sentry": true },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false }
+}
+
+@expected errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "BATCH_PAYLOAD_INVALID": { "statusCode": 422, "sentry": false },
+  "PAYMENT_REFUND_FAILED": { "statusCode": 502, "sentry": true },
+  "PAYMENT_GATEWAY_TIMEOUT": { "statusCode": 504, "sentry": true },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false }
+}

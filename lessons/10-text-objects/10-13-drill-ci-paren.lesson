@@ -1,0 +1,44 @@
+@meta
+id: 10-13
+title: Drill — ci( on a call
+chapter: 10
+type: drill
+skills: obj-paren
+par: 19
+minutes: 5
+reps: 8
+vscode: select from after the paren to before the paren, carefully
+open: format.ts
+
+@brief
+Eight times: `formatStatus` now takes the whole order. Replace both
+arguments with `order`, save, quit.
+
+Get inside the brackets, change what is in them, leave them standing.
+
+@keys
+| `f(` | onto the opening bracket |
+| `ci(` | change everything between the pair |
+
+@hints
+The cursor has to be inside the brackets or on one of them — `ci(` does
+not search forward for you.
+--
+`f(` then `ci(` then type `order`.
+
+@solution
+    f( ci( order <Esc> :wq<Enter>
+
+Fifteen keystrokes.
+
+`f(ci(` is one of the two or three sequences that separate someone who
+knows the keys from someone who uses them. Argument lists change
+constantly — a parameter added, a pair collapsed into an object, a call
+site updated after a signature change — and every one of those edits is
+this shape.
+
+@start format.ts
+export const label = formatStatus(order.status, order.locale);
+
+@expected format.ts
+export const label = formatStatus(order);

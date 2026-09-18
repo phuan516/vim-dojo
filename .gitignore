@@ -1,4 +1,8 @@
-levels/*/work/
-levels/*/.done
-.dojo/state
+.dojo/work/
 .dojo/keys.log
+.dojo/state
+.dojo/state.json
+.dojo/state.json.*
+.dojo/staging/
+__pycache__/
+*.pyc

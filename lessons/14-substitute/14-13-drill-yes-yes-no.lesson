@@ -1,0 +1,60 @@
+@meta
+id: 14-13
+title: Drill — yes, yes, no, yes, yes
+chapter: 14
+type: drill
+skills: sub-confirm
+par: 46
+minutes: 5
+reps: 8
+vscode: Ctrl-H, Replace, Replace, Find Next, Replace, Replace
+open: ledger.ts
+
+@brief
+Eight times: the parameter `amount` becomes `amountPence`. Four of the
+five whole-word hits are code. One is inside a log message a human
+reads, and it stays.
+
+Substitute with confirm, answer five times, save. You are drilling the
+rhythm of reading a highlighted match and answering it without
+breaking stride.
+
+@keys
+| `:%s/\<amount\>/amountPence/gc` `Enter` | confirm each whole-word match |
+| `y` / `n` | take it / leave it |
+
+@hints
+Whole-word anchors keep `REFUND_AMOUNT_INVALID` out of it; the `c`
+flag is for the one the anchors cannot see.
+--
+`:%s/\<amount\>/amountPence/gc`, Enter, then `y y n y y`.
+
+@solution
+    :%s/\<amount\>/amountPence/gc<Enter>  y y n y y  :wq<Enter>
+
+Thirty-nine keystrokes, five decisions. By the last rep you should be
+reading the line vim shows you, not the count of how many you have
+answered. The string is the third hit every time here; in a real file
+you will not know where it is until you see it.
+
+@start ledger.ts
+export function toLedgerLine(refund: Refund, amount: number) {
+  if (amount <= 0) {
+    throw exception('REFUND_AMOUNT_INVALID');
+  }
+
+  logger.info('refund amount accepted', { refund: refund.id, amount });
+
+  return { refund: refund.id, amount, currency: refund.currency };
+}
+
+@expected ledger.ts
+export function toLedgerLine(refund: Refund, amountPence: number) {
+  if (amountPence <= 0) {
+    throw exception('REFUND_AMOUNT_INVALID');
+  }
+
+  logger.info('refund amount accepted', { refund: refund.id, amountPence });
+
+  return { refund: refund.id, amountPence, currency: refund.currency };
+}

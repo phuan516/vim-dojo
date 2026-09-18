@@ -1,0 +1,60 @@
+@meta
+id: 08-15
+title: Drill — duplicate and bump
+chapter: 08
+type: drill
+skills: yank-y, put-p, replace-r
+par: 32
+minutes: 5
+reps: 10
+vscode: copy line, paste, edit the digit, three times
+open: routes.ts
+
+@brief
+Every v1 route needs a v2 twin directly underneath it.
+
+The rep is five keys: copy the line, put it below, land on the version
+digit, replace it.
+
+@keys
+| `yy` | yank the line |
+| `p` | put it below |
+| `f1` | forward to the `1` |
+| `r2` | replace it with a `2` |
+| `j` | down a line |
+
+@hints
+`yyp` gives you the duplicate. `f1r2` fixes it. `j` gets you to the next
+original.
+--
+After `p` the cursor is already on the new line, so `f1` finds the
+version digit of the copy and never the one above it.
+
+@solution
+    j  then three times: yyp f1r2 j  :wq<Enter>
+
+Five keys per line, and the path itself is never retyped — which matters
+more than the keystrokes, because a mistyped route fails at runtime and
+not at compile time.
+
+`yyp` is the duplicate-this-line gesture. Along with `ddp` from the
+earlier drill it covers most of what people use a mouse for in a config
+file: copy this down, move this up. Neither one needs a selection and
+neither one can pick up the wrong number of lines.
+
+@start routes.ts
+export const routes = [
+  '/v1/orders',
+  '/v1/customers',
+  '/v1/refunds',
+];
+
+@expected routes.ts
+export const routes = [
+  '/v1/orders',
+  '/v2/orders',
+  '/v1/customers',
+  '/v2/customers',
+  '/v1/refunds',
+  '/v2/refunds',
+];

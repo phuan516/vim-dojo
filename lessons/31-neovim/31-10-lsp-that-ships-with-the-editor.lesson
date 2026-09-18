@@ -1,0 +1,113 @@
+@meta
+id: 31-10
+title: The LSP client is already there
+chapter: 31
+type: lesson
+skills: nvim-lsp, lua-config
+par: 108
+minutes: 8
+vscode: installing a language extension and never thinking about it again
+open: lsp.lua
+
+@brief
+This is the change that actually moves people. Neovim has a Language
+Server Protocol client built into the editor. Not a plugin — part of the
+binary, documented at `:h lsp`, maintained with the core.
+
+Be precise about what that means, because the marketing blurs it:
+
+- **You still need the server.** The client speaks the protocol; something
+  has to answer. For TypeScript that is `typescript-language-server`,
+  installed with npm. Neovim does not ship servers and never will.
+- **You no longer need a plugin to connect them.** From 0.11, two
+  functions do it: `vim.lsp.config('name', { ... })` describes a server and
+  `vim.lsp.enable('name')` turns it on for the filetypes it claims.
+  `nvim-lspconfig` is still worth having — it is a library of ready-made
+  configs for 300 servers — but it is a convenience now, not a requirement.
+- **`root_markers` is how the server finds your project.** The client walks
+  up from the current file until it sees one of these names, and that
+  directory becomes the workspace root. Get this wrong and the server
+  starts in your home directory and reports nonsense.
+
+What you get once it attaches: real go-to-definition that understands
+types rather than matching a name in an index, rename that is correct
+across a project, diagnostics as you type, hover documentation, and
+completion. Chapter 30's ctags index does the first of those honestly and
+the others not at all — that is the difference, and it is a big one on a
+large TypeScript codebase.
+
+0.11 also ships default mappings, so an attached buffer gets `grn`
+(rename), `gra` (code action), `grr` (references), `gri`
+(implementation), `gO` (document symbols) and `K` (hover) without you
+mapping anything.
+
+Two jobs in the file: give the server its root markers —
+`tsconfig.json`, `package.json`, `.git`, in that order — and turn it on at
+the bottom of the file.
+
+Graded in vim. Nothing here runs: no Neovim, no language server, no npm.
+
+@keys
+| `vim.lsp.config(name, opts)` | describe a server |
+| `vim.lsp.enable(name)` | start it for its filetypes |
+| `ci{` | change inside the braces |
+
+@hints
+The markers are a Lua list of strings, in the same style as `filetypes`
+just above it. The second job is one line on its own at the end of the
+file, separated by a blank line.
+--
+`ci{` works on the enclosing braces, so put the cursor on the empty pair
+first — `f{` gets you there in two keys.
+--
+`/root_markers` and Enter, `f{`, `ci{`, type the list. Then `G`, `o`,
+Enter for the blank line, and `vim.lsp.enable('ts_ls')`.
+
+@solution
+    /root_markers<Enter> f{ ci{ 'tsconfig.json', 'package.json', '.git' <Esc>
+    G o <Enter> vim.lsp.enable('ts_ls') <Esc>
+    :wq<Enter>
+
+Around ninety keystrokes. `f{` before `ci{` is not optional: unlike `ci'`,
+which looks forward on the line, `ci{` works outwards from the cursor and
+would have taken the whole argument table of `vim.lsp.config` instead. The
+shape is worth memorising because every
+server you ever add is the same four fields: `cmd`, `filetypes`,
+`root_markers`, and optionally `settings` for the server's own options.
+
+Where people get stuck, in order of frequency:
+
+1. The server binary is not on `$PATH`. `:checkhealth vim.lsp` says so in
+   plain English. `mason.nvim` exists to install servers from inside
+   Neovim, and is the usual answer if you do not want a global npm.
+2. The root marker list is too narrow, so a monorepo package resolves to
+   the repo root and every import is unresolved.
+3. Nothing attached at all, because the filetype does not match. `:LspInfo`
+   in older setups, `:checkhealth` now.
+
+And the thing to keep in perspective: none of this changes how you edit.
+It changes what the editor knows. `gd`, `K` and a rename are three keys
+either way — the question is whether the answer comes from a text index or
+from a compiler.
+
+@start lsp.lua
+-- ~/.config/nvim/lua/config/lsp.lua
+-- Neovim 0.11+, no lspconfig plugin: the built-in client is enough.
+
+vim.lsp.config('ts_ls', {
+  cmd = { 'typescript-language-server', '--stdio' },
+  filetypes = { 'typescript', 'typescriptreact' },
+  root_markers = {},
+})
+
+@expected lsp.lua
+-- ~/.config/nvim/lua/config/lsp.lua
+-- Neovim 0.11+, no lspconfig plugin: the built-in client is enough.
+
+vim.lsp.config('ts_ls', {
+  cmd = { 'typescript-language-server', '--stdio' },
+  filetypes = { 'typescript', 'typescriptreact' },
+  root_markers = { 'tsconfig.json', 'package.json', '.git' },
+})
+
+vim.lsp.enable('ts_ls')

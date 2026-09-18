@@ -1,0 +1,243 @@
+@meta
+id: 13-04
+title: A range of characters
+chapter: 13
+type: lesson
+skills: regex-classes
+par: 32
+minutes: 6
+vscode: Ctrl+F with the regex toggle and the match-case toggle both on
+vimrc: set ignorecase smartcase
+open: order.provider.ts
+
+@brief
+Error codes are upper snake case, and the registry lookup is
+case-sensitive. One `throw` in this provider was written with the code
+in lower case, so at runtime it raises `UNKNOWN_ERROR` instead of the
+one it names. Find it and upper-case the code.
+
+There are eight `exception(` calls. Seven are fine. You are not going to
+read them all — you are going to describe the broken one: an
+`exception(` whose string starts with a *lower-case letter*.
+
+`\d` gave you one built-in set. Square brackets let you build your own,
+and a dash inside them means a range. One thing will get in your way:
+this file runs with `ignorecase` and `smartcase`, the settings most
+people use, and under `ignorecase` a range of lower-case letters matches
+capitals too. Chapter 12 gave you the fix.
+
+@keys
+| `[a-z]` | any one lower-case letter |
+| `[A-Z]`, `[0-9]`, `[0-9a-f]` | ranges, and ranges can be combined |
+| `[aeiou]`, `[_-]` | a set of specific characters — a dash first or last is literal |
+| `\C` | case matters for this pattern, whatever the settings say |
+| `gUi'` | upper-case everything inside the quotes |
+
+@hints
+Describe the bad call: the function name, the bracket, the quote, and
+then a letter from the wrong half of the alphabet.
+--
+`[a-z]` is "one lower-case letter". Under `ignorecase` it silently
+becomes "one letter", so the search stops at the first `exception(`
+call. `\C` at the front of the pattern puts case back.
+--
+`/\Cexception('[a-z]` `Enter` lands on the broken call. `gUi'`
+upper-cases the string without you moving onto it.
+
+@solution
+/\Cexception('[a-z]<Enter>  gUi'  :wq<Enter>
+
+Twenty-eight keystrokes, and the string was never selected or retyped.
+
+A bracket expression matches exactly one character from the set inside
+it. `[abc]` is one of `a`, `b` or `c`. `[a-z]` is a range; `[a-zA-Z_]`
+is three things at once — two ranges and an underscore — which is a fair
+description of "the first character of an identifier". `[0-9a-f]` is a
+hex digit, which is how you describe a request id or a commit hash.
+
+Most punctuation is ordinary inside brackets. `[.]` is a literal dot,
+`[*]` a literal star. The characters that keep a meaning are `]`, `\`,
+`^` at the very start and `-` between two others; put a dash first or
+last (`[-+]`) when you mean the dash itself.
+
+`\C` is the same `\C` you met in 12-10, doing the same job. It is worth
+seeing it again here because bracket ranges are where `ignorecase`
+bites hardest: `[A-Z]` under `ignorecase` matches every letter, and a
+pattern that was written to tell the two cases apart quietly stops
+doing so. Any time a range is doing the work, pin the case.
+
+`gUi'` from chapter 8 and 10: the `gU` operator, the `i'` object. The
+cursor was on the `e` of `exception`, two words short of the string, and
+the quote object found it anyway — quote objects search forward along
+the line for the first pair. That is a small thing to know and it saves
+a `f'` on every one of these.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { logger } from '../../infrastructure/logger';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async submit(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'DRAFT') {
+      throw exception('ORDER_NOT_DRAFT');
+    }
+
+    if (order.lines.length === 0) {
+      throw exception('ORDER_HAS_NO_LINES');
+    }
+
+    logger.info('order submitted', { orderId: order.id });
+
+    return this.orderRepository.update({ where: { id }, values: { status: 'PENDING' } });
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PAID') {
+      throw exception('ORDER_NOT_PAID');
+    }
+
+    logger.info('order shipped', { orderId: order.id });
+
+    return this.orderRepository.update({ where: { id }, values: { status: 'SHIPPED' } });
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    if (order.status === 'CANCELLED') {
+      throw exception('order_not_cancellable');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    logger.info('order cancelled', { orderId: order.id });
+
+    return this.orderRepository.update({ where: { id }, values: { status: 'CANCELLED' } });
+  }
+
+  public async reopen(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'CANCELLED') {
+      throw exception('ORDER_NOT_CANCELLED');
+    }
+
+    if (order.refundedAt) {
+      throw exception('ORDER_ALREADY_REFUNDED');
+    }
+
+    return this.orderRepository.update({ where: { id }, values: { status: 'DRAFT' } });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { logger } from '../../infrastructure/logger';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async submit(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'DRAFT') {
+      throw exception('ORDER_NOT_DRAFT');
+    }
+
+    if (order.lines.length === 0) {
+      throw exception('ORDER_HAS_NO_LINES');
+    }
+
+    logger.info('order submitted', { orderId: order.id });
+
+    return this.orderRepository.update({ where: { id }, values: { status: 'PENDING' } });
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PAID') {
+      throw exception('ORDER_NOT_PAID');
+    }
+
+    logger.info('order shipped', { orderId: order.id });
+
+    return this.orderRepository.update({ where: { id }, values: { status: 'SHIPPED' } });
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    if (order.status === 'CANCELLED') {
+      throw exception('ORDER_NOT_CANCELLABLE');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    logger.info('order cancelled', { orderId: order.id });
+
+    return this.orderRepository.update({ where: { id }, values: { status: 'CANCELLED' } });
+  }
+
+  public async reopen(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'CANCELLED') {
+      throw exception('ORDER_NOT_CANCELLED');
+    }
+
+    if (order.refundedAt) {
+      throw exception('ORDER_ALREADY_REFUNDED');
+    }
+
+    return this.orderRepository.update({ where: { id }, values: { status: 'DRAFT' } });
+  }
+}

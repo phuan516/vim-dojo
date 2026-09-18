@@ -1,0 +1,85 @@
+@meta
+id: 21-08
+title: Drill — search, edit, repeat
+chapter: 21
+type: drill
+skills: macro-record, macro-count
+par: 50
+minutes: 5
+reps: 8
+vscode: find next, type, find next, type
+open: payment.spec.ts
+
+@brief
+Four tests, not adjacent, each needing `async` on the `it(` line and
+`await` at the start of the line below. Record a macro that begins
+with the search and ends without a `j`, then `99@a`.
+
+@keys
+| `/it(.*, () =>` | the next test that is still synchronous |
+| `f(;` | past the first bracket to the second |
+| `j^` | down, then to the first non-blank |
+
+@hints
+`qa`, the search, `f(;iasync ` `Esc`, `j^iawait ` `Esc`, `q`. Then
+`99@a` and let the failed search stop it.
+--
+Do not press `j` at the end of the recording. The search at the start
+is the step, and it works whether the next test is two lines away or
+twenty.
+
+@solution
+    qa /it(.*, () => <Enter> f(; iasync  <Esc> j^ iawait  <Esc> q   99@a   :wq<Enter>
+
+Forty-four keystrokes. The habit being drilled: when the targets are
+scattered, the first key in the recording is `/`.
+
+@start payment.spec.ts
+describe('PaymentService', () => {
+  it('refunds a paid order', () => {
+    service.refund('ord_101');
+    expect(http.post).toHaveBeenCalledWith('/refunds', { orderId: 'ord_101' });
+  });
+
+  it('throws when the gateway rejects', () => {
+    service.refund('ord_102');
+    expect(http.post).toHaveBeenCalledTimes(1);
+  });
+
+  describe('retries', () => {
+    it('retries once on a timeout', () => {
+      service.refund('ord_103');
+      expect(http.post).toHaveBeenCalledTimes(2);
+    });
+
+    it('gives up after the second timeout', () => {
+      service.refund('ord_104');
+      expect(http.post).toHaveBeenCalledTimes(2);
+    });
+  });
+});
+
+@expected payment.spec.ts
+describe('PaymentService', () => {
+  it('refunds a paid order', async () => {
+    await service.refund('ord_101');
+    expect(http.post).toHaveBeenCalledWith('/refunds', { orderId: 'ord_101' });
+  });
+
+  it('throws when the gateway rejects', async () => {
+    await service.refund('ord_102');
+    expect(http.post).toHaveBeenCalledTimes(1);
+  });
+
+  describe('retries', () => {
+    it('retries once on a timeout', async () => {
+      await service.refund('ord_103');
+      expect(http.post).toHaveBeenCalledTimes(2);
+    });
+
+    it('gives up after the second timeout', async () => {
+      await service.refund('ord_104');
+      expect(http.post).toHaveBeenCalledTimes(2);
+    });
+  });
+});

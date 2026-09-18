@@ -1,0 +1,356 @@
+@meta
+id: 32-20
+title: Boss — release day
+chapter: 32
+type: boss
+skills: conflict-resolution, feature-implementation, multi-file-refactor, code-review, speed-under-pressure
+par: 402
+minutes: 30
+vscode: an afternoon, a merge editor, and a missed status
+open: src/domain/order/order.entity.ts src/configuration/registry.ts src/configuration/errors/default.json src/domain/order/order.provider.ts src/domain/order/order.resolver.ts docs/statuses.md
+vimrc: set hidden
+
+@brief
+The last job in the dojo. Nothing in it is new. All of it is Tuesday.
+
+    ORD-1500  Support need to put an order on hold while they talk to
+              the customer, instead of cancelling it and taking the
+              order again afterwards.
+
+              Cut-off for the release is 17:00 and it is 16:20. The
+              branch is finished apart from the provider and the
+              resolver, and `git merge main` has just failed.
+
+Four things, in this order.
+
+  **1. The merge.** Two files conflicted.
+
+  `order.entity.ts` — `main` added `'REFUNDED'` to the status union and
+  you added `'ON_HOLD'`. Both sides are one line, and the answer is one
+  line with both members on it, `'REFUNDED'` first.
+
+  `registry.ts` — two hunks, both of them "each side added a
+  registration and both are wanted". No spacing to preserve.
+
+  **2. The error code.** `ORDER_ON_HOLD`, a 409, not reported, directly
+  under `ORDER_ALREADY_SHIPPED`.
+
+  **3. The feature.**
+
+  `order.provider.ts` — a `hold(id: string, reason: string)` below
+  `cancel`, one blank line between them. Same lookup, same shipped
+  guard, and an update with
+  `values: { status: 'ON_HOLD', holdReason: reason }`.
+
+  `order.resolver.ts` — `holdOrder` below `cancelOrder`, taking
+  `args: { id: string; reason: string }` and calling
+  `this.orderProvider.hold(args.id, args.reason)`.
+
+  **4. The review comment.** There is a commented-out spike at the top
+  of the provider that a reviewer asked you to delete three weeks ago.
+  It is the only comment in the file. It goes.
+
+`docs/statuses.md` is documentation and is somebody else's ticket. The
+migration under prisma/ is immutable. Neither changes.
+
+Par is 402 keystrokes. Every new line in this ticket already exists
+somewhere, in a form that needs two or three words changed.
+
+@keys
+| `$` `i` | append just before the last character of the line |
+| `3dd` | three lines |
+| `:g/^[<>=]\{7\}/d` | sweep every conflict marker in the buffer |
+| `:g/^\s*\/\//d` | delete every comment line |
+| `13Y` `12j` `p` | copy a method with its blank line, put it after itself |
+| `ciw` `ci{` `ci"` | change the word, the braces, the string |
+| `:bn` `:wqa` | next buffer, write everything |
+
+@hints
+Merge first, always. Finishing a feature on top of an unresolved merge
+means doing the interesting work twice when the resolution turns out to
+disagree with it.
+--
+The entity conflict is a one-line merge, so it is not a delete-a-block
+job. Delete the `<<<<<<<` line, then append your member to the end of
+`main`'s line before the semicolon, then take the remaining three lines
+in one `3dd`.
+--
+The registry has two hunks and both are the easy kind, so one
+`:g/^[<>=]\{7\}/d` does the whole file. That command is only safe when
+every hunk in the buffer is "keep both" — here it is; in the entity it
+was not.
+--
+For the provider: `/public async cancel` `Enter` `k` `13Y` `12j` `p`
+gives you a correctly spaced copy of `cancel` to turn into `hold`. Then
+edit the copy by searching forwards — everything you need to change
+occurs once above you and once in the copy, so `/status: 'CANCELLED'`
+`Enter` goes to the one you mean.
+
+@solution
+A route that measures 349 keystrokes.
+
+**entity** `/^<<<` `Enter` `dd` `$` `i | 'ON_HOLD'` `Esc` `j` `3dd`
+
+**registry** `:bn` `:g/^[<>=]\{7\}/d`
+
+**errors** `:bn` `/ALREADY_SHIPPED` `Enter` `yyp` `ci"ORDER_ON_HOLD` `Esc`
+
+**provider** `:bn` `:g/^\s*\/\//d`, then `/public async cancel` `Enter`
+`k` `13Y` `12j` `p`, then on the copy: `j` `www` `ciwhold` `Esc`,
+`f)` `i, reason: string` `Esc`, `/status: 'CANCELLED'` `Enter`
+`ci{ status: 'ON_HOLD', holdReason: reason ` `Esc`
+
+**resolver** `:bn` `/cancelOrder` `Enter` `k` `4Y` `3j` `p`, then `j`
+`www` `ciwholdOrder` `Esc`, `f{` `ci{ id: string; reason: string ` `Esc`,
+`/cancel(args` `Enter` `ciwhold` `Esc` `f)` `i, args.reason` `Esc`
+
+then `:wqa`.
+
+Four things are worth saying at the end of a year.
+
+**Not every conflict is the same conflict.** Three of the four hunks here
+are "both sides added a thing" and fall to one sweep command. The fourth
+is two versions of the same line and needs a merge by hand, in this case
+an `$` and an `i`. Running the sweep on the entity would have left you
+with two definitions of `OrderStatus`, the second shadowing the first,
+and TypeScript would have told you — eventually. Look at each hunk and
+ask what shape it is before you reach for the command that fixes the
+shape you saw last.
+
+**Order the work by what blocks what.** Merge, then error code, then the
+layers in dependency order, then the tidy-up. Not because it is neater,
+but because each step tells you the name the next one needs:
+`'ON_HOLD'` comes out of the merge, `ORDER_ON_HOLD` out of the registry
+pass, `hold` out of the provider. Working in that order means you never
+go back to check a spelling.
+
+**Copy the neighbour, every time.** The provider method, the resolver
+method and the JSON line in this ticket are 90% identical to something
+four lines away, and copying brings the house style with it for free.
+This is the single habit that separates a fast afternoon from a slow one,
+and it has nothing to do with typing speed.
+
+**And the keystrokes were never the point.** You have spent a year on
+motions and operators and registers and macros, and the reason none of
+this ticket needed a new key is that the vocabulary ran out three
+chapters ago. What you have been building since then is the reflex of
+looking at a change, naming its shape — many, lines, a few, order,
+structure, position — and reaching for the tool that fits it without
+having to think. That reflex is the whole of the skill. Everything else
+is practice, and practice is a Tuesday with a ticket on it.
+
+@start src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  holdReason?: string;
+};
+
+export type OrderStatus =
+<<<<<<< HEAD
+  | 'PENDING' | 'SHIPPED' | 'CANCELLED' | 'REFUNDED';
+=======
+  | 'PENDING' | 'SHIPPED' | 'CANCELLED' | 'ON_HOLD';
+>>>>>>> feature/order-holds
+
+@expected src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  holdReason?: string;
+};
+
+export type OrderStatus =
+  | 'PENDING' | 'SHIPPED' | 'CANCELLED' | 'REFUNDED' | 'ON_HOLD';
+
+@start src/configuration/registry.ts
+import { container } from 'tsyringe';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderResolver } from '../domain/order/order.resolver';
+<<<<<<< HEAD
+import { RefundProvider } from '../domain/order/refund.provider';
+=======
+import { HoldProvider } from '../domain/order/hold.provider';
+>>>>>>> feature/order-holds
+
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('OrderResolver', { useClass: OrderResolver });
+<<<<<<< HEAD
+container.register('RefundProvider', { useClass: RefundProvider });
+=======
+container.register('HoldProvider', { useClass: HoldProvider });
+>>>>>>> feature/order-holds
+
+@expected src/configuration/registry.ts
+import { container } from 'tsyringe';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderResolver } from '../domain/order/order.resolver';
+import { RefundProvider } from '../domain/order/refund.provider';
+import { HoldProvider } from '../domain/order/hold.provider';
+
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('OrderResolver', { useClass: OrderResolver });
+container.register('RefundProvider', { useClass: RefundProvider });
+container.register('HoldProvider', { useClass: HoldProvider });
+
+@start src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@expected src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "ORDER_ON_HOLD": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  // spike: holds used to live in their own table. The branch
+  // feature/holds-table has the query if we ever go back to it.
+  // const holds = await this.prisma.hold.findMany({ where: { orderId } });
+  // Leaving this here so it is not lost.
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async hold(id: string, reason: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'ON_HOLD', holdReason: reason },
+    });
+  }
+}
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@expected src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+
+  public async holdOrder(_: unknown, args: { id: string; reason: string }) {
+    return this.orderProvider.hold(args.id, args.reason);
+  }
+}
+
+@start docs/statuses.md
+# Order statuses
+
+| status | set by | terminal |
+|---|---|---|
+| PENDING | checkout | no |
+| SHIPPED | warehouse consumer | no |
+| CANCELLED | support or the customer | yes |
+| REFUNDED | the refund consumer | yes |
+
+This table is maintained by hand and is behind the code more often than
+anyone would like. ORD-1502 covers generating it from the union type.
+
+@start prisma/migrations/20241108_order_holds/migration.sql
+ALTER TABLE orders ADD COLUMN hold_reason VARCHAR(255) NULL;

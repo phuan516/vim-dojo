@@ -1,0 +1,110 @@
+@meta
+id: 29-04
+title: What a plugin manager actually does
+chapter: 29
+type: lesson
+skills: plugin-manager, packadd
+par: 92
+minutes: 8
+vscode: there is no equivalent; the marketplace is the manager
+open: vimrc install.sh
+vimrc: set hidden
+
+@brief
+Every vim tutorial on the internet opens with "first, install a plugin
+manager". It is worth knowing what one is before you agree to it.
+
+`vimrc` here is somebody's plugin block, written for vim-plug. Four
+plugins. What vim-plug does with that block, on `:PlugInstall`, is:
+
+  - `git clone` each repository into a directory
+  - put that directory on `runtimepath`
+  - run `:helptags` on its `doc/`
+  - on `:PlugUpdate`, `git pull` in each one
+
+That is the entire product. Vim 8's package system does the second step
+for free, and you met the third one last lesson, which leaves `git clone`.
+
+Write the shell script that does it. `install.sh` already has the two
+lines that make the target directory and step into it. Add one
+`git clone` line per plugin, in the order the vimrc lists them, of the
+form:
+
+    git clone https://github.com/tpope/vim-surround.git
+
+The `vimrc` file is here to read. Do not change it.
+
+@keys
+| `yy` `p` | you already own this; the transform is a substitution |
+| `:%s/Plug '\(.*\)'/…/` | capture the repo name out of each line |
+| `:bn` `:bp` | move between the two buffers |
+| `:wqa` | write and quit both |
+
+@hints
+Do not type four URLs. The four repository names are already in the file
+next door, one per line, in the right order.
+--
+Yank the four `Plug` lines, put them at the bottom of `install.sh`, and
+then turn them into clone commands with one `:%s`.
+--
+`/^Plug` `Enter`, `4yy`, `:bn` `Enter`, `G`, `p`, then
+`:%s/Plug '\(.*\)'/git clone https:\/\/github.com\/\1.git/` `Enter`.
+Forward slashes inside an `s///` have to be escaped, which is the one
+ugly part.
+
+@solution
+    /^Plug<Enter>  4yy  :bn<Enter>  G  p
+    :%s/Plug '\(.*\)'/git clone https:\/\/github.com\/\1.git/<Enter>
+    :wqa<Enter>
+
+Four lines of data, moved once and transformed once. Typing the four URLs
+by hand is about 180 keystrokes and two typos.
+
+Now the argument the lesson is really making. A manager buys you `git
+clone`, `git pull` and `helptags`, and charges you: a bootstrapping step
+in your vimrc, a dependency that can break your editor on a machine where
+it did not install cleanly, a lock file, and a layer between you and
+`runtimepath` when something goes wrong. For four plugins that is a bad
+trade. `git clone` into `~/.vim/pack/plugins/start/` and you are done, and
+your config works on a fresh machine as soon as the files are there.
+
+Where a manager starts to earn its place: twenty or thirty plugins,
+plugins with dependencies on each other, or a config you want to pin to
+exact commits and reproduce on a team's machines. Then lock files and
+update commands are doing real work. vim-plug is the small one, lazy.nvim
+the big one on the neovim side — chapter 31.
+
+Either way you now know what is underneath, which means when the manager
+breaks you can go and look at the directory it was managing.
+
+@start vimrc
+" --- Plugins --------------------------------------------------------
+call plug#begin('~/.vim/plugged')
+Plug 'tpope/vim-surround'
+Plug 'tpope/vim-commentary'
+Plug 'tpope/vim-fugitive'
+Plug 'junegunn/fzf.vim'
+call plug#end()
+
+" --- Everything else ------------------------------------------------
+set number
+set ignorecase
+set smartcase
+
+@start install.sh
+#!/bin/sh
+set -e
+
+mkdir -p ~/.vim/pack/plugins/start
+cd ~/.vim/pack/plugins/start
+
+@expected install.sh
+#!/bin/sh
+set -e
+
+mkdir -p ~/.vim/pack/plugins/start
+cd ~/.vim/pack/plugins/start
+git clone https://github.com/tpope/vim-surround.git
+git clone https://github.com/tpope/vim-commentary.git
+git clone https://github.com/tpope/vim-fugitive.git
+git clone https://github.com/junegunn/fzf.vim.git

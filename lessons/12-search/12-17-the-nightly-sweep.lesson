@@ -1,0 +1,209 @@
+@meta
+id: 12-17
+title: Scenario — the nightly payout sweep
+chapter: 12
+type: scenario
+skills: search-slash, search-star, search-motion, search-offset
+par: 75
+minutes: 10
+vscode: three round trips through Ctrl+F and a lot of scrolling
+vimrc: set hlsearch incsearch
+open: payout.sweep.task.ts
+
+@brief
+A ticket. One file, ninety lines, three unrelated fixes in it — which is
+what a morning actually looks like.
+
+    OPS-771  Payout sweep: paying out a hundredth of what it should,
+             printing the ledger token into the logs, and retrying one
+             time too many.
+
+  1. The debug block at the top of `run` goes. All four lines of it,
+     down to the `return`. One of them prints an API token into the
+     application log, which is why this is a ticket and not a chore.
+
+  2. The ledger counts in pence and `send` is handing it pounds. The
+     amount passed to `ledgerService.record` needs multiplying by 100.
+
+  3. `MAX_PAYOUT_ATTEMPTS` is a maximum, so a payout that has already
+     used all of its attempts must not get another one. The comparison
+     in `send` should be `>=`, not `>`.
+
+Nothing else in the file changes. Do the whole thing without scrolling
+and without a motion key that is not a search — the point of the exercise
+is that you can navigate ninety lines by naming things.
+
+@keys
+| `/text` `Enter` | go to the next match |
+| `d/text` `Enter` | delete from here to the next match |
+| `/text/e` `Enter` | land on the last character of the match |
+| `*` | search for the word under the cursor |
+| `gg` | back to line 1 |
+| `F` `x` `a` | back to a character on this line, then append |
+
+@hints
+Three jobs, three searches. Take them in file order and the cursor never
+has to go backwards.
+--
+The debug block is an operator plus a search: start at its first line and
+delete up to the `return`. The pence fix needs the cursor at the *end* of
+what you find, which is what a search offset is for.
+--
+For the third fix, `MAX_PAYOUT_ATTEMPTS` is sitting on line 1 in the
+import. Get the cursor onto it and press `*` rather than typing that
+name out again — then `F>` and `a=`.
+
+@solution
+/const started<Enter>  d/return<Enter>
+    /payout.amount/e<Enter>  a * 100<Esc>
+    gg  fM  *  F>  a=<Esc>
+    :wq<Enter>
+
+Around sixty-five keystrokes for three fixes in a ninety-line file, and
+not one of them was `j`, `k`, `G` or a scroll.
+
+Look at the three moves and notice they are three different uses of the
+same feature. The first uses a search as the *end* of an edit. The second
+uses a search as a *destination with a precise landing spot*. The third
+uses the text already under the cursor as the search itself, so a name
+you would have had to type — and could have mistyped — never gets typed.
+
+The one habit worth carrying out of this chapter is the first line of
+that solution. When you know what you are looking for, say it. The file
+being ninety lines or nine hundred stops being a fact you have to care
+about, and the mouse stops being the obvious tool for "where is that
+thing".
+
+@start payout.sweep.task.ts
+import { MAX_PAYOUT_ATTEMPTS } from '../../configuration/limits';
+import { injectable, inject } from 'tsyringe';
+import { Task } from '../../infrastructure/task';
+import { exception } from '../../configuration/errors';
+import { PayoutRepository } from '../../domain/payout/payout.repository';
+import { LedgerService } from '../../infrastructure/services/ledger.service';
+import { AlertService } from '../../infrastructure/services/alert.service';
+
+@injectable()
+export class PayoutSweepTask extends Task {
+  constructor(
+    @inject(PayoutRepository) protected payoutRepository: PayoutRepository,
+    @inject(LedgerService) protected ledgerService: LedgerService,
+    @inject(AlertService) protected alertService: AlertService,
+  ) {
+    super();
+  }
+
+  public schedule = '0 3 * * *';
+
+  public async run() {
+    const started = Date.now();
+    console.log('[payout-sweep] starting', new Date().toISOString());
+    console.log('[payout-sweep] ledger token', process.env.LEDGER_API_TOKEN);
+    console.log('[payout-sweep] elapsed ms', Date.now() - started);
+    return this.sweep({ before: new Date() });
+  }
+
+  public async sweep(args: { before: Date }) {
+    const due = await this.payoutRepository.findDue({ before: args.before });
+
+    for (const payout of due) {
+      await this.send(payout);
+    }
+
+    return { swept: due.length };
+  }
+
+  public async send(payout: { id: string; amount: number; attempts: number }) {
+    if (payout.attempts > MAX_PAYOUT_ATTEMPTS) {
+      await this.alertService.raise({
+        channel: 'payments-oncall',
+        message: `payout ${payout.id} exhausted its attempts`,
+      });
+
+      throw exception('PAYOUT_ATTEMPTS_EXHAUSTED');
+    }
+
+    await this.ledgerService.record({
+      reference: payout.id,
+      amount: payout.amount,
+      direction: 'CREDIT',
+    });
+
+    return this.payoutRepository.update({
+      where: { id: payout.id },
+      values: { status: 'SENT', sentAt: new Date() },
+    });
+  }
+
+  public async onFailure(error: Error) {
+    await this.alertService.raise({
+      channel: 'payments-oncall',
+      message: `payout sweep failed: ${error.message}`,
+    });
+  }
+}
+
+@expected payout.sweep.task.ts
+import { MAX_PAYOUT_ATTEMPTS } from '../../configuration/limits';
+import { injectable, inject } from 'tsyringe';
+import { Task } from '../../infrastructure/task';
+import { exception } from '../../configuration/errors';
+import { PayoutRepository } from '../../domain/payout/payout.repository';
+import { LedgerService } from '../../infrastructure/services/ledger.service';
+import { AlertService } from '../../infrastructure/services/alert.service';
+
+@injectable()
+export class PayoutSweepTask extends Task {
+  constructor(
+    @inject(PayoutRepository) protected payoutRepository: PayoutRepository,
+    @inject(LedgerService) protected ledgerService: LedgerService,
+    @inject(AlertService) protected alertService: AlertService,
+  ) {
+    super();
+  }
+
+  public schedule = '0 3 * * *';
+
+  public async run() {
+    return this.sweep({ before: new Date() });
+  }
+
+  public async sweep(args: { before: Date }) {
+    const due = await this.payoutRepository.findDue({ before: args.before });
+
+    for (const payout of due) {
+      await this.send(payout);
+    }
+
+    return { swept: due.length };
+  }
+
+  public async send(payout: { id: string; amount: number; attempts: number }) {
+    if (payout.attempts >= MAX_PAYOUT_ATTEMPTS) {
+      await this.alertService.raise({
+        channel: 'payments-oncall',
+        message: `payout ${payout.id} exhausted its attempts`,
+      });
+
+      throw exception('PAYOUT_ATTEMPTS_EXHAUSTED');
+    }
+
+    await this.ledgerService.record({
+      reference: payout.id,
+      amount: payout.amount * 100,
+      direction: 'CREDIT',
+    });
+
+    return this.payoutRepository.update({
+      where: { id: payout.id },
+      values: { status: 'SENT', sentAt: new Date() },
+    });
+  }
+
+  public async onFailure(error: Error) {
+    await this.alertService.raise({
+      channel: 'payments-oncall',
+      message: `payout sweep failed: ${error.message}`,
+    });
+  }
+}

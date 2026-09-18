@@ -1,0 +1,81 @@
+@meta
+id: 05-15
+title: Replacing one word in a chain
+chapter: 05
+type: lesson
+skills: word-e, WORD-motions
+par: 21
+minutes: 6
+vscode: double-click the method name and type over it
+open: order.provider.ts
+
+@brief
+The VS Code instinct for renaming one piece of `this.orderRepository.findFirst`
+is to double-click it. The double-click is doing two jobs at once: it finds
+the boundaries of the word, and it deletes what is inside them.
+
+You have not been given a delete command yet — that is chapter eight. But
+you already have both halves of this in pieces: `e` finds the end of a
+word, and `Ctrl-W` in insert mode rubs out the word behind the cursor,
+which you learned in chapter three.
+
+Put them together. `findFirst` returns a nullable record and the codebase
+uses `findOne` everywhere else. Change it.
+
+Do not retype the rest of the chain — if your fix touches
+`orderRepository`, you did it the slow way and par will say so.
+
+@keys
+| `9e` | nine word-ends forward |
+| `a` | append after the cursor |
+| `Ctrl-W` | in insert mode: delete the word before the cursor |
+| `Esc` | out |
+
+@hints
+Get to the *end* of `findFirst`, then start typing there. Something you
+already know deletes backwards a word at a time once you are in insert
+mode.
+--
+`Ctrl-W` in insert mode deletes back to the start of the word — and it
+uses the same word rule `e` does, so on `orderRepository.findFirst` it
+stops at the dot and takes only `findFirst`.
+--
+`2j` then `9e` puts you on the last `t` of `findFirst`: the stops are
+`const`, `order`, `=`, `await`, `this`, `.`, `orderRepository`, `.`,
+`findFirst`. Then `a`, `Ctrl-W`, type `findOne`, `Esc`, `:wq`.
+
+@solution
+    2j  9e  a  <Ctrl-W> findOne <Esc>  :wq<Enter>
+
+`Ctrl-W` stopping at the dot is the point. It respects the same boundary
+`w` and `e` do, so one press takes exactly the identifier you were
+standing at the end of and nothing else — the double-click, without the
+mouse and without the selection to lose.
+
+Two things follow from that. First, `ea` then `Ctrl-W` is a complete
+rename-this-token move that works today, with nothing from a later
+chapter. Second, if you wanted the whole `this.orderRepository.findFirst`
+gone instead, `Ctrl-W` would need four presses, because it is word-sized
+and not WORD-sized. There is no capital version of it.
+
+Chapter eight replaces this with `cw`, which is two keys and does not
+involve counting to nine. Learn this shape anyway: the reflex of landing
+on a boundary before you start typing is the part that carries over.
+
+@start order.provider.ts
+export class OrderProvider {
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findFirst({ where: { id } });
+
+    return order;
+  }
+}
+
+@expected order.provider.ts
+export class OrderProvider {
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    return order;
+  }
+}

@@ -1,0 +1,78 @@
+@meta
+id: 08-21
+title: Capstone — modes, save, undo
+chapter: 08
+type: scenario
+skills: delete-d, change-c, yank-y, put-p, undo, insert-i
+par: 38
+minutes: 6
+vscode: typing, Ctrl+S, Ctrl+Z
+open: standup.md
+
+@brief
+Vim starts in NORMAL mode. Normal mode is not "broken" - it is the
+mode where every letter on your keyboard is a command. You only type
+text after you have deliberately asked to.
+
+Three things to do in standup.md:
+
+  1. Fix the typo "Yesterdya" -> "Yesterday"
+  2. Delete the whole "TODO:" line
+  3. In its place, add a line:  - Blocked: nothing
+
+Then save and quit.
+
+Make a mess on purpose at some point and undo it with  u  .
+Redo with  Ctrl-R  . You cannot break anything here.
+
+@keys
+i        INSERT mode, typing starts before the cursor
+a        INSERT mode, typing starts after the cursor
+Esc      back to NORMAL mode. When lost, press Esc.
+x        delete the character under the cursor
+dd       delete the whole line
+o        open a new line below and start typing
+u        undo        Ctrl-R  redo
+:w       write (save)        :q  quit        :wq  both
+:q!      quit and throw away changes
+
+@hints
+The typo is a swap: "dya" should be "day". Put the cursor on the
+wrong character and press x to delete it, then a to append the
+letter back in the right place. Esc when done.
+--
+To kill a line, put the cursor anywhere on it and press dd. The
+whole line disappears, no selecting required.
+--
+Press o on the line above where you want the new text. It opens a
+blank line below and drops you into INSERT mode in one keystroke.
+Then type the line, press Esc, then :wq and Enter.
+
+@solution
+/Yesterdya   Enter        jump to the typo
+fy                        hop to the y in "dya"
+x                         delete it  -> "Yesterda"
+a y  Esc                  append "y" -> "Yesterday"   (or just: cw Yesterday Esc)
+
+G                         last line (the TODO line)
+cc                        clear the line, stay in INSERT
+- Blocked: nothing        type it
+Esc
+:wq Enter
+
+The mental model: you are not "in a text box". You are issuing
+commands, and INSERT mode is one of the commands.
+
+@start standup.md
+# Standup - Tuesday
+
+- Yesterdya: finished the order repository
+- Today: start on the resolver
+- TODO: delete this line before posting
+
+@expected standup.md
+# Standup - Tuesday
+
+- Yesterday: finished the order repository
+- Today: start on the resolver
+- Blocked: nothing

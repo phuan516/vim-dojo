@@ -1,0 +1,55 @@
+@meta
+id: 04-11
+title: Drill — four lines, one typing
+chapter: 04
+type: drill
+skills: count-prefix
+par: 30
+minutes: 5
+reps: 8
+vscode: type it, copy it, paste it three times
+open: review.md
+
+@brief
+Eight times: add four identical `- [ ] follow up` lines to the end of the
+file, typing the text once. Save, quit, repeat.
+
+@keys
+| `4o` | open four lines below, repeating what you type |
+| `5j` | down five lines |
+
+@hints
+The count goes in front of `o`.
+--
+Nothing appears four times until you press `Esc`. Trust it and leave
+insert mode.
+
+@solution
+    5j 4o - [ ] follow up <Esc> :wq<Enter>
+
+Twenty-four keystrokes for four lines.
+
+The rep you are building is the pause before the typing: hand goes to the
+count *before* it goes to the command. New vim users type `o`, then the
+text, then think "I need three more of those". By rep eight, the count
+should arrive first, because after the fact it is no use to you.
+
+@start review.md
+# Sprint 42 review
+
+## Shipped
+
+- refund window
+- webhook retries
+
+@expected review.md
+# Sprint 42 review
+
+## Shipped
+
+- refund window
+- webhook retries
+- [ ] follow up
+- [ ] follow up
+- [ ] follow up
+- [ ] follow up

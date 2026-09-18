@@ -1,0 +1,129 @@
+@meta
+id: 03-15
+title: Wire the payment service back in
+chapter: 03
+type: lesson
+skills: insert-I, insert-A, open-o, insert-ctrl-w
+par: 230
+minutes: 10
+vscode: five clicks in four places and a lot of retyping
+open: order.provider.ts
+
+@brief
+`OrderProvider` calls a payment service it never had injected, and the
+method it calls was deleted when the service was rewritten. Five changes,
+one file, top to bottom.
+
+  1. A third import, under the other two:
+
+         import { PaymentService } from '../../infrastructure/services/payment.service';
+
+  2. A second constructor parameter, under the first, comma and all:
+
+         @inject(PaymentService) protected paymentService: PaymentService,
+
+  3. The refund call is `refundLegacy`. It is now just `refund`, and the
+     rest of the call is unchanged.
+
+  4. That same call is not awaited, and has no semicolon.
+
+  5. The `return order` line has no semicolon either.
+
+Every one of those is a key from this chapter. None of them needs you to
+move the cursor sideways, and none of them needs Enter. Plan the whole run
+before you press anything: which door, in which order, and how many `j`
+between them.
+
+@keys
+| `o` | open a line below |
+| `I` | insert at the first non-blank character |
+| `A` | append at the end of the line |
+| `Ctrl-W` | delete the word before the cursor |
+| `Ctrl-U` | clear the line back to the indent |
+| `j` | down a line |
+
+@hints
+Top to bottom means every move is `j` and you never have to work out where
+you are. Remember that each line you open pushes everything below it down
+by one.
+--
+Both new lines are `o` on the line above them. The `await` is `I`. Both
+semicolons are `A`. The method name is the only one with a choice in it.
+--
+For `refundLegacy`, get to the end of the line with `A` and walk back with
+`Ctrl-W`. It stops at every dot and bracket, so it takes six presses to
+get back to `this.paymentService.`, and then you type the rest of the call
+and the semicolon in one go. `Ctrl-U` and retyping the whole line is the
+other honest answer, and costs about twenty more keystrokes.
+
+@solution
+One run, top to bottom:
+
+    j o import { PaymentService } from '../../infrastructure/services/payment.service'; <Esc>
+    j j j j j o @inject(PaymentService) protected paymentService: PaymentService, <Esc>
+    j j j j j j I await<Space> <Esc>
+    A <Ctrl-W>×6 refund(order.id); <Esc>
+    j j A ; <Esc>
+    :wq<Enter>
+
+Two hundred and two keystrokes, and a hundred and forty-four of them are
+the two long lines you were asked to add. The other three edits cost
+fifty-eight between them, the typing included.
+
+That ratio is the whole point of the chapter, so it is worth saying
+plainly. When you are fluent, the cost of an edit in vim is the cost of
+typing the new text, and nothing else. No positioning, no selecting, no
+deleting what you are about to replace. If your keystroke count is much
+higher than the number of characters you added, you are paying for
+navigation, and navigation is what every remaining chapter of this belt is
+about making cheap.
+
+Three habits to take into chapter 4:
+
+- Work top to bottom when the edits allow it. It turns navigation into one
+  repeated key and removes the chance of getting lost.
+- Choose the door before you press anything. `I`, `A`, `o`, `O` — one of
+  them is always closer to the edit than `i` plus steering.
+- `Esc` the moment the words stop. The insert-mode keys in this chapter,
+  `Ctrl-W`, `Ctrl-U`, `Ctrl-O` and `gi`, exist to make a burst of typing
+  survivable, not to make insert mode somewhere to live.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderRepository } from './order.repository';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  public async cancel(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    this.paymentService.refundLegacy(order.id)
+
+    return order
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async cancel(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    await this.paymentService.refund(order.id);
+
+    return order;
+  }
+}

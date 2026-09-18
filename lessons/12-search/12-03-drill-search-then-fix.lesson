@@ -1,0 +1,101 @@
+@meta
+id: 12-03
+title: Drill — search, then fix
+chapter: 12
+type: drill
+skills: search-slash
+par: 20
+minutes: 5
+reps: 8
+vscode: Ctrl+F, type, Enter, Escape, click, edit
+open: http.config.ts
+
+@brief
+Eight times: the retry count near the bottom of the config should be 5,
+not 2. Get there with a search, change the digit, save.
+
+Never touch a motion key. The whole point is that the distance to the
+line stops mattering.
+
+@keys
+| `/text` `Enter` | jump to the next match |
+| `f` `x` | to the next `x` on this line |
+| `r` | replace one character |
+
+@hints
+One search gets you onto the line. The digit is at the end of it.
+--
+`/retries` `Enter`, then `f2` to hop onto the digit, then `r5` to
+overwrite it.
+
+@solution
+/retries<Enter>  $  r5  :wq<Enter>
+
+Seventeen keystrokes, and it would be seventeen if the file were four
+thousand lines long. That is the property you are drilling: search time
+is independent of distance, so you stop thinking about where in the file
+things are.
+
+By rep eight you should be typing `/retries` without deciding to. The
+rhythm is: name the thing, Enter, edit. Most edits in a real file start
+that way.
+
+@start http.config.ts
+export const httpConfig = {
+  baseUrl: 'https://api.example.com',
+  userAgent: 'clarity-order-service/2.4.1',
+  keepAlive: true,
+  maxSockets: 64,
+  compression: 'gzip',
+  proxy: undefined,
+  headers: {
+    accept: 'application/json',
+    'content-type': 'application/json',
+  },
+  timeouts: {
+    connectMs: 2000,
+    requestMs: 8000,
+    idleMs: 15000,
+  },
+  telemetry: {
+    enabled: true,
+    sampleRate: 0.25,
+    endpoint: 'https://otel.example.com/v1/traces',
+  },
+  circuitBreaker: {
+    failureThreshold: 5,
+    resetMs: 30000,
+  },
+  retries: 2,
+  retryDelayMs: 400,
+};
+
+@expected http.config.ts
+export const httpConfig = {
+  baseUrl: 'https://api.example.com',
+  userAgent: 'clarity-order-service/2.4.1',
+  keepAlive: true,
+  maxSockets: 64,
+  compression: 'gzip',
+  proxy: undefined,
+  headers: {
+    accept: 'application/json',
+    'content-type': 'application/json',
+  },
+  timeouts: {
+    connectMs: 2000,
+    requestMs: 8000,
+    idleMs: 15000,
+  },
+  telemetry: {
+    enabled: true,
+    sampleRate: 0.25,
+    endpoint: 'https://otel.example.com/v1/traces',
+  },
+  circuitBreaker: {
+    failureThreshold: 5,
+    resetMs: 30000,
+  },
+  retries: 5,
+  retryDelayMs: 400,
+};

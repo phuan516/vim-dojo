@@ -1,0 +1,105 @@
+@meta
+id: 27-19
+title: The key in front of your keys
+chapter: 27
+type: lesson
+skills: leader-key, mapping
+par: 67
+minutes: 8
+vscode: a chord prefix in keybindings.json, which nobody configures twice
+open: standup.md
+vimrc: source config.vim
+
+@brief
+Vim has about a dozen free keys and you are going to want fifty mappings.
+The way out is a **leader**: one key you press first, turning every other
+key into a two-key command of your own. `<leader>` in a mapping stands for
+whatever `mapleader` is set to.
+
+This repo's `config.vim` sets one, and defines a mapping on it that marks
+a line done. Your colleague's instruction was "leader-d on each of them",
+which would be more useful if you knew what leader was here. It is not the
+default.
+
+The first three carry-over items are finished — mark them with the team's
+mapping. The last three need an owner: define your own leader mapping that
+appends ` (peter)` and use it on those.
+
+@keys
+| `:let mapleader = ","` | set the leader key — do it before any mapping uses it |
+| `:echo mapleader` | what is it now |
+| `:nnoremap <leader>o A (peter)<Esc>` | a mapping behind the leader |
+| `:nmap` | every normal-mode mapping, leader shown as the real key |
+| `:verbose nmap ,d` | what that key does and which file did it |
+
+@hints
+You do not have to guess the leader. List the mappings and read the
+left-hand column — the team's "done" mapping is in there with its real
+key spelled out.
+--
+`:verbose nmap ,d` confirms both the key and the file. Then define yours
+the same way the config did, with `<leader>` in the left-hand side.
+--
+`3G`, then `,d` `j` three times. Then
+`:nnoremap <leader>o A (peter)<Esc>` `Enter`, and `j` `,o` three times.
+
+@solution
+    3G  ,dj,dj,d
+    :nnoremap <leader>o A (peter)<Esc><Enter>
+    j,oj,oj,o  :wq<Enter>
+
+Fifty-eight keystrokes.
+
+The whole of `mapleader` is this: it is a variable, `<leader>` in a
+mapping is replaced by its value **at the moment the mapping is defined**,
+and that is all. Two consequences, both of which catch people:
+
+Set `mapleader` before the mappings that use it. A `let mapleader` line
+half way down a config leaves the mappings above it bound to the old
+leader, and nothing warns you.
+
+Changing `mapleader` later does not move existing mappings. They were
+resolved when they were made. This is also why `:nmap` lists `,d` and not
+`<leader>d` — by the time the mapping exists, the leader is gone.
+
+The common choices are `,` and `<Space>`. Space is popular because it does
+nothing useful in normal mode and both thumbs can reach it; comma costs
+you the "repeat `f` backwards" key, which you will miss. The default,
+backslash, is fine and awkward to reach. Pick one and do not change it —
+the value of a leader is entirely in your fingers knowing it.
+
+There is a second one. `<LocalLeader>` is for mappings that only apply to
+certain filetypes, defined with `<buffer>` in an ftplugin. Plugin authors
+are asked to use it for exactly that, so that a LaTeX plugin's keys do not
+collide with yours.
+
+And when a key you have used for months suddenly does something else, the
+command is `:verbose nmap <key>`. It names the plugin that took it, in one
+line, which is quicker than reading anybody's documentation.
+
+@start config.vim
+" team defaults, inherited from the old tech lead
+let mapleader = ","
+nnoremap <leader>w :w<CR>
+nnoremap <leader>n :nohlsearch<CR>
+nnoremap <leader>d A (done)<Esc>
+
+@start standup.md
+# Sprint 41 carry-over
+
+- [ ] refund window comparison uses local time
+- [ ] gateway schema cache not cleared on deploy
+- [ ] payment webhook retries are not idempotent
+- [ ] export job times out above 50k rows
+- [ ] customer search ignores archived records
+- [ ] refund reason missing from the audit log
+
+@expected standup.md
+# Sprint 41 carry-over
+
+- [ ] refund window comparison uses local time (done)
+- [ ] gateway schema cache not cleared on deploy (done)
+- [ ] payment webhook retries are not idempotent (done)
+- [ ] export job times out above 50k rows (peter)
+- [ ] customer search ignores archived records (peter)
+- [ ] refund reason missing from the audit log (peter)

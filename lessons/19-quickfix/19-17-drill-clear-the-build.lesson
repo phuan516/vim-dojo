@@ -1,0 +1,177 @@
+@meta
+id: 19-17
+title: Drill — clear the build
+chapter: 19
+type: drill
+skills: make-errorformat
+par: 80
+minutes: 5
+reps: 6
+vscode: click the Problems panel, retype the word
+vimrc: set errorformat=%f(%l\\,%c):\ %m hidden
+open: tsc-output.txt
+
+@brief
+Two errors in `tsc-output.txt`, both misspelled names with a "did you
+mean" in the message. Six times: load the file, fix the word under the
+cursor, next, fix, quit.
+
+@keys
+| `:cfile tsc-output.txt` | load the errors, jump to the first |
+| `ciw` | change the word the cursor is on |
+| `:cn` | next error |
+
+@hints
+`:cfile tsc-output.txt` puts the cursor on `orderRepositry`. `ciw` and
+the right spelling.
+--
+`:w`, `:cn`, `ciw` again, `:wq`.
+
+@solution
+    :cfile tsc-output.txt<Enter>  ciw orderRepository <Esc> :w<Enter>  :cn<Enter>  ciw paymentService <Esc> :wq<Enter>
+
+The point of the drill is that you never search for the error. The
+compiler said where it is, `errorformat` read that, and the cursor was
+on the word before you had finished reading the message.
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepositry.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.issueRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.issueRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start src/domain/payment/payment.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { PaymentRepository } from './payment.repository';
+import { PaymentProducer } from './payment.producer';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class PaymentProvider {
+  constructor(
+    @inject(PaymentRepository) protected paymentRepository: PaymentRepository,
+    @inject(PaymentProducer) protected paymentProducer: PaymentProducer,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async reverse(id: string) {
+    const payment = await this.paymentRepository.findOne({ where: { id } });
+
+    if (!payment) {
+      throw exception('PAYMENT_NOT_FOUND');
+    }
+
+    const receipt = await this.paymentServce.issueRefund(payment.orderId);
+
+    await this.paymentProducer.refundIssued({ paymentId: id, receipt });
+
+    return receipt;
+  }
+}
+
+@expected src/domain/payment/payment.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { PaymentRepository } from './payment.repository';
+import { PaymentProducer } from './payment.producer';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class PaymentProvider {
+  constructor(
+    @inject(PaymentRepository) protected paymentRepository: PaymentRepository,
+    @inject(PaymentProducer) protected paymentProducer: PaymentProducer,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async reverse(id: string) {
+    const payment = await this.paymentRepository.findOne({ where: { id } });
+
+    if (!payment) {
+      throw exception('PAYMENT_NOT_FOUND');
+    }
+
+    const receipt = await this.paymentService.issueRefund(payment.orderId);
+
+    await this.paymentProducer.refundIssued({ paymentId: id, receipt });
+
+    return receipt;
+  }
+}
+
+@start tsc-output.txt
+src/domain/order/order.provider.ts(14,30): error TS2551: Property 'orderRepositry' does not exist on type 'OrderProvider'. Did you mean 'orderRepository'?
+src/domain/payment/payment.provider.ts(22,32): error TS2551: Property 'paymentServce' does not exist on type 'PaymentProvider'. Did you mean 'paymentService'?

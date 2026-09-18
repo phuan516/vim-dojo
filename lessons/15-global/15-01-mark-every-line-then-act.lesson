@@ -1,0 +1,392 @@
+@meta
+id: 15-01
+title: Mark every line, then act
+chapter: 15
+type: lesson
+skills: global-delete
+par: 18
+minutes: 5
+vscode: search for DEBUG, then delete two hundred lines one at a time
+open: worker.log
+
+@brief
+Overnight the order worker wrote two hundred lines of log, and finance
+want to read them. About a third are `DEBUG` lines: heartbeats, cache
+misses, query timings. None of that is for finance. Every `DEBUG` line
+goes; every other line stays exactly where it is.
+
+Doing this by hand is a search, a `dd`, an `n`, a `dd`, seventy times.
+Nobody should do that, and in vim nobody does.
+
+The command you are about to learn works in two passes. First it walks
+the whole file and marks every line that matches a pattern. Then it
+visits each marked line and runs a command there. That is the entire
+mechanism. The command can be anything you could type after a colon;
+this lesson uses the simplest one, delete.
+
+@keys
+| `:g/pattern/d` | on every line matching `pattern`, run `d` (delete the line) |
+| `:g/pattern` | with no command, just print the matching lines: a preview |
+
+@hints
+Do not press `n`. The whole point is to say the pattern once and let vim
+find every line for you.
+--
+The command is `:g`, short for global. Between the slashes goes the
+pattern; after the last slash goes the command to run on each match.
+--
+`:g/DEBUG/d` and Enter. Seventy-odd lines vanish in one command, and one
+`u` would bring them all back.
+
+@solution
+    :g/DEBUG/d<Enter>  :wq<Enter>
+
+Fifteen keystrokes for seventy deletions, and it would be the same
+fifteen for seven thousand.
+
+Hold on to the two-pass picture, because everything else in this chapter
+is a variation on it. Pass one: mark every line matching the pattern.
+Pass two: go to each marked line and run the command. The marking
+happens before any command runs, which is why deleting lines does not
+confuse it. Line numbers shift as lines disappear, but the marks are on
+the lines themselves, not on the numbers.
+
+Two things worth knowing today. Leave the command off, `:g/DEBUG`, and
+vim just prints the matching lines: a free preview before you commit to
+anything destructive. And the whole run is a single change, so `u`
+undoes all of it at once. That makes `:g` safe to try on a pattern you
+are not sure about: run it, look, undo if it took too much.
+
+@start worker.log
+2026-09-16T02:14:04Z ERROR order-worker payment gateway 502 for ord_4562
+2026-09-16T02:14:05Z INFO  order-worker email queued for cust_98
+2026-09-16T02:14:13Z INFO  order-worker customer cust_22 updated
+2026-09-16T02:14:19Z DEBUG order-worker rabbit ack ord_4148
+2026-09-16T02:14:23Z DEBUG order-worker resolver Order.total called
+2026-09-16T02:14:25Z INFO  order-worker email queued for cust_96
+2026-09-16T02:14:32Z INFO  order-worker customer cust_14 updated
+2026-09-16T02:14:40Z DEBUG order-worker heartbeat ok
+2026-09-16T02:14:41Z WARN  order-worker retrying ord_4010 after timeout
+2026-09-16T02:14:47Z INFO  order-worker email queued for cust_80
+2026-09-16T02:14:52Z WARN  order-worker slow query 573ms on orders
+2026-09-16T02:14:59Z WARN  order-worker rate limit near for cust_15
+2026-09-16T02:15:05Z INFO  order-worker order ord_4215 shipped
+2026-09-16T02:15:14Z WARN  order-worker retrying ord_4227 after timeout
+2026-09-16T02:15:19Z INFO  order-worker order ord_4452 received for cust_29
+2026-09-16T02:15:22Z DEBUG order-worker consumer idle
+2026-09-16T02:15:26Z INFO  order-worker email queued for cust_40
+2026-09-16T02:15:31Z DEBUG order-worker resolver Order.total called
+2026-09-16T02:15:36Z INFO  order-worker order ord_4978 received for cust_46
+2026-09-16T02:15:41Z DEBUG order-worker resolver Order.total called
+2026-09-16T02:15:44Z INFO  order-worker order ord_4261 shipped
+2026-09-16T02:15:50Z ERROR order-worker payment gateway 502 for ord_4304
+2026-09-16T02:15:58Z DEBUG order-worker prisma query took 346ms
+2026-09-16T02:15:59Z DEBUG order-worker heartbeat ok
+2026-09-16T02:16:08Z DEBUG order-worker resolver Order.total called
+2026-09-16T02:16:17Z DEBUG order-worker prisma query took 86ms
+2026-09-16T02:16:25Z WARN  order-worker slow query 166ms on orders
+2026-09-16T02:16:26Z DEBUG order-worker payload size 500 bytes
+2026-09-16T02:16:30Z WARN  order-worker slow query 50ms on orders
+2026-09-16T02:16:39Z INFO  order-worker customer cust_45 updated
+2026-09-16T02:16:46Z INFO  order-worker batch 310 started
+2026-09-16T02:16:49Z INFO  order-worker customer cust_18 updated
+2026-09-16T02:16:58Z DEBUG order-worker cache miss customer:cust_70
+2026-09-16T02:17:05Z INFO  order-worker refund issued for ord_4429
+2026-09-16T02:17:08Z ERROR order-worker REFUND_FAILED ord_4096
+2026-09-16T02:17:11Z DEBUG order-worker heartbeat ok
+2026-09-16T02:17:12Z DEBUG order-worker retry attempt 2 for ord_4685
+2026-09-16T02:17:15Z ERROR order-worker REFUND_FAILED ord_4786
+2026-09-16T02:17:16Z INFO  order-worker email queued for cust_93
+2026-09-16T02:17:25Z INFO  order-worker order ord_4995 shipped
+2026-09-16T02:17:26Z INFO  order-worker customer cust_39 updated
+2026-09-16T02:17:32Z INFO  order-worker order ord_4627 received for cust_82
+2026-09-16T02:17:37Z INFO  order-worker refund issued for ord_4777
+2026-09-16T02:17:42Z DEBUG order-worker prisma query took 513ms
+2026-09-16T02:17:51Z ERROR order-worker REFUND_FAILED ord_4956
+2026-09-16T02:17:58Z DEBUG order-worker cache miss customer:cust_21
+2026-09-16T02:18:01Z INFO  order-worker payment captured for ord_4139
+2026-09-16T02:18:09Z DEBUG order-worker heartbeat ok
+2026-09-16T02:18:10Z WARN  order-worker rate limit near for cust_82
+2026-09-16T02:18:16Z DEBUG order-worker retry attempt 1 for ord_4876
+2026-09-16T02:18:17Z DEBUG order-worker retry attempt 1 for ord_4438
+2026-09-16T02:18:25Z WARN  order-worker rate limit near for cust_35
+2026-09-16T02:18:27Z WARN  order-worker retrying ord_4564 after timeout
+2026-09-16T02:18:34Z INFO  order-worker email queued for cust_95
+2026-09-16T02:18:35Z DEBUG order-worker rabbit ack ord_4800
+2026-09-16T02:18:37Z WARN  order-worker rate limit near for cust_64
+2026-09-16T02:18:44Z DEBUG order-worker rabbit ack ord_4076
+2026-09-16T02:18:47Z WARN  order-worker slow query 477ms on orders
+2026-09-16T02:18:49Z INFO  order-worker order ord_4728 received for cust_37
+2026-09-16T02:18:54Z DEBUG order-worker resolver Order.total called
+2026-09-16T02:19:01Z INFO  order-worker batch 313 finished
+2026-09-16T02:19:03Z DEBUG order-worker consumer idle
+2026-09-16T02:19:06Z WARN  order-worker retrying ord_4974 after timeout
+2026-09-16T02:19:08Z WARN  order-worker retrying ord_4866 after timeout
+2026-09-16T02:19:17Z INFO  order-worker order ord_4880 received for cust_50
+2026-09-16T02:19:23Z DEBUG order-worker prisma query took 134ms
+2026-09-16T02:19:31Z ERROR order-worker payment gateway 502 for ord_4753
+2026-09-16T02:19:33Z INFO  order-worker email queued for cust_91
+2026-09-16T02:19:34Z INFO  order-worker batch 315 finished
+2026-09-16T02:19:35Z DEBUG order-worker resolver Order.total called
+2026-09-16T02:19:38Z DEBUG order-worker resolver Order.total called
+2026-09-16T02:19:41Z INFO  order-worker payment captured for ord_4856
+2026-09-16T02:19:44Z INFO  order-worker customer cust_93 updated
+2026-09-16T02:19:48Z WARN  order-worker slow query 494ms on orders
+2026-09-16T02:19:52Z DEBUG order-worker rabbit ack ord_4911
+2026-09-16T02:19:58Z INFO  order-worker refund issued for ord_4995
+2026-09-16T02:19:59Z INFO  order-worker order ord_4017 shipped
+2026-09-16T02:20:02Z WARN  order-worker retrying ord_4627 after timeout
+2026-09-16T02:20:06Z DEBUG order-worker resolver Order.total called
+2026-09-16T02:20:13Z INFO  order-worker order ord_4970 received for cust_52
+2026-09-16T02:20:18Z WARN  order-worker slow query 613ms on orders
+2026-09-16T02:20:26Z DEBUG order-worker consumer idle
+2026-09-16T02:20:27Z DEBUG order-worker payload size 95 bytes
+2026-09-16T02:20:35Z INFO  order-worker order ord_4804 shipped
+2026-09-16T02:20:41Z DEBUG order-worker heartbeat ok
+2026-09-16T02:20:44Z WARN  order-worker retrying ord_4691 after timeout
+2026-09-16T02:20:45Z INFO  order-worker payment captured for ord_4533
+2026-09-16T02:20:54Z DEBUG order-worker consumer idle
+2026-09-16T02:20:59Z WARN  order-worker retrying ord_4240 after timeout
+2026-09-16T02:21:06Z DEBUG order-worker consumer idle
+2026-09-16T02:21:14Z DEBUG order-worker resolver Order.total called
+2026-09-16T02:21:19Z DEBUG order-worker consumer idle
+2026-09-16T02:21:27Z WARN  order-worker rate limit near for cust_47
+2026-09-16T02:21:28Z INFO  order-worker batch 305 finished
+2026-09-16T02:21:29Z INFO  order-worker refund issued for ord_4620
+2026-09-16T02:21:36Z INFO  order-worker batch 301 started
+2026-09-16T02:21:45Z INFO  order-worker refund issued for ord_4953
+2026-09-16T02:21:47Z WARN  order-worker rate limit near for cust_25
+2026-09-16T02:21:54Z INFO  order-worker email queued for cust_61
+2026-09-16T02:22:02Z DEBUG order-worker resolver Order.total called
+2026-09-16T02:22:06Z DEBUG order-worker heartbeat ok
+2026-09-16T02:22:12Z DEBUG order-worker heartbeat ok
+2026-09-16T02:22:17Z DEBUG order-worker prisma query took 439ms
+2026-09-16T02:22:24Z DEBUG order-worker consumer idle
+2026-09-16T02:22:31Z DEBUG order-worker consumer idle
+2026-09-16T02:22:32Z INFO  order-worker order ord_4648 received for cust_24
+2026-09-16T02:22:34Z INFO  order-worker refund issued for ord_4854
+2026-09-16T02:22:42Z INFO  order-worker email queued for cust_24
+2026-09-16T02:22:48Z DEBUG order-worker prisma query took 643ms
+2026-09-16T02:22:52Z DEBUG order-worker resolver Order.total called
+2026-09-16T02:22:56Z INFO  order-worker payment captured for ord_4699
+2026-09-16T02:22:57Z INFO  order-worker batch 311 finished
+2026-09-16T02:23:05Z ERROR order-worker REFUND_FAILED ord_4879
+2026-09-16T02:23:06Z INFO  order-worker batch 313 finished
+2026-09-16T02:23:09Z INFO  order-worker email queued for cust_88
+2026-09-16T02:23:17Z INFO  order-worker email queued for cust_39
+2026-09-16T02:23:26Z DEBUG order-worker retry attempt 1 for ord_4434
+2026-09-16T02:23:32Z INFO  order-worker order ord_4616 received for cust_47
+2026-09-16T02:23:40Z ERROR order-worker REFUND_FAILED ord_4904
+2026-09-16T02:23:42Z INFO  order-worker refund issued for ord_4794
+2026-09-16T02:23:44Z INFO  order-worker batch 300 finished
+2026-09-16T02:23:51Z DEBUG order-worker consumer idle
+2026-09-16T02:23:52Z INFO  order-worker batch 314 finished
+2026-09-16T02:23:55Z INFO  order-worker email queued for cust_55
+2026-09-16T02:24:01Z DEBUG order-worker payload size 332 bytes
+2026-09-16T02:24:07Z DEBUG order-worker cache miss customer:cust_55
+2026-09-16T02:24:09Z ERROR order-worker payment gateway 502 for ord_4422
+2026-09-16T02:24:13Z INFO  order-worker order ord_4703 shipped
+2026-09-16T02:24:16Z INFO  order-worker batch 302 finished
+2026-09-16T02:24:25Z INFO  order-worker order ord_4546 received for cust_65
+2026-09-16T02:24:33Z ERROR order-worker REFUND_FAILED ord_4436
+2026-09-16T02:24:35Z INFO  order-worker order ord_4224 received for cust_47
+2026-09-16T02:24:42Z INFO  order-worker email queued for cust_19
+2026-09-16T02:24:49Z INFO  order-worker email queued for cust_60
+2026-09-16T02:24:54Z DEBUG order-worker cache miss customer:cust_27
+2026-09-16T02:24:59Z ERROR order-worker payment gateway 502 for ord_4167
+2026-09-16T02:25:07Z INFO  order-worker batch 303 finished
+2026-09-16T02:25:10Z INFO  order-worker order ord_4090 shipped
+2026-09-16T02:25:15Z INFO  order-worker customer cust_46 updated
+2026-09-16T02:25:16Z INFO  order-worker order ord_4863 shipped
+2026-09-16T02:25:20Z ERROR order-worker ORDER_NOT_FOUND ord_4248
+2026-09-16T02:25:23Z DEBUG order-worker consumer idle
+2026-09-16T02:25:31Z INFO  order-worker payment captured for ord_4939
+2026-09-16T02:25:40Z DEBUG order-worker retry attempt 2 for ord_4480
+2026-09-16T02:25:43Z DEBUG order-worker payload size 98 bytes
+2026-09-16T02:25:48Z INFO  order-worker customer cust_38 updated
+2026-09-16T02:25:53Z INFO  order-worker order ord_4086 received for cust_23
+2026-09-16T02:25:57Z ERROR order-worker payment gateway 502 for ord_4980
+2026-09-16T02:26:00Z DEBUG order-worker cache miss customer:cust_35
+2026-09-16T02:26:04Z INFO  order-worker customer cust_61 updated
+2026-09-16T02:26:06Z DEBUG order-worker heartbeat ok
+2026-09-16T02:26:08Z INFO  order-worker customer cust_68 updated
+2026-09-16T02:26:13Z DEBUG order-worker retry attempt 3 for ord_4938
+2026-09-16T02:26:18Z INFO  order-worker refund issued for ord_4673
+2026-09-16T02:26:22Z DEBUG order-worker cache miss customer:cust_19
+2026-09-16T02:26:27Z DEBUG order-worker cache miss customer:cust_95
+2026-09-16T02:26:28Z ERROR order-worker payment gateway 502 for ord_4234
+2026-09-16T02:26:31Z ERROR order-worker payment gateway 502 for ord_4158
+2026-09-16T02:26:34Z DEBUG order-worker rabbit ack ord_4928
+2026-09-16T02:26:35Z INFO  order-worker order ord_4631 shipped
+2026-09-16T02:26:39Z DEBUG order-worker cache miss customer:cust_69
+2026-09-16T02:26:40Z INFO  order-worker batch 311 finished
+2026-09-16T02:26:46Z INFO  order-worker order ord_4181 received for cust_82
+2026-09-16T02:26:50Z INFO  order-worker email queued for cust_99
+2026-09-16T02:26:55Z INFO  order-worker batch 313 started
+2026-09-16T02:27:04Z DEBUG order-worker rabbit ack ord_4848
+2026-09-16T02:27:12Z ERROR order-worker ORDER_NOT_FOUND ord_4843
+2026-09-16T02:27:20Z DEBUG order-worker prisma query took 376ms
+2026-09-16T02:27:22Z DEBUG order-worker rabbit ack ord_4122
+2026-09-16T02:27:30Z DEBUG order-worker resolver Order.total called
+2026-09-16T02:27:33Z INFO  order-worker customer cust_71 updated
+2026-09-16T02:27:36Z INFO  order-worker order ord_4079 received for cust_11
+2026-09-16T02:27:37Z DEBUG order-worker resolver Order.total called
+2026-09-16T02:27:45Z DEBUG order-worker heartbeat ok
+2026-09-16T02:27:48Z ERROR order-worker ORDER_NOT_FOUND ord_4501
+2026-09-16T02:27:51Z INFO  order-worker order ord_4024 received for cust_96
+2026-09-16T02:27:54Z DEBUG order-worker retry attempt 3 for ord_4559
+2026-09-16T02:27:59Z DEBUG order-worker resolver Order.total called
+2026-09-16T02:28:07Z INFO  order-worker order ord_4402 received for cust_91
+2026-09-16T02:28:10Z INFO  order-worker payment captured for ord_4626
+2026-09-16T02:28:11Z INFO  order-worker batch 316 finished
+2026-09-16T02:28:15Z INFO  order-worker order ord_4770 received for cust_73
+2026-09-16T02:28:19Z DEBUG order-worker resolver Order.total called
+2026-09-16T02:28:21Z ERROR order-worker REFUND_FAILED ord_4944
+2026-09-16T02:28:27Z INFO  order-worker batch 311 finished
+2026-09-16T02:28:36Z ERROR order-worker ORDER_NOT_FOUND ord_4083
+2026-09-16T02:28:43Z INFO  order-worker order ord_4053 received for cust_65
+2026-09-16T02:28:47Z DEBUG order-worker retry attempt 2 for ord_4229
+2026-09-16T02:28:51Z ERROR order-worker ORDER_NOT_FOUND ord_4305
+2026-09-16T02:28:54Z ERROR order-worker ORDER_NOT_FOUND ord_4098
+2026-09-16T02:28:59Z INFO  order-worker batch 311 finished
+2026-09-16T02:29:03Z ERROR order-worker ORDER_NOT_FOUND ord_4394
+2026-09-16T02:29:11Z DEBUG order-worker rabbit ack ord_4264
+2026-09-16T02:29:14Z INFO  order-worker batch 316 finished
+2026-09-16T02:29:18Z ERROR order-worker payment gateway 502 for ord_4152
+2026-09-16T02:29:20Z ERROR order-worker payment gateway 502 for ord_4984
+2026-09-16T02:29:29Z WARN  order-worker retrying ord_4122 after timeout
+2026-09-16T02:29:34Z ERROR order-worker REFUND_FAILED ord_4056
+2026-09-16T02:29:43Z ERROR order-worker payment gateway 502 for ord_4219
+2026-09-16T02:29:45Z DEBUG order-worker resolver Order.total called
+
+@expected worker.log
+2026-09-16T02:14:04Z ERROR order-worker payment gateway 502 for ord_4562
+2026-09-16T02:14:05Z INFO  order-worker email queued for cust_98
+2026-09-16T02:14:13Z INFO  order-worker customer cust_22 updated
+2026-09-16T02:14:25Z INFO  order-worker email queued for cust_96
+2026-09-16T02:14:32Z INFO  order-worker customer cust_14 updated
+2026-09-16T02:14:41Z WARN  order-worker retrying ord_4010 after timeout
+2026-09-16T02:14:47Z INFO  order-worker email queued for cust_80
+2026-09-16T02:14:52Z WARN  order-worker slow query 573ms on orders
+2026-09-16T02:14:59Z WARN  order-worker rate limit near for cust_15
+2026-09-16T02:15:05Z INFO  order-worker order ord_4215 shipped
+2026-09-16T02:15:14Z WARN  order-worker retrying ord_4227 after timeout
+2026-09-16T02:15:19Z INFO  order-worker order ord_4452 received for cust_29
+2026-09-16T02:15:26Z INFO  order-worker email queued for cust_40
+2026-09-16T02:15:36Z INFO  order-worker order ord_4978 received for cust_46
+2026-09-16T02:15:44Z INFO  order-worker order ord_4261 shipped
+2026-09-16T02:15:50Z ERROR order-worker payment gateway 502 for ord_4304
+2026-09-16T02:16:25Z WARN  order-worker slow query 166ms on orders
+2026-09-16T02:16:30Z WARN  order-worker slow query 50ms on orders
+2026-09-16T02:16:39Z INFO  order-worker customer cust_45 updated
+2026-09-16T02:16:46Z INFO  order-worker batch 310 started
+2026-09-16T02:16:49Z INFO  order-worker customer cust_18 updated
+2026-09-16T02:17:05Z INFO  order-worker refund issued for ord_4429
+2026-09-16T02:17:08Z ERROR order-worker REFUND_FAILED ord_4096
+2026-09-16T02:17:15Z ERROR order-worker REFUND_FAILED ord_4786
+2026-09-16T02:17:16Z INFO  order-worker email queued for cust_93
+2026-09-16T02:17:25Z INFO  order-worker order ord_4995 shipped
+2026-09-16T02:17:26Z INFO  order-worker customer cust_39 updated
+2026-09-16T02:17:32Z INFO  order-worker order ord_4627 received for cust_82
+2026-09-16T02:17:37Z INFO  order-worker refund issued for ord_4777
+2026-09-16T02:17:51Z ERROR order-worker REFUND_FAILED ord_4956
+2026-09-16T02:18:01Z INFO  order-worker payment captured for ord_4139
+2026-09-16T02:18:10Z WARN  order-worker rate limit near for cust_82
+2026-09-16T02:18:25Z WARN  order-worker rate limit near for cust_35
+2026-09-16T02:18:27Z WARN  order-worker retrying ord_4564 after timeout
+2026-09-16T02:18:34Z INFO  order-worker email queued for cust_95
+2026-09-16T02:18:37Z WARN  order-worker rate limit near for cust_64
+2026-09-16T02:18:47Z WARN  order-worker slow query 477ms on orders
+2026-09-16T02:18:49Z INFO  order-worker order ord_4728 received for cust_37
+2026-09-16T02:19:01Z INFO  order-worker batch 313 finished
+2026-09-16T02:19:06Z WARN  order-worker retrying ord_4974 after timeout
+2026-09-16T02:19:08Z WARN  order-worker retrying ord_4866 after timeout
+2026-09-16T02:19:17Z INFO  order-worker order ord_4880 received for cust_50
+2026-09-16T02:19:31Z ERROR order-worker payment gateway 502 for ord_4753
+2026-09-16T02:19:33Z INFO  order-worker email queued for cust_91
+2026-09-16T02:19:34Z INFO  order-worker batch 315 finished
+2026-09-16T02:19:41Z INFO  order-worker payment captured for ord_4856
+2026-09-16T02:19:44Z INFO  order-worker customer cust_93 updated
+2026-09-16T02:19:48Z WARN  order-worker slow query 494ms on orders
+2026-09-16T02:19:58Z INFO  order-worker refund issued for ord_4995
+2026-09-16T02:19:59Z INFO  order-worker order ord_4017 shipped
+2026-09-16T02:20:02Z WARN  order-worker retrying ord_4627 after timeout
+2026-09-16T02:20:13Z INFO  order-worker order ord_4970 received for cust_52
+2026-09-16T02:20:18Z WARN  order-worker slow query 613ms on orders
+2026-09-16T02:20:35Z INFO  order-worker order ord_4804 shipped
+2026-09-16T02:20:44Z WARN  order-worker retrying ord_4691 after timeout
+2026-09-16T02:20:45Z INFO  order-worker payment captured for ord_4533
+2026-09-16T02:20:59Z WARN  order-worker retrying ord_4240 after timeout
+2026-09-16T02:21:27Z WARN  order-worker rate limit near for cust_47
+2026-09-16T02:21:28Z INFO  order-worker batch 305 finished
+2026-09-16T02:21:29Z INFO  order-worker refund issued for ord_4620
+2026-09-16T02:21:36Z INFO  order-worker batch 301 started
+2026-09-16T02:21:45Z INFO  order-worker refund issued for ord_4953
+2026-09-16T02:21:47Z WARN  order-worker rate limit near for cust_25
+2026-09-16T02:21:54Z INFO  order-worker email queued for cust_61
+2026-09-16T02:22:32Z INFO  order-worker order ord_4648 received for cust_24
+2026-09-16T02:22:34Z INFO  order-worker refund issued for ord_4854
+2026-09-16T02:22:42Z INFO  order-worker email queued for cust_24
+2026-09-16T02:22:56Z INFO  order-worker payment captured for ord_4699
+2026-09-16T02:22:57Z INFO  order-worker batch 311 finished
+2026-09-16T02:23:05Z ERROR order-worker REFUND_FAILED ord_4879
+2026-09-16T02:23:06Z INFO  order-worker batch 313 finished
+2026-09-16T02:23:09Z INFO  order-worker email queued for cust_88
+2026-09-16T02:23:17Z INFO  order-worker email queued for cust_39
+2026-09-16T02:23:32Z INFO  order-worker order ord_4616 received for cust_47
+2026-09-16T02:23:40Z ERROR order-worker REFUND_FAILED ord_4904
+2026-09-16T02:23:42Z INFO  order-worker refund issued for ord_4794
+2026-09-16T02:23:44Z INFO  order-worker batch 300 finished
+2026-09-16T02:23:52Z INFO  order-worker batch 314 finished
+2026-09-16T02:23:55Z INFO  order-worker email queued for cust_55
+2026-09-16T02:24:09Z ERROR order-worker payment gateway 502 for ord_4422
+2026-09-16T02:24:13Z INFO  order-worker order ord_4703 shipped
+2026-09-16T02:24:16Z INFO  order-worker batch 302 finished
+2026-09-16T02:24:25Z INFO  order-worker order ord_4546 received for cust_65
+2026-09-16T02:24:33Z ERROR order-worker REFUND_FAILED ord_4436
+2026-09-16T02:24:35Z INFO  order-worker order ord_4224 received for cust_47
+2026-09-16T02:24:42Z INFO  order-worker email queued for cust_19
+2026-09-16T02:24:49Z INFO  order-worker email queued for cust_60
+2026-09-16T02:24:59Z ERROR order-worker payment gateway 502 for ord_4167
+2026-09-16T02:25:07Z INFO  order-worker batch 303 finished
+2026-09-16T02:25:10Z INFO  order-worker order ord_4090 shipped
+2026-09-16T02:25:15Z INFO  order-worker customer cust_46 updated
+2026-09-16T02:25:16Z INFO  order-worker order ord_4863 shipped
+2026-09-16T02:25:20Z ERROR order-worker ORDER_NOT_FOUND ord_4248
+2026-09-16T02:25:31Z INFO  order-worker payment captured for ord_4939
+2026-09-16T02:25:48Z INFO  order-worker customer cust_38 updated
+2026-09-16T02:25:53Z INFO  order-worker order ord_4086 received for cust_23
+2026-09-16T02:25:57Z ERROR order-worker payment gateway 502 for ord_4980
+2026-09-16T02:26:04Z INFO  order-worker customer cust_61 updated
+2026-09-16T02:26:08Z INFO  order-worker customer cust_68 updated
+2026-09-16T02:26:18Z INFO  order-worker refund issued for ord_4673
+2026-09-16T02:26:28Z ERROR order-worker payment gateway 502 for ord_4234
+2026-09-16T02:26:31Z ERROR order-worker payment gateway 502 for ord_4158
+2026-09-16T02:26:35Z INFO  order-worker order ord_4631 shipped
+2026-09-16T02:26:40Z INFO  order-worker batch 311 finished
+2026-09-16T02:26:46Z INFO  order-worker order ord_4181 received for cust_82
+2026-09-16T02:26:50Z INFO  order-worker email queued for cust_99
+2026-09-16T02:26:55Z INFO  order-worker batch 313 started
+2026-09-16T02:27:12Z ERROR order-worker ORDER_NOT_FOUND ord_4843
+2026-09-16T02:27:33Z INFO  order-worker customer cust_71 updated
+2026-09-16T02:27:36Z INFO  order-worker order ord_4079 received for cust_11
+2026-09-16T02:27:48Z ERROR order-worker ORDER_NOT_FOUND ord_4501
+2026-09-16T02:27:51Z INFO  order-worker order ord_4024 received for cust_96
+2026-09-16T02:28:07Z INFO  order-worker order ord_4402 received for cust_91
+2026-09-16T02:28:10Z INFO  order-worker payment captured for ord_4626
+2026-09-16T02:28:11Z INFO  order-worker batch 316 finished
+2026-09-16T02:28:15Z INFO  order-worker order ord_4770 received for cust_73
+2026-09-16T02:28:21Z ERROR order-worker REFUND_FAILED ord_4944
+2026-09-16T02:28:27Z INFO  order-worker batch 311 finished
+2026-09-16T02:28:36Z ERROR order-worker ORDER_NOT_FOUND ord_4083
+2026-09-16T02:28:43Z INFO  order-worker order ord_4053 received for cust_65
+2026-09-16T02:28:51Z ERROR order-worker ORDER_NOT_FOUND ord_4305
+2026-09-16T02:28:54Z ERROR order-worker ORDER_NOT_FOUND ord_4098
+2026-09-16T02:28:59Z INFO  order-worker batch 311 finished
+2026-09-16T02:29:03Z ERROR order-worker ORDER_NOT_FOUND ord_4394
+2026-09-16T02:29:14Z INFO  order-worker batch 316 finished
+2026-09-16T02:29:18Z ERROR order-worker payment gateway 502 for ord_4152
+2026-09-16T02:29:20Z ERROR order-worker payment gateway 502 for ord_4984
+2026-09-16T02:29:29Z WARN  order-worker retrying ord_4122 after timeout
+2026-09-16T02:29:34Z ERROR order-worker REFUND_FAILED ord_4056
+2026-09-16T02:29:43Z ERROR order-worker payment gateway 502 for ord_4219

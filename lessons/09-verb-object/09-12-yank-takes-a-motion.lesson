@@ -1,0 +1,69 @@
+@meta
+id: 09-12
+title: Yank takes a motion, and p puts it back
+chapter: 09
+type: lesson
+skills: op-motion
+par: 34
+minutes: 5
+vscode: select the code, Ctrl-C, click, Ctrl-V — twice
+open: errors.json
+
+@brief
+Every error in this file needs its `message` filled in, and for now the
+message is just the code itself spelled out again.
+
+Fill both empty message strings so that `"message": "ORDER_NOT_FOUND"`
+and `"message": "ORDER_ALREADY_SHIPPED"` read back the code on their own
+line. Nothing else about the file changes.
+
+Copy the codes rather than retyping them. A typo here is a 500 that
+nobody notices for a week.
+
+@keys
+| `yw` | yank from the cursor to the start of the next word |
+| `p` | put what you yanked after the cursor |
+| `P` | put it before the cursor |
+| `2F"` | back to the second double quote behind you |
+
+@hints
+`y` is an operator like the others, so it takes a motion and copies
+exactly the ground that motion covers. The quote characters are not part
+of the code, so do not include them.
+--
+With the cursor on the first letter of the code, `yw` copies the whole
+identifier — underscores are word characters, and the closing quote stops
+it. Then get inside the empty pair of quotes and `p`.
+--
+Per line: `f"` then `l` to sit on the first letter, `yw`, then `$` and
+`2F"` to land on the opening quote of the empty string, then `p`.
+
+@solution
+    j f" l yw $ 2F" p    j 0 f" l yw $ 2F" p    :wq<Enter>
+
+Where did the text go? Into the unnamed register, which is the same place
+`dd`, `x` and `c` put what they take. `p` reads it back. That is why
+deleting a line and putting it somewhere else works as a move — there is
+one clipboard and every destructive operator writes to it. Chapter 20
+gives you twenty-six more of them.
+
+`p` after a charwise yank puts the text *after* the cursor, which is why
+landing on the opening quote and pressing `p` drops the code neatly
+between the quotes. `P` puts it before the cursor. After a linewise yank
+like `yy`, the same two keys put whole lines below or above instead. The
+operator decided which kind of copy it was; `p` just respects it.
+
+The general habit: if text already exists in the file, yank it. Retyping
+an identifier is how `ORDER_ALREADY_SHIPED` gets into production.
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false, "message": "" },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false, "message": "" }
+}
+
+@expected errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false, "message": "ORDER_NOT_FOUND" },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false, "message": "ORDER_ALREADY_SHIPPED" }
+}

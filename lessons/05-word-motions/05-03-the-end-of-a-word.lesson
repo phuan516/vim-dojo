@@ -1,0 +1,65 @@
+@meta
+id: 05-03
+title: The end of a word
+chapter: 05
+type: lesson
+skills: word-e, word-w
+par: 16
+minutes: 4
+vscode: double-click the word, then click either end of the selection
+open: api.md
+
+@brief
+`w` and `b` both land on the *start* of a word. Half the time what you
+want is the other end — you are adding a suffix, a closing quote, a
+question mark. Vim has a motion for that too.
+
+In this doc, `cancel` is a mutation name and should be in backticks:
+
+    Call the `cancel` mutation with the order id.
+
+One backtick goes in front of the word and one after it. Do both without
+moving a character at a time and without touching the rest of the line.
+
+@keys
+| `e` | forward to the end of the current or next word |
+| `w` | forward to the start of the next word |
+| `i` | insert before the cursor |
+| `a` | insert after the cursor |
+
+@hints
+Two inserts, at two different ends of the same word. `w` gets you to the
+front. Something else gets you to the back.
+--
+`e` moves to the last character of a word. `a` then appends after the
+character you are sitting on, so `ea` is "start typing at the end of this
+word".
+--
+`ww` lands on `cancel`, `i` and a backtick puts one in front. `Esc` drops
+you back on that new backtick; `e` now runs to the end of `cancel`, and
+`a` with a backtick closes it.
+
+@solution
+    ww  i`<Esc>  e  a`<Esc>  :wq<Enter>
+
+Two motions, two one-character inserts, thirteen keystrokes including the
+save. The mouse route is double-click, type a backtick, watch the
+selection vanish, click again at the other end, type another.
+
+The pattern worth memorising is the pairing:
+
+    w  then  i     insert in front of a word
+    e  then  a     append to the end of a word
+
+`ea` is how you pluralise an identifier, add a `?` to a field, or close a
+quote. It will come up constantly.
+
+One detail that saves confusion later: `e` from the middle of a word goes
+to the end of *that* word, not the next one. It only moves on to the next
+word if you are already sitting on the last character.
+
+@start api.md
+Call the cancel mutation with the order id. It returns the updated order.
+
+@expected api.md
+Call the `cancel` mutation with the order id. It returns the updated order.

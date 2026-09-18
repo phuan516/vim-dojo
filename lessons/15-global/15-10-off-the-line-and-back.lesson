@@ -1,0 +1,167 @@
+@meta
+id: 15-10
+title: Off the line and back
+chapter: 15
+type: lesson
+skills: global-normal
+par: 35
+minutes: 6
+vscode: find @deprecated, select each method by dragging, Delete, three times
+open: order.provider.ts
+
+@brief
+Three methods in `OrderProvider` carry a `@deprecated` doc comment, and
+the last caller of each was removed last sprint. Delete all three, each
+with its comment line, and leave exactly one blank line between the
+methods that remain.
+
+The pattern only matches the comment line. The method is the three
+lines under it. So the `normal` sequence has to do something that
+`d` on the marked line alone cannot: reach off the line and take the
+whole block.
+
+You already own the right tool. A doc comment sitting directly on top
+of its method, with blank lines above and below, is a paragraph.
+
+@keys
+| `:g/pattern/normal keys` | replay `keys` on every matching line |
+| `dap` | delete a paragraph and the blank line after it |
+
+@hints
+Do not think about the method's lines. Think about what shape the
+comment and the method make together, and which text object names it.
+--
+`dap` from the comment line takes the comment, the method under it and
+the blank line that follows. That is exactly the three-method cleanup,
+once per match.
+--
+`:g/@deprecated/normal dap` and Enter.
+
+@solution
+    :g/@deprecated/normal dap<Enter>  :wq<Enter>
+
+Thirty keystrokes to remove fifteen lines in three places.
+
+This is the step where `:g//normal` stops being a way to save keystrokes
+and becomes a different kind of tool. The marked line is only a starting
+point. From there the keys can go anywhere: `j` to the line below, `}`
+to the end of the block, `dap` around the whole thing, `%` to the
+matching brace. The pattern finds the landmark; the keys do the work
+around it.
+
+One thing to check before you lean on `dap`: a paragraph ends at a blank
+line, so a method with a blank line inside its body is two paragraphs,
+and `dap` would take only the first. These three are one-liners. For
+the longer kind you would reach for `j` and `%` or `d}` instead; the
+principle is the same, only the text object changes.
+
+There is a subtlety worth knowing. `:g` marks every match before it runs
+anything. If a command deletes a line that was marked later in the file,
+that mark disappears with the line and the command is simply not run
+there. So overlapping edits do not double up, and you do not need to
+worry about a `dap` swallowing the next match.
+
+If you tried `dd` on the comment and then `dap` on the method you were
+working too hard. Look for the text object that names the whole shape
+first; there usually is one.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  /** @deprecated use findOne and check the status yourself */
+  public async findPending(id: string) {
+    return this.orderRepository.findOne({ where: { id, status: 'PENDING' } });
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  /** @deprecated the payment service refunds directly now */
+  public async legacyRefund(id: string) {
+    return this.paymentService.refundLegacy(id);
+  }
+
+  /** @deprecated replaced by the shipping consumer */
+  public async markShipped(id: string) {
+    return this.orderRepository.update({ where: { id }, values: { status: 'SHIPPED' } });
+  }
+
+  public async findByCustomer(customerId: string) {
+    return this.orderRepository.findByCustomer({ customerId });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async findByCustomer(customerId: string) {
+    return this.orderRepository.findByCustomer({ customerId });
+  }
+}

@@ -1,0 +1,57 @@
+@meta
+id: 27-09
+title: Drill — keep it in this buffer
+chapter: 27
+type: drill
+skills: set-local, buffer-switch
+par: 45
+minutes: 4
+reps: 8
+vscode: nothing
+open: report.sql total.ts
+
+@brief
+Eight times: give the SQL buffer a four-space indent without leaking it,
+indent its second line, switch to the TypeScript buffer, indent its second
+line by two, write both.
+
+The TypeScript file is the check. If it comes out with four spaces you
+typed `:set` when you meant `:setlocal`.
+
+@keys
+| `:setlocal shiftwidth=4` | this buffer only |
+| `:bn` | next buffer |
+| `:wqa` | write and quit everything |
+
+@hints
+The word is `setlocal`, not `set`.
+--
+`:setlocal shiftwidth=4` `Enter`, `2G>>`, `:bn` `Enter`, `2G>>`, `:wqa`.
+
+@solution
+    :setlocal shiftwidth=4<Enter>  2G>>  :bn<Enter>  2G>>  :wqa<Enter>
+
+Forty keystrokes.
+
+Eight reps of this is eight chances to type `:set` out of habit and watch
+the second file come out wrong. That is the whole value of the drill: the
+mistake is invisible in the buffer you are looking at and obvious in the
+one you are not.
+
+@start report.sql
+SELECT status, count(*) FROM orders
+GROUP BY status;
+
+@expected report.sql
+SELECT status, count(*) FROM orders
+    GROUP BY status;
+
+@start total.ts
+export const totals = {
+cancelled: 0,
+};
+
+@expected total.ts
+export const totals = {
+  cancelled: 0,
+};

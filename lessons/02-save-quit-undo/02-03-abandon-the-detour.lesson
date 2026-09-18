@@ -1,0 +1,92 @@
+@meta
+id: 02-03
+title: Abandoning changes on purpose
+chapter: 02
+type: lesson
+skills: quit, write
+par: 79
+minutes: 5
+vscode: closing the tab and clicking "Don't Save"
+open: deploy-checklist.md
+
+@brief
+`:q` protects you from losing work by accident. Sometimes losing the work
+is the point: you went down a path, it was wrong, and the version already
+on disk is better than anything in front of you. `:q!` is how you say so.
+The exclamation mark means "yes, I know, do it anyway".
+
+This is the move that makes vim safe to experiment in. Save a good state,
+try something reckless, and if it goes badly the good state is one command
+away.
+
+Work through this in order, exactly as written.
+
+  1. Step 2 of the checklist is incomplete. It should read:
+
+         2. Run the migration on the read replica first
+
+     Fix it, and write the file.
+
+  2. Now start a detour. You decide step 4 is really three steps, and you
+     begin by noting it on the line:
+
+         4. Watch the error rate for ten minutes (split this into three)
+
+  3. Then remember the ticket said nothing about splitting step 4, and the
+     checklist is being read off a screen during a deploy in an hour. The
+     detour goes. Not the migration fix — that was right, and you wrote it.
+
+Get out of vim leaving the file exactly as it was at your write.
+
+@keys
+| `:q!` | quit, throwing away everything since the last write |
+| `ZQ` | the same thing in two keys |
+| `:e!` | reload the file from disk, discarding changes, and stay in it |
+
+@hints
+Step 1 ends with `:w`. That write is what makes the rest of this safe.
+--
+After the detour, nothing you want is in the buffer that is not already
+on disk. So do not save again.
+--
+`:q` will refuse, because the buffer has changed since the write. `:q!`
+will not.
+
+@solution
+    jjj $ a  on the read replica first <Esc> :w<Enter>
+    jj $ a  (split this into three) <Esc>
+    :q!<Enter>
+
+The file on disk has the migration fix and no trace of the detour,
+because `:q!` discards the buffer, and the buffer is the only place the
+detour ever existed.
+
+The habit this unlocks is worth more than the command. Write when you are
+happy, experiment freely after that, and `:q!` when the experiment fails.
+You are using the file on disk as a one-step save point.
+
+`:e!` is the same idea without leaving: it rereads the file from disk and
+throws away everything since the last write, and you carry on editing
+from there. Use it when the detour was wrong but you still have work to do
+in the file.
+
+One warning. `:q!` is indiscriminate. It does not care that the first
+thing you did was good and the last thing was bad — if both are unwritten,
+both go. The rest of this chapter is about the tool that can tell them
+apart.
+
+@start deploy-checklist.md
+# Deploy checklist: payments 2.14
+
+1. Drain the refund queue
+2. Run the migration
+3. Flip the feature flag
+4. Watch the error rate for ten minutes
+
+@expected deploy-checklist.md
+# Deploy checklist: payments 2.14
+
+1. Drain the refund queue
+2. Run the migration on the read replica first
+3. Flip the feature flag
+4. Watch the error rate for ten minutes

@@ -1,0 +1,118 @@
+@meta
+id: 22-11
+title: The slow way, measured
+chapter: 22
+type: lesson
+skills: visual-char, visual-line
+par: 50
+minutes: 6
+vscode: this is the VS Code way, and it is why you are here
+open: order.provider.ts
+
+@brief
+Two jobs in one file. `legacyRefund` is dead and goes, the whole
+method and the blank line after it. And `total` is renamed `amount` in
+the three places it appears.
+
+Do it with visual mode first if you like: `V`, count down the method
+with `j`, `d`; `viw`, `c`, type the word. It will pass the file check.
+It will not pass par. Par is set to the operator route from chapters
+8 to 11, plus a little, and the visual route does not fit under it.
+
+Then `./dojo replay` and do it the other way.
+
+@keys
+| `dap` | delete a paragraph — the method and the blank line after it |
+| `ciw` | change the word under the cursor |
+| `n` `.` | next match, repeat the change |
+
+@hints
+A method with no blank lines inside it is a paragraph. From any line
+of it, one operator and one text object take the whole thing.
+--
+`ciw` on the first `total`, type `amount`, `Esc`. `n` finds the next
+`total`, `.` repeats the change. There are three.
+--
+`/legacyRefund` `Enter`, `dap`. `/\<total\>` `Enter`, `ciwamount`
+`Esc`, `n.`, `n.`.
+
+@solution
+    /legacyRefund<Enter> d a p /\<total\><Enter> c i w amount <Esc> n . n . :wq<Enter>
+
+Forty-six keystrokes. The visual version of the same edit —
+`V` and ten `j` and `d` for the method, `viwcamount` then `n.` twice —
+comes to fifty-six, and that is on a ten-line method. On a forty-line
+method the counted `j` would be the whole budget.
+
+The two habits to keep from this: name the region with a text object
+when it has a name (`ap`, `iw`, `i{`), and let `.` do the repetition.
+Visual mode wins when the region has no name — an odd span of a
+sentence, half a call, a column. Everything from lesson 12 onward is
+one of those.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async legacyRefund(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+    return this.paymentService.refundLegacy(order.id, order.total);
+  }
+
+  public async refund(id: string, total: number) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    if (total > order.paid) {
+      throw exception('REFUND_EXCEEDS_ORDER');
+    }
+
+    return this.paymentService.refund(order.id, total);
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async refund(id: string, amount: number) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    if (amount > order.paid) {
+      throw exception('REFUND_EXCEEDS_ORDER');
+    }
+
+    return this.paymentService.refund(order.id, amount);
+  }
+}

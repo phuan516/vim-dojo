@@ -1,0 +1,65 @@
+@meta
+id: 27-06
+title: Drill — stop the comment spreading
+chapter: 27
+type: drill
+skills: set-option
+par: 44
+minutes: 4
+reps: 8
+vscode: nothing — VS Code does this to you too, with no switch to find
+open: order.service.ts
+
+@brief
+Eight times: take the `o` flag out of `formatoptions`, then open three
+lines under the comment with `3o` and type the retry call once. Save, quit,
+go again.
+
+Leave the option alone and vim helpfully makes all three new lines
+comments, because `formatoptions` contains `o`: "when `o` or `O` opens a
+line below a comment, keep the comment going". Useful in prose. Infuriating
+in code.
+
+@keys
+| `:setlocal formatoptions-=o` | drop one flag from the list |
+| `:setlocal fo-=o` | the short name, for live use |
+| `:set fo?` | read the flags back |
+
+@hints
+`formatoptions` is a list, so take the one flag out rather than assigning
+a new value. The flag is the letter `o`.
+--
+`:setlocal fo-=o` then Enter, then `3oretry(payment);` and `Esc`.
+
+@solution
+    :setlocal fo-=o<Enter>  3oretry(payment);<Esc>  :wq<Enter>
+
+Thirty-eight keystrokes.
+
+`formatoptions` is the strangest of the list options: its items are single
+letters with no commas between them, and there are about twenty of them.
+Four are worth recognising on sight:
+
+    r   Enter inside a comment keeps the comment going
+    o   o and O below a comment keep the comment going
+    t   wrap text at textwidth as you type
+    c   wrap comments at textwidth as you type
+
+`-=` works on it letter by letter, which is why `fo-=o` is safe and
+`fo=tcq` would trample whatever the filetype plugin had decided.
+
+Note the `setlocal`. `formatoptions` is set per buffer by whichever
+filetype plugin loaded, so a global `:set fo-=o` gets overwritten the next
+time you open a file of that type. The next few lessons are about exactly
+that distinction.
+
+@start order.service.ts
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const handler = createHandler();
+
+@expected order.service.ts
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+retry(payment);
+retry(payment);
+retry(payment);
+const handler = createHandler();

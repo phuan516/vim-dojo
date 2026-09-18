@@ -1,0 +1,82 @@
+@meta
+id: 20-19
+title: Put by line number
+chapter: 20
+type: lesson
+skills: register-named
+par: 54
+minutes: 5
+vscode: cut, Ctrl-Home, paste, cut, Ctrl-End, paste
+open: registry.ts
+
+@brief
+`p` puts relative to the cursor. `:put` puts relative to a line
+number, and it always puts whole lines, whatever shape the register
+is. `:0put a` puts register `a` above the first line. `:$put a` puts it
+after the last. `:put` on its own uses the unnamed register, and
+`:put =expr` evaluates an expression the way `"=` does.
+
+Somebody assembled this registry by pasting. The `import { container }`
+line has ended up at the bottom, and it belongs on line 1. The
+`export { container };` line is in the middle, and it belongs last.
+Fix both without moving the cursor to either destination.
+
+@keys
+| `:0put a` | put `a` above the first line |
+| `:$put a` | put `a` after the last line |
+| `:12put a` | put `a` after line 12 |
+| `:put =range(1, 5)` | put the numbers 1 to 5, one per line |
+| `:let @a = 'text'` | write a register by hand |
+
+@hints
+Delete each line into a register, then put the register at the line
+number you want. Two deletes, two `:put` commands, no travel.
+--
+`/tsyringe` Enter finds the import: `container` is on every line, so
+search for something only the import has. `"add`, then `:0put a`.
+--
+`/^export` Enter, `"bdd`, `:$put b`.
+
+@solution
+    /tsyringe<Enter> "add :0put a<Enter>  /^export<Enter> "bdd :$put b<Enter>  :wq<Enter>
+
+`:put` is the register command for when the destination is a line
+number rather than a place your cursor happens to be, and it composes
+with the whole Ex language of chapter 24. It also gives you a way to
+write a register without yanking: `:let @a = 'text'` sets `a` directly,
+and `:put =` turns any expression into lines.
+
+That last pair is how chapter 21 edits macros. A macro is a register
+with keystrokes in it. `"qp` puts it in the buffer as text, you fix the
+text, `"qyy` picks it back up, or `:let @q = '...'` writes it outright.
+Everything in this chapter applies to `q` the moment you record into it.
+
+@start registry.ts
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { CustomerRepository } from '../domain/customer/customer.repository';
+import { CustomerProvider } from '../domain/customer/customer.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+export { container };
+container.register('CustomerRepository', { useClass: CustomerRepository });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('PaymentService', { useClass: PaymentService });
+import { container } from 'tsyringe';
+
+@expected registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { CustomerRepository } from '../domain/customer/customer.repository';
+import { CustomerProvider } from '../domain/customer/customer.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerRepository', { useClass: CustomerRepository });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('PaymentService', { useClass: PaymentService });
+export { container };

@@ -1,0 +1,122 @@
+@meta
+id: 03-12
+title: Carry on where you stopped
+chapter: 03
+type: lesson
+skills: insert-I, open-o
+par: 64
+minutes: 5
+vscode: scroll down, scroll back, find your place again
+open: order.entity.ts
+
+@brief
+`Order` needs a channel field, directly under `customerId`. The type it
+should be annotated with is declared at the bottom of this file, and the
+brief is not going to tell you its name — go and read it.
+
+So the job has a shape you will meet constantly: start writing a line,
+realise you need to check something elsewhere, go and look, come back and
+finish the line. The coming back is the part worth learning. Vim
+remembers the exact spot where you last stopped typing, down to the
+column, and will drop you back into insert mode there.
+
+Work it in that order, even though you could cheat by reading the file
+first. The keystroke count assumes the round trip.
+
+@keys
+| `o` | open a line below |
+| `j` | down a line |
+| `gi` | insert again, exactly where insert mode last stopped |
+| `Esc` | out |
+
+@hints
+Getting back to a line with `k` costs one press per line, and you have
+twenty-odd lines to climb. There is a two-key way that does not care how
+far away you went.
+--
+`gi` — `g` then `i` — puts you back in insert mode at the position where
+you last left it. Not the start of that line: the exact column.
+--
+`jj` `o`, type `channel: ` and stop, `Esc`. Read the bottom of the file
+with `j`. Then `gi`, type the type name and the semicolon, `Esc`, `:wq`.
+
+@solution
+    j j o channel:<Space> <Esc>   j×22   gi OrderChannel; <Esc> :wq<Enter>
+
+Fifty-five keystrokes, and only two of them were spent getting back.
+
+`gi` works off a mark that vim updates every time you leave insert mode,
+called `^`. Chapter 17 is about marks and how to set your own; this one is
+free and automatic, and it is the one you will use most. Two places it
+earns its keep immediately:
+
+- You stop typing to look something up, anywhere in the file. `gi` and you
+  are back mid-word, not hunting for the line.
+- You `Esc` and `:w` out of habit, then want to keep writing. `gi`
+  continues the sentence. `A` would only get you to the end of the line,
+  which is not the same place if you were typing in the middle of it.
+
+There is a related pair worth knowing the names of now, even though they
+belong to chapter 17: `` `. `` jumps to the position of the last change,
+and `` `` `` jumps back to where you were before the last big jump. `gi`
+is the insert-mode member of that family.
+
+The habit this replaces is the bad one from the last lesson: staying in
+insert mode *because leaving felt expensive*. It is not expensive. Leaving
+and coming back costs you `Esc` and two keys, and in between you get the
+whole editor.
+
+@start order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+export type OrderLine = {
+  id: string;
+  orderId: string;
+  sku: string;
+  quantity: number;
+  unitPrice: number;
+};
+
+export type OrderSummary = {
+  order: Order;
+  lines: OrderLine[];
+  refundedTotal: number;
+};
+
+export type OrderChannel = 'WEB' | 'IOS' | 'ANDROID' | 'PHONE';
+
+@expected order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  channel: OrderChannel;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+export type OrderLine = {
+  id: string;
+  orderId: string;
+  sku: string;
+  quantity: number;
+  unitPrice: number;
+};
+
+export type OrderSummary = {
+  order: Order;
+  lines: OrderLine[];
+  refundedTotal: number;
+};
+
+export type OrderChannel = 'WEB' | 'IOS' | 'ANDROID' | 'PHONE';

@@ -1,0 +1,143 @@
+@meta
+id: 18-08
+title: Find by any part of the name
+chapter: 18
+type: lesson
+skills: find-path, wildmenu
+par: 41
+minutes: 5
+vscode: Ctrl+P "repo"
+vimrc: set path=.,** wildmenu wildmode=longest:full,full
+open: README.md
+
+@brief
+The soft-delete column was renamed from `deleted` to `deletedAt` in the
+last migration. The order repository still filters on `deleted: null`
+in `findByCustomer`. Fix that one key. The customer repository has no
+such filter and needs nothing.
+
+You remember "repository", not what comes before it. A prefix will not
+get you there. Put a `*` in front of the fragment and `:find *repo` Tab
+matches any file with `repo` anywhere in its name. There are two, so
+the first Tab fills in nothing and shows both; each further Tab moves to
+the next candidate. Enter takes the one shown.
+
+@keys
+| `:find *frag` `Tab` | any file with `frag` anywhere in its name |
+| `Tab` `Tab` | walk the candidates |
+| `Shift-Tab` | walk backwards |
+| `:find *.spec` `Tab` | works with any glob |
+
+@hints
+`:find *repo` and Tab. Two names appear in the bar. Tab again moves the
+highlight.
+--
+The customer repository comes first because `c` sorts before `o`. One
+more Tab reaches the order repository. Or type `*r.repo` — narrowing
+with letters beats cycling when you can.
+--
+`:find *repo<Tab><Tab><Tab>` Enter, `/deleted` Enter, `ea`, `At`,
+`Esc`, `:wq`.
+
+@solution
+    :find *repo<Tab><Tab><Tab><Enter> /deleted<Enter> eaAt <Esc> :wq<Enter>
+
+or, narrowing instead of cycling:
+
+    :find order.repo<Tab><Enter> ...
+
+The glob is what makes `:find` behave like a fuzzy finder rather than an
+autocomplete. `*` matches anything, so `*repo` is "contains repo",
+`*.spec` is "ends in .spec…", and `order*` is the plain prefix you had
+before. With `**` in `path`, all of it searches the whole tree.
+
+When the bar shows more than two or three candidates, do not cycle.
+Type another letter. Cycling is for when you genuinely cannot tell
+which one you want until you see the list.
+
+@start README.md
+# Orders service
+
+Handles orders, customers and refunds for the storefront.
+
+Soft deletes: every table has a nullable `deletedAt` timestamp. Live
+rows are the ones where it is null.
+
+@start src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+    };
+  }
+}
+
+@expected src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deletedAt: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+    };
+  }
+}
+
+@start src/domain/customer/customer.repository.ts
+import { injectable } from 'tsyringe';
+import { Customer as CustomerRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Customer } from './customer.entity';
+
+@injectable()
+export class CustomerRepository extends BaseRepository<CustomerRecord, Customer> {
+  public toEntity(record: CustomerRecord): Customer {
+    return {
+      id: record.id,
+      email: record.email,
+      name: record.name,
+    };
+  }
+}
+
+@start src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';

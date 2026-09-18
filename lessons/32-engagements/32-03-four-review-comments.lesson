@@ -1,0 +1,180 @@
+@meta
+id: 32-03
+title: Review — four comments, four tools
+chapter: 32
+type: scenario
+skills: code-review, sub-basic, global-delete, dot-repeat, ex-sort
+par: 114
+minutes: 10
+vscode: four passes over the file, most of them by hand
+open: src/domain/report/order.report.provider.ts src/domain/order/order.repository.ts
+vimrc: set hidden
+
+@brief
+Your MR came back with four comments. None of them is an argument;
+all four are "yes, fine, change it". The job is to turn them around
+before standup.
+
+    !312  Order report provider
+
+    @rk   Line 9 and the two filters: `==` should be `===`. We have
+          the lint rule off in this directory, which is its own ticket.
+
+    @rk   Three console.logs left in. They go.
+
+    @sd   `findByCustomer` takes the id directly since !298. Both call
+          sites here still pass an object. Update them.
+
+    @rk   The keys of the returned object in `dailyTotals` should be in
+          alphabetical order so the snapshot test stops churning.
+
+`order.repository.ts` is open so you can check the new signature. It is
+not yours to change.
+
+Four comments, four different tools. Reaching for the same hammer on all
+four is what makes a review turnaround take an hour.
+
+@keys
+| `:%s/old/new/g` | every occurrence in the file |
+| `:g/pat/d` | delete every line matching a pattern |
+| `ci(` then `n` `.` | change inside the parens, then again at the next match |
+| `:.,+2sort` | sort this line and the two below it |
+
+@hints
+Take the comments one at a time and ask what shape each change is: many
+identical edits, whole lines to remove, a handful of edits at matches you
+can search for, or a block that needs reordering. Each shape has a tool.
+--
+Identical text in many places is `:%s`. Whole lines identified by a
+pattern is `:g//d`. Reordering lines is `:sort` over a range. The two
+call sites are close enough to each other that search plus `.` beats
+writing a substitution you have to get exactly right.
+--
+`:%s/ == / === /g`, then `:g/console\.log/d`. For the call sites, search
+for `customerId: args`, which lands you inside the object literal, and
+`ci(` replaces the whole argument list. `n` then `.` does the second one.
+For the keys, land on the `shipped:` line and `:.,+2sort`.
+
+@solution
+99 keystrokes, in the order the comments arrived.
+
+**`==` to `===`** — `:%s/ == / === /g`. The spaces are the guard. A bare
+`:%s/==/===/g` is a well-known way to turn `===` into `=====` on a second
+run, and here it would also be tempted by nothing else in the file, which
+is exactly the kind of luck you should not depend on.
+
+**the logging** — `:g/console\.log/d`. Three lines, three different
+places, one pattern. This is the shape `:g` exists for: the lines have
+nothing in common except the thing you are searching for.
+
+**the call sites** — `/customerId: args` `Enter` puts the cursor inside
+the object literal, `ci(args.customerId` `Esc` replaces the entire
+argument list, brackets and all. Then `n` `.`. Two edits, and the second
+one costs two keystrokes.
+
+You could have done this with a substitution too. Try writing it: the
+pattern has to cover `({ customerId: args.customerId })` including the
+braces and the spaces, and you will spend longer getting it right than
+the edit takes. When there are two of something, search and dot wins.
+Somewhere around five it flips.
+
+**the keys** — `/shipped:` `Enter` `:.,+2sort`. Sorting three lines by
+hand means three cut-and-pastes and a reread to check you got it right.
+`:sort` over a range cannot get it wrong.
+
+The meta-lesson: a review turnaround is four small jobs of four different
+shapes, not one big edit. Naming the shape before you start — many,
+lines, a few, order — picks the tool for you, and picking the tool is
+most of the speed.
+
+@start src/domain/report/order.report.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderRepository } from '../order/order.repository';
+
+@injectable()
+export class OrderReportProvider {
+  constructor(@inject(OrderRepository) protected orderRepository: OrderRepository) {}
+
+  public async dailyTotals(args: { customerId: string }) {
+    const orders = await this.orderRepository.findByCustomer({ customerId: args.customerId });
+    console.log('orders', orders.length);
+
+    const shipped = orders.filter((order) => order.status == 'SHIPPED');
+    const pending = orders.filter((order) => order.status == 'PENDING');
+    const cancelled = orders.filter((order) => order.status == 'CANCELLED');
+    console.log('cancelled', cancelled.length);
+
+    return {
+      shipped: shipped.reduce((sum, order) => sum + order.total, 0),
+      pending: pending.reduce((sum, order) => sum + order.total, 0),
+      cancelled: cancelled.reduce((sum, order) => sum + order.total, 0),
+    };
+  }
+
+  public async refundRate(args: { customerId: string }) {
+    const orders = await this.orderRepository.findByCustomer({ customerId: args.customerId });
+    console.log('refundRate', orders.length);
+
+    const refunded = orders.filter((order) => order.status == 'CANCELLED');
+
+    return refunded.length / orders.length;
+  }
+}
+
+@expected src/domain/report/order.report.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderRepository } from '../order/order.repository';
+
+@injectable()
+export class OrderReportProvider {
+  constructor(@inject(OrderRepository) protected orderRepository: OrderRepository) {}
+
+  public async dailyTotals(args: { customerId: string }) {
+    const orders = await this.orderRepository.findByCustomer(args.customerId);
+
+    const shipped = orders.filter((order) => order.status === 'SHIPPED');
+    const pending = orders.filter((order) => order.status === 'PENDING');
+    const cancelled = orders.filter((order) => order.status === 'CANCELLED');
+
+    return {
+      cancelled: cancelled.reduce((sum, order) => sum + order.total, 0),
+      pending: pending.reduce((sum, order) => sum + order.total, 0),
+      shipped: shipped.reduce((sum, order) => sum + order.total, 0),
+    };
+  }
+
+  public async refundRate(args: { customerId: string }) {
+    const orders = await this.orderRepository.findByCustomer(args.customerId);
+
+    const refunded = orders.filter((order) => order.status === 'CANCELLED');
+
+    return refunded.length / orders.length;
+  }
+}
+
+@start src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(customerId: string) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}

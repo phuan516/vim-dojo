@@ -1,0 +1,305 @@
+@meta
+id: 32-05
+title: Deprecation — take it all out
+chapter: 32
+type: scenario
+skills: multi-file-refactor, global-delete, range-pattern, buffer-switch
+par: 110
+minutes: 14
+vscode: search "giftWrap", delete the hits, ship the broken import
+open: src/domain/order/order.entity.ts src/domain/order/order.provider.ts src/domain/order/order.resolver.ts src/configuration/registry.ts src/configuration/errors/default.json CHANGELOG.md
+vimrc: set hidden
+
+@brief
+    ORD-1105  Gift wrapping was switched off in March and the supplier
+              contract ended in June. Nothing calls it. Take it out.
+
+              `gift-wrap.service.ts` is already gone — it was removed in
+              the previous commit, which is why the build is red. Your
+              job is everything that still refers to it.
+
+Five files change:
+
+  1. order.entity.ts — the two fields go.
+  2. order.provider.ts — `applyGiftWrap` goes, and the blank line that
+     separated it from its neighbour, so the file reads as if it had
+     never been there.
+  3. order.resolver.ts — the mutation goes, same rule about spacing.
+  4. registry.ts — the import and the registration.
+  5. errors/default.json — the error code it threw.
+
+CHANGELOG.md mentions gift wrapping because gift wrapping happened.
+History is not a reference. Leave it alone, and leave the migration
+under prisma/ alone too.
+
+The trap in this ticket is the search term. Search for the identifier and
+you will miss two of the references, ship a red build, and find out from
+CI ten minutes after you thought you were done.
+
+@keys
+| `:g/pat/d` | delete every matching line in this buffer |
+| `:.,/^  }$/d` | from here to the next line that is exactly two spaces and a brace |
+| `4dd` | four lines |
+| `:bn` | next buffer |
+| `:vimgrep /pat/gj src/**/*.ts src/**/*.json` | prove there is nothing left |
+
+@hints
+Before you delete anything, find out how many references there are.
+Then search again with a shorter term and count again. If the two numbers
+differ, the shorter term is the honest one.
+--
+`giftWrap` is one of at least three spellings this feature has in the
+tree. The error code is `GIFT_WRAP_UNAVAILABLE`. The import path is
+`gift-wrap.service`. The stem they share is `gift`, and with `ignorecase`
+on, `/gift` finds every one of them.
+--
+Per file: the entity and the registry are `:g/gift/d`, because the lines
+to remove have nothing in common but the word. The provider is a method
+with a blank line in its body, so `dap` will not do — use a range that
+ends at the closing brace: `/applyGiftWrap` then `:.,/^  }$/d`, then `dd`
+for the blank line it leaves. The resolver method is exactly four lines
+with its gap.
+
+@solution
+A route that measures 96 keystrokes.
+
+**entity** `:g/gift/d`
+**provider** `:bn` `/applyGiftWrap` `Enter` `:.,/^  }$/d` `dd`
+**resolver** `:bn` `/setGiftWrap` `Enter` `4dd`
+**registry** `:bn` `:g/gift/d`
+**errors** `:bn` `:g/GIFT/d`
+then `:wqa`.
+
+The whole lesson is in the choice of search term.
+
+`giftWrap` finds the entity fields, the provider method, the resolver
+mutation and the values object — and it does not find
+`GIFT_WRAP_UNAVAILABLE` or `gift-wrap.service`, because neither of them
+contains the string `giftWrap`. Every codebase renames a concept across
+casing boundaries: camelCase in TypeScript, UPPER_SNAKE in error codes
+and enums, kebab-case in file names, snake_case in the database, and
+whatever marketing chose in the copy. A search for the identifier finds
+one of those five.
+
+So search the stem. `gift` is the longest string that survives every
+casing convention, and `ignorecase` does the rest. The same reasoning
+applies to `refund`, `subscri`, `cancel`: cut the word at the point where
+the conventions start to disagree.
+
+Two smaller things worth keeping.
+
+`:.,/^  }$/d` deletes from the cursor to the method's own closing brace.
+The pattern is anchored and exact — two spaces, a brace, end of line — so
+it cannot stop early on the `}` of the `if` inside the method, which sits
+at four spaces. Counting lines would have worked too, right up until
+somebody adds a line to the method.
+
+Then prove it. `:vimgrep /gift/gj src/**/*.ts src/**/*.json` `:copen`
+should give you E480, no match found. A deletion ticket is finished when
+the search is empty, not when the diff looks plausible.
+
+@start src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  giftWrap: boolean;
+  giftWrapMessage?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@expected src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async applyGiftWrap(id: string, message: string) {
+    const order = await this.findOne(id);
+
+    if (order.total < 2000) {
+      throw exception('GIFT_WRAP_UNAVAILABLE');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { giftWrap: true, giftWrapMessage: message },
+    });
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async setGiftWrap(_: unknown, args: { id: string; message: string }) {
+    return this.orderProvider.applyGiftWrap(args.id, args.message);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@expected src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@start src/configuration/registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderResolver } from '../domain/order/order.resolver';
+import { GiftWrapService } from '../infrastructure/services/gift-wrap.service';
+import { PaymentService } from '../infrastructure/services/payment.service';
+import { EmailService } from '../infrastructure/services/email.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('GiftWrapService', { useClass: GiftWrapService });
+container.register('PaymentService', { useClass: PaymentService });
+container.register('EmailService', { useClass: EmailService });
+container.register('OrderResolver', { useClass: OrderResolver });
+
+@expected src/configuration/registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderResolver } from '../domain/order/order.resolver';
+import { PaymentService } from '../infrastructure/services/payment.service';
+import { EmailService } from '../infrastructure/services/email.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('PaymentService', { useClass: PaymentService });
+container.register('EmailService', { useClass: EmailService });
+container.register('OrderResolver', { useClass: OrderResolver });
+
+@start src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "GIFT_WRAP_UNAVAILABLE": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@expected src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@start CHANGELOG.md
+# Changelog
+
+## 2024-06-30
+- Gift wrapping supplier contract ended. Feature flag left off.
+
+## 2024-03-14
+- Gift wrapping disabled for all customers pending supplier review.
+
+## 2023-11-02
+- Gift wrapping released behind the `giftWrap` flag.
+
+@start prisma/migrations/20231102_gift_wrap/migration.sql
+ALTER TABLE orders ADD COLUMN gift_wrap TINYINT(1) NOT NULL DEFAULT 0;
+ALTER TABLE orders ADD COLUMN gift_wrap_message VARCHAR(255) NULL;

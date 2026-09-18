@@ -1,0 +1,89 @@
+@meta
+id: 24-02
+title: Move a line to the top or the bottom
+chapter: 24
+type: lesson
+skills: ex-move
+par: 17
+minutes: 4
+vscode: cut the line, scroll, paste, scroll back, repeat
+open: registry.ts
+
+@brief
+Two lines in the DI registry are in the wrong place. The `container`
+import on line 5 has to be the first line of the file, because the
+convention is framework imports first. And `OrderResolver` is
+registered on line 10, before the providers it depends on; it has to be
+the last registration in the file.
+
+The command is `m`, move. Like `d` it takes a range in front. Unlike
+`d` it also takes an argument after: the line the moved text should
+land *below*. `0` means "below nothing", so the very top. `$` is the
+last line, so the very bottom.
+
+Neither move needs the cursor anywhere near the line.
+
+@keys
+| `:5m0` | move line 5 to the top of the file |
+| `:10m$` | move line 10 to the bottom of the file |
+| `:m0` | move the current line to the top |
+
+@hints
+Range in front, `m`, then the destination. The destination is the line
+number the text goes *after*.
+--
+Do the import first. Moving line 5 to the top pushes lines 1 to 4 down
+by one, but line 10 is still line 10, because nothing above it was added
+or removed. Check the gutter if you doubt it.
+--
+`:5m0` and Enter. `:10m$` and Enter. `:wq`.
+
+@solution
+    :5m0<Enter>  :10m$<Enter>  :wq<Enter>
+
+Fifteen keystrokes, no cursor movement, no register touched.
+
+The argument to `m` is an address, and it means "put the lines after
+this one". That is why `0` exists as an address at all: it is the only
+way to say "before line 1". It comes up again with `:pu` and `:t`, where
+`:0pu` and `:t0` mean the same thing.
+
+Notice what happened to the line numbers. After the first move,
+everything between the source and the destination shifted by one, so a
+second command aimed at that region would have missed. Line 10 was
+below both, so it did not care. When you chain several moves, work out
+whether each one shifts the next one's numbers, or do the lower one
+first. Chapter 15 got around this with `:g`, which marks its lines
+before it moves any of them. Here you are the one keeping count.
+
+@start registry.ts
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderResolver } from '../domain/order/order.resolver';
+import { CustomerRepository } from '../domain/customer/customer.repository';
+import { container } from 'tsyringe';
+import { CustomerProvider } from '../domain/customer/customer.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('OrderResolver', { useClass: OrderResolver });
+container.register('CustomerRepository', { useClass: CustomerRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('PaymentService', { useClass: PaymentService });
+
+@expected registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderResolver } from '../domain/order/order.resolver';
+import { CustomerRepository } from '../domain/customer/customer.repository';
+import { CustomerProvider } from '../domain/customer/customer.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('CustomerRepository', { useClass: CustomerRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('PaymentService', { useClass: PaymentService });
+container.register('OrderResolver', { useClass: OrderResolver });

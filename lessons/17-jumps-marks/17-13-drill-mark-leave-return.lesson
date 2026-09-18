@@ -1,0 +1,86 @@
+@meta
+id: 17-13
+title: Drill — mark, leave, return
+chapter: 17
+type: drill
+skills: marks-set, marks-jump, mark-backtick
+par: 38
+minutes: 5
+reps: 8
+vscode: Ctrl+K Ctrl+K to bookmark, if the extension is installed
+open: release-notes.md
+
+@brief
+Eight times: the `Unreleased` heading becomes `2.4.0`, and the stray
+`<!-- draft -->` line at the very bottom goes.
+
+Find `Unreleased`, mark it, go to the bottom, delete the line, come
+back to the mark and change the word. The mark has to be on the word,
+not the line, or you will be changing `##`.
+
+@keys
+| `ma` | mark here |
+| `` `a `` | back to the marked character |
+| `G` `dd` | last line, delete it |
+| `ciw` | change the word |
+
+@hints
+The search leaves you on the `U`. Mark before you move.
+--
+`` `a `` with the backtick puts you back on the `U`, so `ciw` changes
+the right word. `'a` would put you on the first `#`.
+
+@solution
+    /Unreleased<Enter> ma G dd `a ciw2.4.0<Esc> :wq<Enter>
+
+Set, leave, return. Once this is a reflex you will find yourself
+dropping `ma` before any excursion, the way you would put a finger in
+a book before flipping to the index. It costs two keystrokes and it
+never fails, whereas `Ctrl-O` occasionally surprises you when you have
+jumped more times than you thought.
+
+Lowercase marks belong to the file. Every buffer has its own `a`, so
+setting `a` in the release notes does not disturb an `a` you set in a
+provider earlier. The next lessons use that, and then break it on
+purpose with the uppercase ones.
+
+@start release-notes.md
+# Release notes
+
+## Unreleased
+
+- Refund window enforced at 30 days
+- Duplicate refund guard in PaymentService
+- Order confirmation email moved to a template
+
+## 2.3.0
+
+- Partial refunds
+- Customer lookup by email
+- Fix double email on order creation
+
+## 2.2.1
+
+- Fix cancelled orders showing as shipped in the export
+- Pin tsyringe to 4.8
+<!-- draft -->
+
+@expected release-notes.md
+# Release notes
+
+## 2.4.0
+
+- Refund window enforced at 30 days
+- Duplicate refund guard in PaymentService
+- Order confirmation email moved to a template
+
+## 2.3.0
+
+- Partial refunds
+- Customer lookup by email
+- Fix double email on order creation
+
+## 2.2.1
+
+- Fix cancelled orders showing as shipped in the export
+- Pin tsyringe to 4.8

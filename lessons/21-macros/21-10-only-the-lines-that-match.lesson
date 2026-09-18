@@ -1,0 +1,108 @@
+@meta
+id: 21-10
+title: Only the lines that match
+chapter: 21
+type: lesson
+skills: macro-play, macro-record
+par: 90
+minutes: 8
+vscode: find each ticket number, select it, wrap it in a link, paste the number again
+open: CHANGELOG.md
+
+@brief
+Release notes are going on the public site and every ticket reference
+has to become a link. A bullet that starts with a ticket number:
+
+    - ORD-512 refund window is now 30 days
+
+becomes
+
+    - [ORD-512](https://jira.example.com/browse/ORD-512) refund window is now 30 days
+
+The ticket number appears twice in the result, so this is a yank and a
+put, not a substitute you would enjoy writing. Bullets without a ticket
+number, and the headings, stay exactly as they are. The bullets are
+spread across three releases.
+
+Record the macro on the first ticketed line. Then let `:g` pick out
+the other lines that need it and play the macro on each.
+
+@keys
+| `:g/pattern/normal @a` | play `a` on every line that matches |
+| `yE` | yank to the end of the WORD, hyphen included |
+| `E` | to the end of the WORD |
+
+@hints
+On one line: `^w` onto the ticket, `yE` to take it, `i[` `Esc`, `E`
+to the end of it, `a](https://jira.example.com/browse/` `Esc`, `p`,
+`a)` `Esc`.
+--
+The pattern is what a ticketed bullet looks like at the start of the
+line: `^- ORD-`. Once a line is edited it starts `- [ORD`, so the line
+you recorded on will not match twice.
+--
+`4j`, record, then `:g/^- ORD-/normal @a` and Enter.
+
+@solution
+    4j  qa ^w yE i[ <Esc> E a](https://jira.example.com/browse/ <Esc> p a) <Esc> q   :g/^- ORD-/normal @a<Enter>   :wq<Enter>
+
+Seventy-eight keystrokes, nearly all of them the URL.
+
+Chapter 15 gave you `:g//normal` with the keys written out on the
+command line. That works until the keys include an `Esc` or two, and
+then you are typing `Ctrl-V Esc` into a command and squinting at `^[`.
+The macro version separates the two concerns. You record the edit
+where you can see it working, and `:g` supplies only the pattern and
+the word `normal @a`.
+
+It is worth being deliberate about which tool does the selecting.
+`99@a` with a search inside the macro is the right shape when the
+targets are found by their content and the edit consumes the match.
+`:g//normal @a` is the right shape when the targets are lines and you
+can name them with a pattern. Here the pattern is easy and anchored,
+and the macro's own search would have needed the same care about
+wrap-around. Let `:g` do the finding.
+
+@start CHANGELOG.md
+# Changelog
+
+## 2.14.0
+
+- ORD-512 refund window is now 30 days
+- Bumped tsyringe to 4.8
+- ORD-498 cancelled orders keep their cancellation reason
+- ORD-501 shipped orders can no longer be cancelled from the admin panel
+
+## 2.13.0
+
+- Node 20 in CI
+- ORD-476 customer email is validated on create
+- Dropped the legacy refund endpoint
+- ORD-470 payment retries once on a gateway timeout
+
+## 2.12.1
+
+- ORD-455 fixed a double refund on concurrent cancellation
+- Documentation for the seed script
+
+@expected CHANGELOG.md
+# Changelog
+
+## 2.14.0
+
+- [ORD-512](https://jira.example.com/browse/ORD-512) refund window is now 30 days
+- Bumped tsyringe to 4.8
+- [ORD-498](https://jira.example.com/browse/ORD-498) cancelled orders keep their cancellation reason
+- [ORD-501](https://jira.example.com/browse/ORD-501) shipped orders can no longer be cancelled from the admin panel
+
+## 2.13.0
+
+- Node 20 in CI
+- [ORD-476](https://jira.example.com/browse/ORD-476) customer email is validated on create
+- Dropped the legacy refund endpoint
+- [ORD-470](https://jira.example.com/browse/ORD-470) payment retries once on a gateway timeout
+
+## 2.12.1
+
+- [ORD-455](https://jira.example.com/browse/ORD-455) fixed a double refund on concurrent cancellation
+- Documentation for the seed script

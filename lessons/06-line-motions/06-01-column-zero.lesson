@@ -1,0 +1,60 @@
+@meta
+id: 06-01
+title: All the way back with zero
+chapter: 06
+type: lesson
+skills: line-start
+par: 20
+minutes: 3
+vscode: Home, or clicking in the gap before the first character
+open: constants.ts
+
+@brief
+One line, eighty characters wide, and two things wrong with it. The
+declaration is never terminated, and it is not exported, so nothing else in
+the service can see these values.
+
+Terminate the line and export the declaration. Leave everything between the
+two ends exactly as it is.
+
+The second half of the job starts at the far left of the line. You have just
+been at the far right. Getting between the two is what this chapter is about,
+and the first key does it in one press regardless of how long the line is.
+
+@keys
+| `0` | the first column of the line, blank or not |
+| `A` | append at the end of the line |
+| `i` | insert to the left of the cursor |
+
+@hints
+Do the end of the line first, while you are already there. Then you need to
+travel the whole width of the line leftwards.
+--
+`0` — the digit zero, not the letter O — puts the cursor in column one. It
+takes one press whether the line is ten characters or two hundred.
+--
+`A` `;` `Esc` closes the statement. Then `0`, then `i`, then type the keyword
+and a space, then `Esc` and save.
+
+@solution
+    A ; <Esc> 0 i export  <Esc> :wq<Enter>
+
+Seventeen keystrokes, seven of them the word `export`.
+
+`0` is the bluntest motion in vim and one of the most used. It ignores
+indentation, ignores words, ignores everything: column one, now. The cost of
+using it does not grow with the line, which is the whole point. Holding `h`
+across eighty characters takes eighty presses and your full attention;
+`b` counts words and stops in the wrong places around punctuation like
+`=` and `,`.
+
+Two habits worth forming here. Repair the end of a line while you are at the
+end of it, rather than travelling back and forth. And when you are lost in
+the middle of a long line, `0` is a reset button — it costs one key and puts
+you somewhere you understand.
+
+@start constants.ts
+const REFUND_WINDOW_DAYS = 30, MAX_PARTIAL_REFUNDS = 3, RETRY_BACKOFF_MS = 250
+
+@expected constants.ts
+export const REFUND_WINDOW_DAYS = 30, MAX_PARTIAL_REFUNDS = 3, RETRY_BACKOFF_MS = 250;

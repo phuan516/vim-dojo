@@ -1,0 +1,79 @@
+@meta
+id: 10-07
+title: Taking the quotes with it
+chapter: 10
+type: lesson
+skills: obj-quote, inner-vs-around
+par: 33
+minutes: 5
+vscode: select from before the opening quote to after the closing one
+open: CHANGELOG.md
+
+@brief
+`a"` is the string plus its quotes plus, like `aw`, one space. It is the
+object you want when the string itself should stop existing — not be
+replaced, removed.
+
+That is rarer than `ci"` but it is the only tidy way to do it, because the
+alternative is deleting the content, then the two quotes, then the space,
+and hoping you counted.
+
+The changelog entry for 2.4.0 mentions a flag that was removed before the
+release went out, so the line is now wrong. Delete the quoted flag name
+from that line so it reads as a sentence again. Then fix the last line:
+the environment name is read from `SENTRY_ENV`, not `NODE_ENV`.
+
+Do not touch the heading or the first bullet.
+
+@keys
+| `a"` | the string, its quotes, and one space |
+| `da"` | delete all of that |
+| `ci"` | change what is inside — still the common one |
+
+@hints
+One of these two edits removes a string, the other replaces one. They are
+different objects.
+--
+`da"` takes the quotes and the space with it. `ci"` keeps the quotes and
+replaces what is between them.
+--
+`f"` lands you on the opening quote, which counts as being on the string.
+Then `da"` on the middle line and `ci"` on the last one.
+
+@solution
+    5j f" da"
+    j f" ci" SENTRY_ENV <Esc>
+    :wq<Enter>
+
+Twenty-eight keystrokes. Look at the middle line afterwards: one space
+between `The` and `flag`, not two. `da"` took the trailing space because
+there was one.
+
+That fallback rule is the thing to remember, and it bites in code. In
+prose a string usually has a space after it, so `da"` reads your mind. In
+TypeScript a string is usually followed by a comma, a bracket or a
+semicolon and there is no trailing space at all — so `a"` falls back to
+the space in *front* of it and you get `send(customer.email,'order-shipped'`
+collapsed into `send(customer.email,`. Correct by vim's rule, wrong by
+Prettier's.
+
+So: `ci"` everywhere, `da"` in prose and in lists, and check the line
+afterwards the first few times.
+
+@start CHANGELOG.md
+# Changelog
+
+## 2.4.0
+
+- Refunds now respect the "refund window" and stop after 30 days.
+- The "detectOpenHandles" flag has been removed from the test scripts.
+- Sentry reads the environment name from "NODE_ENV".
+
+@expected CHANGELOG.md
+# Changelog
+
+## 2.4.0
+
+- Refunds now respect the "refund window" and stop after 30 days.
+- The flag has been removed from the test scripts.
+- Sentry reads the environment name from "SENTRY_ENV".

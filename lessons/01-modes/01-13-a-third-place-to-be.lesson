@@ -1,0 +1,69 @@
+@meta
+id: 01-13
+title: A look at visual mode
+chapter: 01
+type: lesson
+skills: mode-awareness, esc, insert-a, survival-motion
+par: 19
+minutes: 4
+vscode: click and drag, or Shift with the arrow keys
+open: totals.csv
+
+@brief
+You have been in four modes now: normal, insert, command line and
+replace. Here is the fifth, briefly, so that the map is complete.
+
+`v` puts you in VISUAL mode. The character under the cursor is selected,
+and every motion you make extends the selection instead of just moving.
+It is the closest thing vim has to dragging with a mouse, and it exists
+for the times when it is easier to see what you are about to change than
+to describe it.
+
+Chapter 22 is where visual mode does any work, because the work needs
+verbs you have not been given yet. Today, just visit.
+
+  1. Put the cursor on the last row and press `v`, then `$`. Watch the
+     row highlight and the indicator read `-- VISUAL --`.
+  2. Press `Esc`. Nothing has changed — visual mode on its own is a
+     selection, not an edit.
+  3. The total on that row is cut off. It should read `12.50`.
+
+@keys
+| `v` | visual mode, character by character |
+| `V` | visual mode, whole lines |
+| `Esc` | drop the selection, change nothing |
+| `$` `a` | end of the line, append |
+
+@hints
+`jj` gets you to the `ord_1043` row. `v` starts the selection there and
+`$` drags it to the end of the line.
+--
+`Esc` collapses the selection. The cursor is left where the selection
+ended, which is a genuinely useful side effect once you know it.
+--
+The row ends `12.` and wants two more digits. `$a50` then `Esc`, then
+save and quit.
+
+@solution
+    j j v $ <Esc> $ a 5 0 <Esc> :wq<Enter>
+
+The reason visual mode is late in this curriculum rather than early is
+that it is a trap for people coming from VS Code. It is familiar, so it
+becomes the thing you reach for, and you end up using vim as a slower
+mouse: select, then act, select, then act.
+
+The faster habit is to say what you mean in one go — delete this word,
+change what is inside these brackets — which is what chapters 8 to 10
+build. Visual mode stays in the toolbox for the genuinely awkward cases
+where the region is easier to see than to name, and there are plenty of
+those. It is just not the default.
+
+@start totals.csv
+order_id,customer,total
+ord_1042,priya,48.00
+ord_1043,marco,12.
+
+@expected totals.csv
+order_id,customer,total
+ord_1042,priya,48.00
+ord_1043,marco,12.50

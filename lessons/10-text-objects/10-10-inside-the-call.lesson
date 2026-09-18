@@ -1,0 +1,97 @@
+@meta
+id: 10-10
+title: Inside the argument list
+chapter: 10
+type: lesson
+skills: obj-paren
+par: 80
+minutes: 6
+vscode: click after the open paren, shift-End, fix the end by hand
+open: order.provider.ts
+
+@brief
+`i(` is everything between a matching pair of round brackets. In a
+TypeScript file that means the argument list of a call or the parameter
+list of a function, which between them are most of the brackets you will
+ever edit.
+
+`ci(` is the edit that follows: wipe the arguments, type the new ones,
+leave the brackets alone. It is the same shape of move as `ci"` and it is
+the second one worth having in your fingers.
+
+One difference from the quote objects, and it matters: the cursor has to
+be inside the brackets, or on one of them. Vim will not go looking down
+the line for the next pair the way it does for a string. `f(` first.
+
+The payment service has changed under you. `refund` now needs the amount
+as well as the order id, and `cancel` has to take a reason so the refund
+call can be audited. Update both signatures:
+
+  - `cancel(id: string, reason: string)`
+  - `refund(order.id, order.total)`
+
+The body of the update call is already correct.
+
+@keys
+| `i(` | everything between the brackets |
+| `ci(` | change the argument list |
+| `i)` `ib` | the same object, two more names for it |
+| `f(` | get inside the brackets first |
+
+@hints
+The argument list is a thing with two edges, like a string. There is an
+object for it.
+--
+`ci(` replaces everything between the brackets and leaves the brackets.
+`i)` and `ib` are the same object if you prefer the other key.
+--
+Unlike `ci"`, this one will not search forward for you. `f(` puts the
+cursor on the bracket, which counts as inside, and then `ci(` works.
+
+@solution
+    j f( ci( id: string, reason: string <Esc>
+    3j 0 f( ci( order.id, order.total <Esc>
+    :wq<Enter>
+
+Sixty-seven keystrokes, fifty of them the new argument lists.
+Everything else is navigation.
+
+`ci(` is worth more than it first looks because of what it protects you
+from. Changing an argument list by hand means finding the closing bracket,
+and closing brackets are the single most common thing to get wrong when
+selecting — one too few and you leave a fragment, one too many and you
+have broken the call and will not see it until the compiler complains.
+The object cannot make that mistake: it is defined by the matching pair.
+
+`b` in `ib` and `ab` stands for bracket. `i(`, `i)` and `ib` all mean the
+same thing, so use whichever your hand reaches first. Some people prefer
+`i)` because you press the same shift as for the closing bracket you are
+looking at; some prefer `ib` because it needs no shift at all.
+
+@start order.provider.ts
+export class OrderProvider {
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+export class OrderProvider {
+  public async cancel(id: string, reason: string) {
+    const order = await this.findOne(id);
+
+    await this.paymentService.refund(order.id, order.total);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}

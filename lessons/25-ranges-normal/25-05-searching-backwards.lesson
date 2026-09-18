@@ -1,0 +1,113 @@
+@meta
+id: 25-05
+title: The address that searches backwards
+chapter: 25
+type: lesson
+skills: range-pattern
+par: 34
+minutes: 5
+vscode: scroll up a bit, find the right one of two identical lines, delete it
+open: batch.provider.ts
+
+@brief
+Two `// eslint-disable-next-line` comments in this file. The one directly
+above `processBatch` is stale — the rule it silences no longer fires
+there. The other one, further down above `retryFailed`, is still needed
+and must survive.
+
+Go to `processBatch`, then delete the disable comment above it. The trick
+is the "above". A forward pattern address would find the wrong one.
+
+@keys
+| `:?eslint?d` | delete the nearest line above the cursor matching `eslint` |
+| `:/pat/` | forwards from the cursor |
+| `:?pat?` | backwards from the cursor |
+
+@hints
+Get the cursor onto the `processBatch` line first, with a search.
+--
+Then use the backward form of a pattern address. It is the same shape
+with question marks instead of slashes.
+--
+`/processBatch` Enter, then `:?eslint?d` Enter, then `:wq`.
+
+@solution
+    /processBatch<Enter>  :?eslint?d<Enter>  :wq<Enter>
+
+Twenty-nine keystrokes, and the second disable comment is untouched
+because the address only ever looked upwards.
+
+`?pat?` is the mirror of `/pat/`: it searches backwards from the line
+*above* the cursor, and wraps around the top of the file. Together they
+are how you name a line relative to where you are rather than relative to
+the file. "The `import` above me" is `?import?`. "The next closing brace
+below me" is `/^}/`.
+
+That relative framing is what makes these addresses safe inside a big
+file. There are eleven `const` lines in a typical module and `:/const/d`
+picks the one after the cursor, every time, no matter how the file grows
+above or below. Naming lines by number is how you delete the wrong thing
+at 6pm on a Friday.
+
+@start batch.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderRepository } from './order.repository';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class BatchProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  public async processBatch(orders: string[]) {
+    const results = [];
+
+    for (const id of orders) {
+      results.push(await this.orderRepository.findOne({ where: { id } }));
+    }
+
+    return results;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  public async retryFailed(payload: any) {
+    if (!payload.orders) {
+      throw exception('BATCH_PAYLOAD_INVALID');
+    }
+
+    return this.processBatch(payload.orders);
+  }
+}
+
+@expected batch.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderRepository } from './order.repository';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class BatchProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  public async processBatch(orders: string[]) {
+    const results = [];
+
+    for (const id of orders) {
+      results.push(await this.orderRepository.findOne({ where: { id } }));
+    }
+
+    return results;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  public async retryFailed(payload: any) {
+    if (!payload.orders) {
+      throw exception('BATCH_PAYLOAD_INVALID');
+    }
+
+    return this.processBatch(payload.orders);
+  }
+}

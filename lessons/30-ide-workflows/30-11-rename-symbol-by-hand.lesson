@@ -1,0 +1,169 @@
+@meta
+id: 30-11
+title: Rename symbol, and what it misses
+chapter: 30
+type: lesson
+skills: rename-symbol
+par: 245
+minutes: 12
+vscode: F2, type the new name, press Enter, trust it
+vimrc: set hidden
+open: src/domain/order/order.provider.ts
+
+@brief
+    ORD-590  OrderProvider.sendReceipt is misnamed. It queues an email;
+             it sends nothing itself. Rename it emailReceipt, definition
+             and callers.
+
+F2 in an IDE. In vim it is a search across the tree and a substitute
+over every file that matched — `:vimgrep` then `:cfdo`, both of which
+chapter 19 gave you. That part is easy.
+
+The part that is not easy is that a text search has no idea what a
+symbol is. Look at the whole list before you change anything. Two of the
+hits are not this method at all:
+
+  · `NotificationService` has its own `sendReceipt`. Different class,
+    different job, nothing to do with this ticket.
+  · the producer publishes on the routing key `'order.sendReceipt'`.
+    Consumers subscribe to that string. Change it and messages stop
+    being delivered, silently, in production.
+
+Rename the method and its callers. Those two must read exactly as they
+do now when you are finished.
+
+@keys
+| `:vimgrep /\<name\>/ path/*.ts` | every whole-word hit, into the quickfix list |
+| `:copen` | read the list before you act |
+| `:cfdo %s/old/new/g \| update` | substitute through every file in the list |
+| `/ge` | the `e` flag: no error when a file has no match |
+| `:cfdo` vs `:cdo` | once per file, versus once per hit |
+
+@hints
+Search wide first — `:vimgrep /\<sendReceipt\>/ src/**/*.ts` and
+`:copen` — so you can see what you are about to break.
+--
+The notification service is in a different directory, so a narrower
+glob leaves it out of the list entirely. The routing key is not: it
+lives in the same directory as the code you are renaming.
+--
+Do the blind rename over the narrowed list, then put the routing key
+back with a second pass. `%s/pattern/text/ge` with the `e` flag runs
+happily in the files that do not contain it.
+
+@solution
+    :vimgrep /\<sendReceipt\>/ src/**/*.ts<Enter>  :copen<Enter>
+    :vimgrep /\<sendReceipt\>/ src/domain/order/*.ts<Enter>
+    :cfdo %s/\<sendReceipt\>/emailReceipt/g | update<Enter>
+    :cfdo %s/'order\.emailReceipt'/'order.sendReceipt'/ge | update<Enter>
+    :qa<Enter>
+
+Two mitigations, because there are two different failures.
+
+Wrong scope is a *file* problem here, so the fix is a narrower list.
+`src/domain/order/*.ts` cannot reach the notification service. This is
+the usual shape: the thing you are renaming lives in one part of the
+tree, and the same word elsewhere is somebody else's.
+
+A string that happens to contain the name is not a file problem, and no
+glob will save you. Either answer each match with the `c` flag, or —
+faster on a big rename — change everything and put the handful of
+strings back afterwards. The second pass is cheap because you know
+exactly what to look for.
+
+Now the honest comparison. A language server renames by symbol: it
+resolves `sendReceipt` to one declaration, finds the references that
+actually resolve to it, and leaves the other class and the string alone
+without being asked. That is a real advantage and this lesson is what it
+saves you.
+
+What it costs: a server that understands your project, which means an
+install, a config, an index, and a language it supports. On the machine
+you ssh into at 2am there is no server, and `:vimgrep` plus `:cfdo`
+still renames a symbol across two hundred files in about four seconds.
+Both are worth having. Only one of them is always there.
+
+Whichever you use, read `git diff` before you commit. A rename is the
+edit most likely to be right in nine places and quietly wrong in the
+tenth.
+
+@start src/domain/order/order.provider.ts
+import { EmailProducer } from './order.producer';
+
+export class OrderProvider {
+  constructor(protected emailProducer: EmailProducer) {}
+
+  public async confirm(id: string) {
+    const order = await this.findOne(id);
+
+    await this.sendReceipt(order);
+
+    return order;
+  }
+
+  public async sendReceipt(order: Order) {
+    return this.emailProducer.publish(order.id);
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { EmailProducer } from './order.producer';
+
+export class OrderProvider {
+  constructor(protected emailProducer: EmailProducer) {}
+
+  public async confirm(id: string) {
+    const order = await this.findOne(id);
+
+    await this.emailReceipt(order);
+
+    return order;
+  }
+
+  public async emailReceipt(order: Order) {
+    return this.emailProducer.publish(order.id);
+  }
+}
+
+@start src/domain/order/order.resolver.ts
+import { OrderProvider } from './order.provider';
+
+export class OrderResolver {
+  constructor(protected orderProvider: OrderProvider) {}
+
+  public async resendReceipt(_: unknown, args: { id: string }) {
+    const order = await this.orderProvider.findOne(args.id);
+
+    return this.orderProvider.sendReceipt(order);
+  }
+}
+
+@expected src/domain/order/order.resolver.ts
+import { OrderProvider } from './order.provider';
+
+export class OrderResolver {
+  constructor(protected orderProvider: OrderProvider) {}
+
+  public async resendReceipt(_: unknown, args: { id: string }) {
+    const order = await this.orderProvider.findOne(args.id);
+
+    return this.orderProvider.emailReceipt(order);
+  }
+}
+
+@start src/domain/order/order.producer.ts
+export class EmailProducer {
+  public async publish(orderId: string) {
+    return this.channel.publish({
+      routingKey: 'order.sendReceipt',
+      payload: { orderId },
+    });
+  }
+}
+
+@start src/infrastructure/services/notification.service.ts
+export class NotificationService {
+  public async sendReceipt(customerId: string, receiptUrl: string) {
+    return this.push.deliver(customerId, { url: receiptUrl });
+  }
+}

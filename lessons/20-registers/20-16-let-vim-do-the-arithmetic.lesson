@@ -1,0 +1,61 @@
+@meta
+id: 20-16
+title: Let vim do the arithmetic
+chapter: 20
+type: lesson
+skills: register-expression
+par: 21
+minutes: 4
+vscode: alt-tab to a calculator, alt-tab back, type the number
+open: orders.csv
+
+@brief
+One register is not a place text is stored but a place text is
+computed. `"=` is the expression register: type `"=`, and vim gives
+you a prompt where you enter an expression; press Enter and the
+result is what the register holds. `"=12*1849` Enter `p` puts `22188`.
+
+The last row of this fixture file is missing its total. The order is
+37 units at 1849 pence each. Do not reach for a calculator and do not
+do it in your head: put the product at the end of the row.
+
+@keys
+| `"=` | the expression register — opens a prompt |
+| `"=37*1849` `Enter` `p` | compute, then put the result |
+| `Ctrl-R =` | the same prompt from inside insert mode (next lesson) |
+
+@hints
+Get to the end of the last line first, so the put lands after the
+trailing comma.
+--
+`G$` and then `"=`. The prompt appears at the bottom of the screen.
+Type the multiplication and press Enter; nothing is put until you press
+`p`.
+--
+`G$` `"=37*1849` Enter `p`.
+
+@solution
+    G$ "=37*1849<Enter> p :wq<Enter>
+
+The expression is vimscript, so it does more than sums: `"=line('.')`
+puts the current line number, `"=strftime('%Y-%m-%d')` puts today's
+date, `"=expand('%:t')` puts the file's name without its directory.
+Anything vim can evaluate can be typed into a file this way.
+
+One thing to know about the arithmetic: `/` on two whole numbers is
+whole-number division, so `"=22188/100` gives `221`, not `221.88`. Write
+`22188/100.0` when you want the decimals.
+
+@start orders.csv
+id,customer,status,total
+ord_001,cus_042,PENDING,1999
+ord_002,cus_017,SHIPPED,4500
+ord_003,cus_042,CANCELLED,2750
+ord_004,cus_003,SHIPPED,
+
+@expected orders.csv
+id,customer,status,total
+ord_001,cus_042,PENDING,1999
+ord_002,cus_017,SHIPPED,4500
+ord_003,cus_042,CANCELLED,2750
+ord_004,cus_003,SHIPPED,68413

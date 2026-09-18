@@ -1,0 +1,267 @@
+@meta
+id: 22-20
+title: Scenario — the registry split
+chapter: 22
+type: scenario
+skills: visual-block, block-insert, visual-line, visual-char, buffer-switch
+par: 130
+minutes: 14
+vimrc: set hidden
+vscode: three tabs, Alt+click, drag-select, Find in selection
+open: registry.ts README.md order.provider.ts errors.json
+
+@brief
+A ticket, not an exercise.
+
+    PLAT-77  Repositories and providers are constructed once per
+             request. They hold no request state; make them
+             singletons. Tidy the README while you are in there, and
+             quieten the cancel path's logging.
+
+Four files, open as four buffers. `:bn` for the next one, `:wqa` when
+you are done.
+
+  1. registry.ts — the four repository and provider registrations
+     become `container.registerSingleton(...)`. The three service and
+     resolver registrations stay `container.register(...)`.
+
+  2. README.md — the seven service names under "Services" become a
+     bullet list: `- ` in front of each. The whole "Legacy gateway"
+     section goes — heading, paragraph, and one of the blank lines
+     around it, so a single blank line separates the list from
+     "Running locally".
+
+  3. order.provider.ts — in `cancel`, and only in `cancel`, every
+     `this.logger.info(` becomes `this.logger.debug(`. `markShipped`
+     keeps its `info`.
+
+  4. errors.json — leave it alone.
+
+@keys
+| `Ctrl-V` then `I` | insert at the block's left edge on every line |
+| `f(` | find the bracket, which sets the block's column |
+| `vip` `o` `k` | select the paragraph, swap ends, grow upward |
+| `V` then `:s` | substitute on the selected lines only |
+| `:bn` `:wqa` | next buffer; write all and quit |
+
+@hints
+`registerSingleton(` is `register(` with a word inserted before the
+bracket. Put a block on the bracket column, four lines tall, and `I`
+the word.
+--
+In the README, land inside the legacy paragraph with a search, `vip`,
+then `o` and three `k` to take the heading and the blank lines with
+it. The list is a block `I` like the registry.
+--
+registry.ts: `/register(` `Enter`, `f(`, `Ctrl-V`, `3j`, `ISingleton`,
+`Esc`. README.md: `/LegacyPayment` `Enter`, `vip`, `o`, `kkk`, `d`;
+`/^OrderRep` `Enter`, `Ctrl-V`, `6j`, `I- `, `Esc`. order.provider.ts:
+`/async cancel` `Enter`, `Vip`, `:s/info/debug/g` `Enter`. `:wqa`.
+
+@solution
+A route, buffer by buffer.
+
+**registry.ts** — `/register(` `Enter` lands on the first
+registration; `f(` moves to the bracket. `Ctrl-V`, `3j`, `ISingleton`,
+`Esc`. `:bn`.
+
+**README.md** — `/LegacyPayment` `Enter` lands in the section body.
+`vip`, `o`, `kkk`, `d` takes the paragraph, the blank above it, the
+heading and the blank above that. Then `/^OrderRep` `Enter`, `Ctrl-V`,
+`6j`, `I- `, `Esc`. `:bn`.
+
+**order.provider.ts** — `/async cancel` `Enter`, `Vip`, `:` gives
+`:'<,'>`, then `s/info/debug/g` `Enter`. `:wqa`.
+
+**errors.json** — untouched.
+
+Around a hundred and fifteen keystrokes across three files. Every edit
+here is a region: a column of brackets, a section, a method. None of
+them is a word or a line, which is when an operator with a text object
+wins. Visual mode earns its place on exactly this kind of ticket —
+regions you can see and would rather not describe — and the three
+modes cover three shapes: `Ctrl-V` for columns, `V` for runs of
+lines, `v` for anything ragged in between.
+
+@start registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { CustomerRepository } from '../domain/customer/customer.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { CustomerProvider } from '../domain/customer/customer.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+import { EmailService } from '../infrastructure/services/email.service';
+import { OrderResolver } from '../domain/order/order.resolver';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('CustomerRepository', { useClass: CustomerRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('PaymentService', { useClass: PaymentService });
+container.register('EmailService', { useClass: EmailService });
+container.register('OrderResolver', { useClass: OrderResolver });
+
+@expected registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { CustomerRepository } from '../domain/customer/customer.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { CustomerProvider } from '../domain/customer/customer.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+import { EmailService } from '../infrastructure/services/email.service';
+import { OrderResolver } from '../domain/order/order.resolver';
+
+container.registerSingleton('OrderRepository', { useClass: OrderRepository });
+container.registerSingleton('CustomerRepository', { useClass: CustomerRepository });
+container.registerSingleton('OrderProvider', { useClass: OrderProvider });
+container.registerSingleton('CustomerProvider', { useClass: CustomerProvider });
+container.register('PaymentService', { useClass: PaymentService });
+container.register('EmailService', { useClass: EmailService });
+container.register('OrderResolver', { useClass: OrderResolver });
+
+@start README.md
+# Orders service
+
+## Services
+
+Everything is registered in `src/configuration/registry.ts`.
+Repositories and providers are singletons; services and resolvers are
+constructed per request.
+
+OrderRepository
+CustomerRepository
+OrderProvider
+CustomerProvider
+PaymentService
+EmailService
+OrderResolver
+
+## Legacy gateway
+
+The legacy payment gateway is registered as `LegacyPaymentService`
+and is used only by `legacyRefund`. Both are scheduled for removal
+once the last pre-migration order is closed.
+
+## Running locally
+
+Start the database with `./start/database`, then `npm run dev`. The
+GraphQL playground is on port 4000.
+
+@expected README.md
+# Orders service
+
+## Services
+
+Everything is registered in `src/configuration/registry.ts`.
+Repositories and providers are singletons; services and resolvers are
+constructed per request.
+
+- OrderRepository
+- CustomerRepository
+- OrderProvider
+- CustomerProvider
+- PaymentService
+- EmailService
+- OrderResolver
+
+## Running locally
+
+Start the database with `./start/database`, then `npm run dev`. The
+GraphQL playground is on port 4000.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { Logger } from '../../infrastructure/logger';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(Logger) protected logger: Logger,
+  ) {}
+
+  public async cancel(id: string) {
+    this.logger.info('cancel requested', id);
+    const order = await this.orderRepository.findOne({ where: { id } });
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+    if (order.status === 'SHIPPED') {
+      this.logger.info('cancel refused, already shipped', id);
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+    this.logger.info('refunding', order.id);
+    await this.paymentService.refund(order.id);
+    this.logger.info('refund complete', order.id);
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async markShipped(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+    this.logger.info('markShipped', order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { Logger } from '../../infrastructure/logger';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(Logger) protected logger: Logger,
+  ) {}
+
+  public async cancel(id: string) {
+    this.logger.debug('cancel requested', id);
+    const order = await this.orderRepository.findOne({ where: { id } });
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+    if (order.status === 'SHIPPED') {
+      this.logger.debug('cancel refused, already shipped', id);
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+    this.logger.debug('refunding', order.id);
+    await this.paymentService.refund(order.id);
+    this.logger.debug('refund complete', order.id);
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async markShipped(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+    this.logger.info('markShipped', order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+}
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}

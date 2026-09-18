@@ -1,0 +1,224 @@
+@meta
+id: 12-05
+title: Search for the word you are looking at
+chapter: 12
+type: lesson
+skills: search-star
+par: 15
+minutes: 4
+vscode: double-click the word, Ctrl+F, Enter
+open: refund.provider.ts
+
+@brief
+Line 1 imports `LEGACY_REFUND_LIMIT`. It is used exactly once, seventy
+lines further down, in `requiresApproval`, and the comparison there is
+wrong: a refund *equal* to the limit needs approval too, so `>` should be
+`>=`.
+
+Reading an import and wanting to know where the thing is actually used is
+one of the most common moves there is. Typing the name out to search for
+it is silly — you are looking straight at it.
+
+Change the comparison and save. Do not type the constant's name.
+
+@keys
+| `*` | search forward for the word under the cursor |
+| `f` `x` | to the next `x` on this line |
+| `F` `x` | back to the previous `x` on this line |
+| `a` | append after the cursor |
+
+@hints
+Put the cursor on the constant in the import line, then ask vim to
+search for whatever is under the cursor. There is a single key for it.
+--
+`*` searches forward for the word the cursor is sitting on, wrapping
+round the file if it needs to. Any character of the word will do.
+--
+`fL` puts you on the constant in line 1. `*` jumps to the use site. Then
+step back to the comparison with `F>` and append the `=`.
+
+@solution
+fL  *  F>  a=<Esc>  :wq<Enter>
+
+Twelve keystrokes, and none of them spell `LEGACY_REFUND_LIMIT`.
+
+`*` is the single best argument for vim's search over a find box. The
+thing you want to search for is almost always already under your cursor —
+a function you are reading, a variable you are tracing, a config key you
+just spotted. `*` turns "where else is this?" into one keystroke.
+
+It is also smarter than it looks. `*` wraps the word in word boundaries,
+so searching from `total` will not stop on `subtotal` or `totalRefunded`.
+That is usually what you want when you are chasing an identifier. When it
+is not — when you *do* want the loose match — `g*` is the same search
+without the boundaries.
+
+One more thing `*` quietly does: it sets the last search pattern, so `n`
+and `N` work afterwards exactly as if you had typed the search yourself.
+That is what makes `*` the front half of so many longer moves.
+
+@start refund.provider.ts
+import { LEGACY_REFUND_LIMIT } from '../../configuration/limits';
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from '../order/order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class RefundProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(args: { id: string }) {
+    const order = await this.orderRepository.findOne({ where: { id: args.id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async isRefundable(args: { id: string }) {
+    const order = await this.findOne({ id: args.id });
+
+    return order.status === 'SHIPPED' || order.status === 'SUBMITTED';
+  }
+
+  public async partial(args: { id: string; amount: number }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (args.amount <= 0) {
+      throw exception('REFUND_AMOUNT_INVALID');
+    }
+
+    if (args.amount > order.total) {
+      throw exception('REFUND_EXCEEDS_TOTAL');
+    }
+
+    await this.paymentService.refundPartial(order.id, args.amount);
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { refunded: args.amount },
+    });
+  }
+
+  public async full(args: { id: string }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (order.status === 'CANCELLED') {
+      throw exception('ORDER_ALREADY_CANCELLED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { status: 'CANCELLED', refunded: order.total },
+    });
+  }
+
+  public async requiresApproval(args: { id: string }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (order.total > LEGACY_REFUND_LIMIT) {
+      return true;
+    }
+
+    return false;
+  }
+
+  public async notify(args: { id: string; email: string }) {
+    const order = await this.findOne({ id: args.id });
+
+    return this.emailService.sendRefundNotice(args.email, order.id);
+  }
+}
+
+@expected refund.provider.ts
+import { LEGACY_REFUND_LIMIT } from '../../configuration/limits';
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from '../order/order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class RefundProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(args: { id: string }) {
+    const order = await this.orderRepository.findOne({ where: { id: args.id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async isRefundable(args: { id: string }) {
+    const order = await this.findOne({ id: args.id });
+
+    return order.status === 'SHIPPED' || order.status === 'SUBMITTED';
+  }
+
+  public async partial(args: { id: string; amount: number }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (args.amount <= 0) {
+      throw exception('REFUND_AMOUNT_INVALID');
+    }
+
+    if (args.amount > order.total) {
+      throw exception('REFUND_EXCEEDS_TOTAL');
+    }
+
+    await this.paymentService.refundPartial(order.id, args.amount);
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { refunded: args.amount },
+    });
+  }
+
+  public async full(args: { id: string }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (order.status === 'CANCELLED') {
+      throw exception('ORDER_ALREADY_CANCELLED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { status: 'CANCELLED', refunded: order.total },
+    });
+  }
+
+  public async requiresApproval(args: { id: string }) {
+    const order = await this.findOne({ id: args.id });
+
+    if (order.total >= LEGACY_REFUND_LIMIT) {
+      return true;
+    }
+
+    return false;
+  }
+
+  public async notify(args: { id: string; email: string }) {
+    const order = await this.findOne({ id: args.id });
+
+    return this.emailService.sendRefundNotice(args.email, order.id);
+  }
+}

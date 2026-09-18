@@ -1,0 +1,103 @@
+@meta
+id: 14-05
+title: Lines eight to nineteen
+chapter: 14
+type: lesson
+skills: sub-range
+par: 28
+minutes: 5
+vscode: select the twelve lines by hand, Ctrl-H, "in selection"
+vimrc: set number
+open: seed.sql
+
+@brief
+Finance ran a euro pilot for March. The twelve March rows in this seed
+file were raised in EUR, and whoever wrote the seed put `'GBP'` on all
+of them. February and April really were GBP and are correct.
+
+A pattern cannot tell a March `'GBP'` from a February one; the text is
+identical. What separates them is where they are: lines 8 to 19. A
+range can say that, and this lesson runs with line numbers on so you
+can see it.
+
+Change the currency on those twelve lines and no others.
+
+@keys
+| `:8,19s/old/new/` `Enter` | substitute on lines 8 through 19 inclusive |
+| `:8s/old/new/` `Enter` | a single line by number |
+| `%` | the range you already know — it is `1,$` |
+
+@hints
+The range goes where the `%` went in the last lesson: between the colon
+and the `s`. Two numbers with a comma between them.
+--
+Both ends are inclusive. Line 8 is the first March row and line 19 is
+the last, so the range is `8,19`.
+--
+`:8,19s/'GBP'/'EUR'/` and Enter. No `g` needed; each row has one
+currency.
+
+@solution
+    :8,19s/'GBP'/'EUR'/<Enter>  :wq<Enter>
+
+Twenty-four keystrokes and you never moved the cursor.
+
+`8,19` is the plainest range there is: two line numbers, both
+inclusive. It is the right tool when the thing that distinguishes the
+lines you want is their position rather than their content. That is
+more common than it sounds. Blocks of test data, one section of a
+changelog, the rows of one month in an export.
+
+The trap with numeric ranges is that the numbers are only true until
+the file changes. Insert a line above the block and `8,19` now covers
+the wrong rows. Use them for a single command you run now, in a file
+you are looking at. The next two lessons give you ranges that are
+anchored to the cursor and to marks, which survive that kind of drift.
+
+@start seed.sql
+-- Refund seed data for the reconciliation tests.
+-- Amounts are in minor units. March 2026 was the EUR pilot.
+
+INSERT INTO refunds (id, order_id, amount, currency, raised_at) VALUES
+  ('rfd_0201', 'ord_8101', 1999, 'GBP', '2026-02-03'),
+  ('rfd_0202', 'ord_8104', 4500, 'GBP', '2026-02-11'),
+  ('rfd_0203', 'ord_8110', 1250, 'GBP', '2026-02-24'),
+  ('rfd_0301', 'ord_8122', 3200, 'GBP', '2026-03-02'),
+  ('rfd_0302', 'ord_8125', 899, 'GBP', '2026-03-04'),
+  ('rfd_0303', 'ord_8127', 1999, 'GBP', '2026-03-06'),
+  ('rfd_0304', 'ord_8131', 6400, 'GBP', '2026-03-09'),
+  ('rfd_0305', 'ord_8133', 2100, 'GBP', '2026-03-11'),
+  ('rfd_0306', 'ord_8138', 1500, 'GBP', '2026-03-13'),
+  ('rfd_0307', 'ord_8140', 4999, 'GBP', '2026-03-16'),
+  ('rfd_0308', 'ord_8142', 750, 'GBP', '2026-03-18'),
+  ('rfd_0309', 'ord_8149', 3200, 'GBP', '2026-03-20'),
+  ('rfd_0310', 'ord_8151', 1250, 'GBP', '2026-03-24'),
+  ('rfd_0311', 'ord_8156', 8800, 'GBP', '2026-03-27'),
+  ('rfd_0312', 'ord_8160', 1999, 'GBP', '2026-03-31'),
+  ('rfd_0401', 'ord_8201', 2100, 'GBP', '2026-04-01'),
+  ('rfd_0402', 'ord_8203', 4500, 'GBP', '2026-04-08'),
+  ('rfd_0403', 'ord_8209', 899, 'GBP', '2026-04-15');
+
+@expected seed.sql
+-- Refund seed data for the reconciliation tests.
+-- Amounts are in minor units. March 2026 was the EUR pilot.
+
+INSERT INTO refunds (id, order_id, amount, currency, raised_at) VALUES
+  ('rfd_0201', 'ord_8101', 1999, 'GBP', '2026-02-03'),
+  ('rfd_0202', 'ord_8104', 4500, 'GBP', '2026-02-11'),
+  ('rfd_0203', 'ord_8110', 1250, 'GBP', '2026-02-24'),
+  ('rfd_0301', 'ord_8122', 3200, 'EUR', '2026-03-02'),
+  ('rfd_0302', 'ord_8125', 899, 'EUR', '2026-03-04'),
+  ('rfd_0303', 'ord_8127', 1999, 'EUR', '2026-03-06'),
+  ('rfd_0304', 'ord_8131', 6400, 'EUR', '2026-03-09'),
+  ('rfd_0305', 'ord_8133', 2100, 'EUR', '2026-03-11'),
+  ('rfd_0306', 'ord_8138', 1500, 'EUR', '2026-03-13'),
+  ('rfd_0307', 'ord_8140', 4999, 'EUR', '2026-03-16'),
+  ('rfd_0308', 'ord_8142', 750, 'EUR', '2026-03-18'),
+  ('rfd_0309', 'ord_8149', 3200, 'EUR', '2026-03-20'),
+  ('rfd_0310', 'ord_8151', 1250, 'EUR', '2026-03-24'),
+  ('rfd_0311', 'ord_8156', 8800, 'EUR', '2026-03-27'),
+  ('rfd_0312', 'ord_8160', 1999, 'EUR', '2026-03-31'),
+  ('rfd_0401', 'ord_8201', 2100, 'GBP', '2026-04-01'),
+  ('rfd_0402', 'ord_8203', 4500, 'GBP', '2026-04-08'),
+  ('rfd_0403', 'ord_8209', 899, 'GBP', '2026-04-15');

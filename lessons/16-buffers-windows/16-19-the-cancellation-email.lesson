@@ -1,0 +1,271 @@
+@meta
+id: 16-19
+title: Scenario — the cancellation email
+chapter: 16
+type: scenario
+skills: buffer-switch, buffer-list, split-window, search-slash, open-o
+par: 270
+minutes: 12
+vscode: five tabs, and the registry is the one you forget
+open: order.provider.ts email.service.ts registry.ts customer.provider.ts errors.json
+
+@brief
+A ticket, not an exercise.
+
+    ORD-467  Customers hear nothing when an order is cancelled. Send
+             the order-cancelled email after the refund goes through.
+             The email service plumbing landed last sprint; the call
+             was never written, the template does not exist, and
+             nobody registered the service.
+
+Five buffers. Three change, two are there to read. Nothing tells you
+which is which except the ticket and the code.
+
+  1. `order.provider.ts` — `cancel` already has `emailService`
+     injected. After the refund call and before the update, add:
+
+         await this.emailService.send({
+           customerId: order.customerId,
+           template: 'order-cancelled',
+         });
+
+     with a blank line on either side of it.
+
+  2. `email.service.ts` — `EmailTemplate` does not include
+     `'order-cancelled'`. Append it to the union, last, before the
+     semicolon.
+
+  3. `registry.ts` — `EmailService` is imported and never registered.
+     Add its registration as the last line of the file, in the same
+     shape as the others.
+
+  4. `customer.provider.ts` and `errors.json` — reference only. The
+     email service takes a customer id, not an address, so the customer
+     provider is not needed; check that yourself rather than taking
+     the ticket's word for it. Neither file may change.
+
+@keys
+| `:b email` `:b reg` | by name, no list |
+| `:sp name` | if you would rather see a reference beside the code |
+| `Ctrl-^` | between the two you are alternating |
+| `:ls` | `+` on anything you have changed and not written |
+| `:wqa` | the exit |
+
+@hints
+Provider first: `/refund(` lands on the refund line. `o`, Enter for
+the blank line, then the four lines. Autoindent handles the leading
+spaces; type none.
+--
+`:b email`, `/password`, `$`, `i`, type ` | 'order-cancelled'`. The
+`$` puts you on the semicolon and `i` inserts before it.
+--
+`:b reg`, `G`, `o`, the registration line. It is the same shape as
+the line above it, so `yy` `p` and two `cw` is an alternative to
+typing it.
+--
+Write before each hop unless `hidden` is on in your vimrc; `:ls` will
+tell you what is still `+`. `:wqa` at the end regardless.
+
+@solution
+A reasonable route, buffer by buffer.
+
+**order.provider.ts** — `/refund(` `Enter`, `o`, `Enter`, then the
+four lines with Enter between them, `Esc`, `:w`.
+
+**email.service.ts** — `:b email`, `/password` `Enter`, `$`, `i`,
+` | 'order-cancelled'`, `Esc`, `:w`.
+
+**registry.ts** — `:b reg`, `G`, `o`, the registration line, `Esc`.
+
+**customer.provider.ts**, **errors.json** — `:b cust` or `:b err` to
+look, `Ctrl-^` to come back, and nothing else.
+
+`:wqa`.
+
+About two hundred and forty keystrokes, and everything that is not
+typed code is under thirty. The chapter's whole contribution to a job
+like this is that the switching disappears: three files, three names,
+and at no point did you look at a list or a strip of tabs to find one.
+
+The other thing this one tests is restraint. Two of the five buffers
+are open because a real ticket lands on a codebase, not on the three
+files it mentions, and the habit of opening things to read them has
+to coexist with the habit of not typing into them. `:ls` before
+`:wqa` is the check: anything with a `+` that should not have one is a
+`u` away from clean.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    await this.emailService.send({
+      customerId: order.customerId,
+      template: 'order-cancelled',
+    });
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start email.service.ts
+import { injectable } from 'tsyringe';
+
+export type EmailTemplate = 'order-shipped' | 'password-reset';
+
+@injectable()
+export class EmailService {
+  public async send(args: { customerId: string; template: EmailTemplate }) {
+    return this.http.post(`/send`, args);
+  }
+}
+
+@expected email.service.ts
+import { injectable } from 'tsyringe';
+
+export type EmailTemplate = 'order-shipped' | 'password-reset' | 'order-cancelled';
+
+@injectable()
+export class EmailService {
+  public async send(args: { customerId: string; template: EmailTemplate }) {
+    return this.http.post(`/send`, args);
+  }
+}
+
+@start registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderResolver } from '../domain/order/order.resolver';
+import { CustomerRepository } from '../domain/customer/customer.repository';
+import { CustomerProvider } from '../domain/customer/customer.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+import { EmailService } from '../infrastructure/services/email.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('CustomerRepository', { useClass: CustomerRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('OrderResolver', { useClass: OrderResolver });
+container.register('PaymentService', { useClass: PaymentService });
+
+@expected registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderResolver } from '../domain/order/order.resolver';
+import { CustomerRepository } from '../domain/customer/customer.repository';
+import { CustomerProvider } from '../domain/customer/customer.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+import { EmailService } from '../infrastructure/services/email.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('CustomerRepository', { useClass: CustomerRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('OrderResolver', { useClass: OrderResolver });
+container.register('PaymentService', { useClass: PaymentService });
+container.register('EmailService', { useClass: EmailService });
+
+@start customer.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { CustomerRepository } from './customer.repository';
+
+@injectable()
+export class CustomerProvider {
+  constructor(
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return customer;
+  }
+}
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}

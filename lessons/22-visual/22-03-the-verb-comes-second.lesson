@@ -1,0 +1,78 @@
+@meta
+id: 22-03
+title: The verb comes second
+chapter: 22
+type: lesson
+skills: visual-char, visual-line
+par: 20
+minutes: 4
+vscode: select the block, Command Palette, "Transform to Uppercase"
+open: flags.md
+
+@brief
+Every operator you know works on a selection, and so do a few keys that
+are only operators when there is a selection to work on. `~` toggles the
+case of the whole region, `u` lowercases it, `U` uppercases it, `J` joins
+its lines. In normal mode `~` and `J` only ever touch one character or
+one line at a time; with a selection they take the lot.
+
+The feature-flag names in the notes were written in lowercase and the
+config loader only reads upper case. Uppercase the four flag names. The
+rest of the file, including the heading and the sentence above them,
+stays as it is.
+
+@keys
+| `U` | uppercase the selection |
+| `u` | lowercase the selection |
+| `~` | toggle the case of the selection |
+| `J` | join the selected lines |
+| `ip` | in visual mode, select the paragraph — like `vip` |
+
+@hints
+The four names are one paragraph: a block of lines with a blank line
+either side. Text objects work in visual mode too.
+--
+Get onto any of the four lines, press `v`, then `ip`. The whole
+paragraph lights up. Now the operator.
+--
+`/refund` `Enter` lands on the first flag. `vipU`.
+
+@solution
+    /refund<Enter> v i p U :wq<Enter>
+
+Sixteen keystrokes. `gUip` from normal mode does the same job in the
+same count, so the point is not this one edit. It is that once a region
+is selected, `U`, `u`, `~` and `J` become whole-region commands. `J`
+especially: `VjjjJ` joins exactly the lines you can see highlighted,
+which is far harder to get wrong than counting for `4J`.
+
+Notice the text object. `ip` after `v` selected the paragraph the same
+way `dip` would have deleted it. Every text object from chapter 10 —
+`iw`, `i(`, `a"`, `it` — works after `v`, and lesson 6 shows the one
+thing they can do in visual mode that they cannot do with an operator.
+
+@start flags.md
+# Feature flags
+
+Flags are read from the environment by the config loader and must be
+written in upper case. The current set:
+
+refund_window_days
+refund_auto_approve
+order_cutoff_hour
+payments_retry_limit
+
+Unset flags fall back to the defaults in `config.default.ts`.
+
+@expected flags.md
+# Feature flags
+
+Flags are read from the environment by the config loader and must be
+written in upper case. The current set:
+
+REFUND_WINDOW_DAYS
+REFUND_AUTO_APPROVE
+ORDER_CUTOFF_HOUR
+PAYMENTS_RETRY_LIMIT
+
+Unset flags fall back to the defaults in `config.default.ts`.

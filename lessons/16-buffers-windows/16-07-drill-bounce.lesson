@@ -1,0 +1,107 @@
+@meta
+id: 16-07
+title: Drill — bounce
+chapter: 16
+type: drill
+skills: buffer-switch
+par: 85
+minutes: 5
+reps: 8
+vscode: Ctrl-Tab, Ctrl-Tab, Ctrl-Tab
+open: order.repository.ts order.entity.ts
+vimrc: set hidden
+
+@brief
+Eight times: the entity gains `note?: string;` directly under `total`,
+and the repository maps it with `note: record.note ?? undefined,`
+directly under its own `total` line. You start in the repository.
+
+`hidden` is on, so no writing between hops; `:bn` there, `Ctrl-^`
+back, `:wqa` at the end. Two edits, one bounce, done.
+
+@keys
+| `:bn` | to the entity |
+| `Ctrl-^` | back to the repository |
+| `:wqa` | write both, quit |
+
+@hints
+`:bn`, `/total`, `o`, the field, `Esc`, `Ctrl-^`, `/total`, `o`, the
+mapping, `Esc`, `:wqa`.
+--
+The bounce is one chord. If you find yourself typing `:b` for it, stop
+and use the chord; the whole point of the drill is that the way back is
+free.
+
+@solution
+    :bn<Enter>  /total<Enter>  o note?: string; <Esc>
+    Ctrl-^  /total<Enter>  o note: record.note ?? undefined, <Esc>  :wqa<Enter>
+
+Seventy-odd keystrokes, of which the switching costs five.
+
+`hidden` is doing quiet work here: the entity is modified when you
+leave it, and vim lets you go because it can keep the buffer in memory
+with the change. At the end `:wqa` writes both. If you ever want to see
+what the option saved you, `:ls` mid-drill shows the entity as `#h +`:
+alternate, hidden, modified.
+
+@start order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}
+
+@expected order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      note: record.note ?? undefined,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}
+
+@start order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@expected order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  note?: string;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';

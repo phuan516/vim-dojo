@@ -1,0 +1,130 @@
+@meta
+id: 28-06
+title: Two spaces, and nothing else
+chapter: 28
+type: lesson
+skills: vimrc-structure
+par: 151
+minutes: 6
+vscode: editor.tabSize, editor.insertSpaces, and hoping the team agreed
+open: .vimrc order.repository.ts
+vimrc: set expandtab | set tabstop=2 | set shiftwidth=2 | set autoindent
+
+@brief
+Four settings decide what your Tab key and your `>>` actually do, and
+they are separate on purpose.
+
+    set expandtab             " Tab inserts spaces, never a tab character
+    set tabstop=2             " an existing tab character displays 2 wide
+    set shiftwidth=2          " >> and << move by 2
+
+`autoindent` is the fourth and is already in the file: it makes `o` and
+Enter keep the current line's indent, which is most of what you want from
+an editor that indents.
+
+Add the three missing ones to the Indentation section. Then use them in
+the repository buffer, which needs two things:
+
+  1. the `select` object needs `customerId: true,` and `total: true,`
+     added under `id: true,`
+  2. the one-line body of `count` is flush with its own signature and
+     should be one level in
+
+You will not type a single space for either. `o` inherits the indent and
+`>>` supplies exactly `shiftwidth` of it.
+
+@keys
+| `o` | open below, keeping the indent |
+| `>>` | shift the line right by `shiftwidth` |
+| `<<` | shift it back |
+| `:bn` | next buffer |
+| `:wqa` | write everything and quit |
+
+@hints
+Config first, `:w`, then `:bn`.
+--
+Search for `id: true`, then `o` twice — or `o` once and Enter, which is
+one keystroke cheaper and keeps both lines at the same indent.
+--
+For `count`, put the cursor anywhere on the `return` line and press `>>`
+once. `shiftwidth=2` means one press is one level.
+
+@solution
+    /set autoindent<Enter> o set expandtab<Enter> set tabstop=2<Enter>
+    set shiftwidth=2 <Esc> :w<Enter>
+    :bn<Enter> /id: true<Enter> o customerId: true,<Enter> total: true, <Esc>
+    /return this<Enter> >> :wqa<Enter>
+
+Nothing in the solution types leading whitespace, and that is the test of
+whether these settings are right. If you ever find yourself pressing
+space four times at the start of a line, one of `expandtab`,
+`shiftwidth` or `autoindent` is not what you think it is, and
+`:verbose set shiftwidth?` will tell you who last touched it.
+
+Why `tabstop` and `shiftwidth` are different numbers in many configs:
+`tabstop` is only about *displaying* a tab character that is already in
+the file — a Makefile, a Go file, someone else's commit. `shiftwidth` is
+about the indentation you produce. Setting `tabstop=8` and
+`shiftwidth=2` is a perfectly coherent position: show real tabs the way
+the rest of the world does, and never write one yourself.
+
+There is one more of these, `softtabstop`, which controls what a single
+Tab press inserts when it differs from `shiftwidth`. Add it the day it
+annoys you, and not before.
+
+@start .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Indentation ---
+set autoindent
+
+@expected .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Indentation ---
+set autoindent
+set expandtab
+set tabstop=2
+set shiftwidth=2
+
+@start order.repository.ts
+export class OrderRepository {
+  public async findOne(args: FindOneArgs) {
+    return this.prisma.order.findFirst({
+      where: args.where,
+      select: {
+        id: true,
+      },
+    });
+  }
+
+  public async count(args: CountArgs) {
+  return this.prisma.order.count({ where: args.where });
+  }
+}
+
+@expected order.repository.ts
+export class OrderRepository {
+  public async findOne(args: FindOneArgs) {
+    return this.prisma.order.findFirst({
+      where: args.where,
+      select: {
+        id: true,
+        customerId: true,
+        total: true,
+      },
+    });
+  }
+
+  public async count(args: CountArgs) {
+    return this.prisma.order.count({ where: args.where });
+  }
+}

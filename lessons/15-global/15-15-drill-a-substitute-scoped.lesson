@@ -1,0 +1,129 @@
+@meta
+id: 15-15
+title: Drill — a substitute, scoped by :g
+chapter: 15
+type: drill
+skills: global-delete, sub-basic
+par: 40
+minutes: 5
+reps: 8
+vscode: replace-all, then undo the four you should not have touched
+open: order.provider.ts
+
+@brief
+Eight times: the log pipeline indexes on `order_id`, so every `logger`
+call must send `order_id`, not `orderId`. The code around the logging
+keeps `orderId`; it is a TypeScript identifier and it is fine.
+
+A file-wide substitute would break the parameter and the calls. Scope
+it to the lines that log.
+
+@keys
+| `:g/pattern/s/old/new/g` | on every matching line, run this substitute |
+
+@hints
+`:g` picks the lines; `:s` does the edit on each one. The pattern and
+the substitute do not have to be about the same word.
+--
+`:g/logger/s/orderId/order_id/g` and Enter.
+
+@solution
+    :g/logger/s/orderId/order_id/g<Enter>  :wq<Enter>
+
+Thirty-five keystrokes. The `:g` pattern is a filter; the `:s` pattern is
+the edit. Keeping those two jobs separate is what makes this safe where
+`:%s/orderId/order_id/g` would have been a bug.
+
+This is the most common `:g` you will type in real code: "substitute,
+but only on lines that look like this". Import lines, log lines, test
+descriptions, comments. Whenever the word you are changing also appears
+somewhere it must not change, ask what is different about the lines
+where it should, and put that in the `:g`.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { logger } from '../../configuration/logger';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(orderId: string) {
+    const order = await this.orderRepository.findOne({ where: { id: orderId } });
+
+    if (!order) {
+      logger.warn('order not found', { orderId });
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(orderId: string) {
+    const order = await this.findOne(orderId);
+    logger.info('cancel requested', { orderId, status: order.status });
+
+    if (order.status === 'SHIPPED') {
+      logger.warn('cancel refused', { orderId, reason: 'ORDER_ALREADY_SHIPPED' });
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(orderId);
+    logger.info('refund issued', { orderId, amount: order.total });
+
+    return this.orderRepository.update({
+      where: { id: orderId },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { logger } from '../../configuration/logger';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(orderId: string) {
+    const order = await this.orderRepository.findOne({ where: { id: orderId } });
+
+    if (!order) {
+      logger.warn('order not found', { order_id });
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(orderId: string) {
+    const order = await this.findOne(orderId);
+    logger.info('cancel requested', { order_id, status: order.status });
+
+    if (order.status === 'SHIPPED') {
+      logger.warn('cancel refused', { order_id, reason: 'ORDER_ALREADY_SHIPPED' });
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(orderId);
+    logger.info('refund issued', { order_id, amount: order.total });
+
+    return this.orderRepository.update({
+      where: { id: orderId },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}

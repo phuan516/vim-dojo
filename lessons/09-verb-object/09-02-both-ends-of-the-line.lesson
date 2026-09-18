@@ -1,0 +1,66 @@
+@meta
+id: 09-02
+title: Delete to either end of the line
+chapter: 09
+type: lesson
+skills: op-motion
+par: 17
+minutes: 4
+vscode: click, then Shift-End or Shift-Home, then Delete
+open: release-notes.md
+
+@brief
+Two lines of a release note need trimming. One has a marker left at the
+front that should not ship. The other has a note stuck on the end that
+should not ship either.
+
+    refunds run nightly at 02:00 UTC
+    The thirty day window is configurable.
+
+Leave the two sentences and nothing else, then save.
+
+@keys
+| `$` | to the end of the line |
+| `0` | to the very start of the line |
+| `d$` | delete from the cursor to the end of the line |
+| `d0` | delete from the start of the line up to the cursor |
+
+@hints
+Both edits are the same shape: park the cursor on the first character you
+want to keep, or the first one you want to lose, and let a line motion
+say where to stop.
+--
+`d$` clears everything from the cursor rightwards. `d0` clears everything
+leftwards, back to column one. The character under the cursor survives
+`d0` and dies with `d$`.
+--
+On the first line, land on `refunds` and press `d0`. On the second,
+`f` onto the first `X` and press `d$`.
+
+@solution
+    2w d0    j fX d$    :wq<Enter>
+
+`d$` has a shorthand you already met in chapter 8: `D`. They are the same
+edit, and `D` is one key rather than two. `d0` has no shorthand, which
+tells you something about how often each gets used.
+
+Two details worth having straight.
+
+`d$` is inclusive of the character under the cursor — it runs to the last
+character of the line and takes it. `d0` is exclusive at the cursor end:
+it deletes everything to the left and leaves the character you are sitting
+on. That asymmetry is not arbitrary. `$` is an inclusive motion and `0` is
+an exclusive one, and the operator simply obeys whichever motion you gave
+it. Every operator in vim inherits that from its motion.
+
+The leftover space after `d$` does not matter here — the grader ignores
+trailing whitespace, as does every sane linter. If you want it gone
+anyway, land one character to the left before deleting.
+
+@start release-notes.md
+FIXME: refunds run nightly at 02:00 UTC
+The thirty day window is configurable. XXX check with finance
+
+@expected release-notes.md
+refunds run nightly at 02:00 UTC
+The thirty day window is configurable.

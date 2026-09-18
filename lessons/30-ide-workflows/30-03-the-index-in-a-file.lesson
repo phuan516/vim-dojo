@@ -1,0 +1,128 @@
+@meta
+id: 30-03
+title: The index that lives in a file
+chapter: 30
+type: lesson
+skills: ctags
+par: 53
+minutes: 6
+vscode: Ctrl-T, the symbol search box
+vimrc: set hidden
+open: src/domain/order/order.resolver.ts
+
+@brief
+    REF-204  PaymentService throws REFUND_FAILD. The error table has no
+             such code, so the handler falls through to a 500.
+
+One misspelled string. You do not know which file it is in, and there is
+no search to run yet because you do not know the file either.
+
+There is a `tags` file in the root of this tree. It is a plain text
+index: one line per definition, giving the name, the file it lives in,
+and how to find it once you are there. `:tag issueRefund` reads it and
+puts you on the definition, wherever that is. The file is provided with
+this lesson — normally `ctags -R src` writes it in about a second.
+
+Fix the code so it reads `REFUND_FAILED`. Leave the tags file alone.
+
+@keys
+| `:tag name` | jump to the definition of `name` |
+| `:tag /pattern` | jump to the first definition matching a pattern |
+| `:tags` | the stack of tag jumps you have made |
+| `'tags'` | the option naming the tags files vim reads |
+
+@hints
+`:tag issueRefund`. You do not have to be in the right file, or know
+which file the right file is.
+--
+Once you are on the definition, the typo is a short search away and
+`ciw` replaces the whole word.
+--
+`:tag issueRefund` `Enter`, `/FAILD` `Enter`, `ciwREFUND_FAILED` `Esc`,
+`:wqa` `Enter`.
+
+@solution
+    :tag issueRefund<Enter>  /FAILD<Enter>  ciw REFUND_FAILED <Esc>  :wqa<Enter>
+
+Open the `tags` file and read it — it is not magic. Each line is
+
+    name   <tab>   file   <tab>   address
+
+where the address is either a line number or a search pattern that
+finds the definition again after the file has been edited around it.
+That last detail is why a slightly stale tags file still works: it
+searches, so a definition that has moved down twenty lines is still
+found.
+
+`ctags -R src` builds one for a whole project. It understands about
+forty languages, it takes a second on a repo that a language server
+needs a minute to index, and the result is one file you can commit,
+rsync, or generate on a machine you have only ssh access to.
+
+A tags file has no idea about types, scope or imports. It is a phone
+book: names to places. The whole of the next three lessons is about
+getting good value out of exactly that much information — and the
+lesson after those is about the one thing it gets wrong.
+
+@start tags
+!_TAG_FILE_FORMAT	2	//
+!_TAG_FILE_SORTED	1	//
+HttpClient	src/infrastructure/http/http.client.ts	/^export class HttpClient {$/;"	c
+OrderResolver	src/domain/order/order.resolver.ts	/^export class OrderResolver {$/;"	c
+PaymentService	src/infrastructure/services/payment.service.ts	/^export class PaymentService {$/;"	c
+issueRefund	src/infrastructure/services/payment.service.ts	/^  public async issueRefund(orderId: string) {$/;"	m	class:PaymentService
+post	src/infrastructure/http/http.client.ts	/^  public async post(path: string, body: unknown) {$/;"	m	class:HttpClient
+
+@start src/domain/order/order.resolver.ts
+import { OrderProvider } from './order.provider';
+
+export class OrderResolver {
+  constructor(protected orderProvider: OrderProvider) {}
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@start src/infrastructure/http/http.client.ts
+export class HttpClient {
+  public async post(path: string, body: unknown) {
+    return fetch(path, { method: 'POST', body: JSON.stringify(body) });
+  }
+}
+
+@start src/infrastructure/services/payment.service.ts
+import { exception } from '../../configuration/errors';
+import { HttpClient } from '../http/http.client';
+
+export class PaymentService {
+  constructor(protected http: HttpClient) {}
+
+  public async issueRefund(orderId: string) {
+    const response = await this.http.post('/refunds', { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILD');
+    }
+
+    return response.data;
+  }
+}
+
+@expected src/infrastructure/services/payment.service.ts
+import { exception } from '../../configuration/errors';
+import { HttpClient } from '../http/http.client';
+
+export class PaymentService {
+  constructor(protected http: HttpClient) {}
+
+  public async issueRefund(orderId: string) {
+    const response = await this.http.post('/refunds', { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}

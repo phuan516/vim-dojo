@@ -1,0 +1,144 @@
+@meta
+id: 16-05
+title: The file you just left
+chapter: 16
+type: lesson
+skills: buffer-switch
+par: 125
+minutes: 6
+vscode: Ctrl-Tab, which cycles through a popup you have to watch
+open: order.entity.ts order.repository.ts
+
+@brief
+Most switching is between two files. Entity and repository. Test and
+code. Provider and the service it calls. Vim keeps track of the buffer
+you were in before this one and calls it the alternate file; `Ctrl-^`
+swaps you to it, and pressing it again swaps you back. No name, no
+number, one chord.
+
+In `:ls` the alternate buffer carries a `#` flag. Until you have
+switched at least once there is no alternate and `Ctrl-^` says so with
+E23, which is why the first hop here is `:bn`.
+
+The ticket: orders need a `placedAt` timestamp, and `OrderStatus` gains
+a `REFUNDED` value.
+
+  1. `order.entity.ts`: `placedAt: Date;` directly under `customerId`.
+  2. `order.repository.ts`: `placedAt: record.placedAt,` directly under
+     the `customerId` line in `toEntity`.
+  3. Back in the entity: append `| 'REFUNDED'` to the `OrderStatus`
+     union, before the semicolon.
+
+Write before each hop.
+
+@keys
+| `Ctrl-^` | go to the alternate file (the one you were in before) |
+| `Ctrl-6` | the same key on keyboards where `^` needs Shift |
+| `:bn` | next buffer, for the first hop when there is no alternate yet |
+| `#` in `:ls` | which buffer is the alternate |
+
+@hints
+Entity first: `/customerId`, `o`, the field, `Esc`, `:w`. `:bn` to the
+repository.
+--
+In the repository `customerId` appears three times; `/record.cu` goes
+straight to the one in `toEntity`. Add the mapping, `:w`.
+--
+`Ctrl-^` takes you back to the entity. `/SHIPPED`, `$` to the
+semicolon, `i`, type ` | 'REFUNDED'`, `Esc`, `:wqa`.
+
+@solution
+    /customerId<Enter>  o placedAt: Date; <Esc>  :w<Enter>  :bn<Enter>
+    /record.cu<Enter>  o placedAt: record.placedAt, <Esc>  :w<Enter>  Ctrl-^
+    /SHIPPED<Enter>  $  i  | 'REFUNDED' <Esc>  :wqa<Enter>
+
+About a hundred and ten keystrokes; the third hop cost one of them.
+
+`Ctrl-^` is the key for the way people actually work, which is two
+files at a time with occasional excursions. Combined with `:b name` for
+the excursions it covers almost every switch you will make in a day.
+It also survives the excursion: go to a third file, `:b` back to the
+entity, and `Ctrl-^` now bounces between the entity and the third
+file, because "alternate" always means "the one before this one".
+
+VS Code's Ctrl-Tab is the same idea with a popup in the way. Here there
+is nothing to watch; the buffer is on screen before your finger is off
+the key.
+
+@start order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@expected order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  placedAt: Date;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED' | 'REFUNDED';
+
+@start order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}
+
+@expected order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      placedAt: record.placedAt,
+      status: record.status,
+      total: record.total,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}

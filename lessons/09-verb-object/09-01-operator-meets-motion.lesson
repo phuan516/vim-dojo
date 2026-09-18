@@ -1,0 +1,70 @@
+@meta
+id: 09-01
+title: An operator needs somewhere to go
+chapter: 09
+type: lesson
+skills: op-motion
+par: 14
+minutes: 4
+vscode: double-click the word, press Backspace twice
+open: refunds.md
+
+@brief
+Chapter 8 gave you operators: `d`, `c`, `y`. Chapter 5 to 7 gave you
+motions: `w`, `$`, `G`, `}` and the rest. Vim's whole grammar is that the
+two halves clip together. An operator on its own does nothing; it waits.
+Give it a motion and it applies itself to exactly the ground that motion
+would have covered.
+
+`dd` was a special case — the operator doubled means "this line". The
+general case is an operator plus any motion at all, and there are a great
+many motions.
+
+This paragraph has a word typed twice. Delete the second one, leaving the
+line reading normally, and save.
+
+@keys
+| `d` | delete — waits for a motion |
+| `w` | forward to the start of the next word |
+| `dw` | delete from the cursor up to the start of the next word |
+
+@hints
+Get the cursor onto the first character of the duplicated word. Word
+motions are still the cheapest way down a line.
+--
+With the cursor on the word, `dw` deletes it — and the space after it,
+because that space is ground the `w` motion covers.
+--
+Two `j` presses down, four `w` presses along, then `dw`. `4w` beats
+pressing `w` four times.
+
+@solution
+    jj 4w dw :wq<Enter>
+
+Ten keystrokes, and only two of them were the edit.
+
+The important part is that `dw` is not a command you memorised. It is `d`
+and `w` put together, and the same `d` takes every other motion you know.
+`d$` deletes to the end of the line. `dG` deletes to the end of the file.
+`d3w` deletes three words. You learned `w` in chapter 5 and it just became
+a delete, a change and a yank without anyone teaching you three more keys.
+
+That is the deal vim offers: learn ten operators and twenty motions and
+you have two hundred edits, none of which you had to memorise separately.
+
+Note what `dw` took: from the cursor up to, but not including, the first
+character of the next word. The space came with it. That is not a rule
+about `d`, it is a rule about `w` — `w` lands on the next word's start, so
+everything before that point is what got deleted.
+
+@start refunds.md
+Refunds run nightly at 02:00 UTC.
+
+A cancelled order is is refunded in full when it is inside the
+thirty day window. Outside the window no money moves.
+
+@expected refunds.md
+Refunds run nightly at 02:00 UTC.
+
+A cancelled order is refunded in full when it is inside the
+thirty day window. Outside the window no money moves.

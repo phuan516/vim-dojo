@@ -1,0 +1,49 @@
+@meta
+id: 02-14
+title: Drill — back to the last write
+chapter: 02
+type: drill
+skills: write, undo, undo-branches
+par: 44
+minutes: 5
+reps: 8
+vscode: closing without saving and reopening
+open: batch.md
+
+@brief
+Eight times: append ` verified` to the line, write, append ` XXXX` on top
+of it, then get the file back to the written state without retyping
+anything, and quit.
+
+The sequence to burn in is write, experiment, rewind. By rep eight,
+`:earlier 1f` should feel like part of saving rather than a command you
+have to remember.
+
+@keys
+| `:w` | write, creating the point you can return to |
+| `:earlier 1f` | back to the state at that write |
+| `:q` | quit — it will not argue, because the buffer matches the disk |
+
+@hints
+The write in the middle is what makes the rewind possible. No write, no
+point to return to.
+--
+After `:earlier 1f` the `[+]` modified marker is gone from the status
+line, so a plain `:q` is enough.
+
+@solution
+    $ a  verified <Esc> :w<Enter> $ a  XXXX <Esc> :earlier 1f<Enter> :q<Enter>
+
+Thirty-eight keystrokes, and the twelve that matter are `:earlier 1f`.
+
+Notice what you did not need: you did not count the changes since the
+write, and you did not have to remember what the line said before. The
+write recorded that for you. This is the habit the whole chapter has been
+building towards — `:w` is not just insurance against a crash, it is a
+marker in your undo history that you can aim at.
+
+@start batch.md
+Reprocess batch 4471
+
+@expected batch.md
+Reprocess batch 4471 verified

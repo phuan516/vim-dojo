@@ -1,0 +1,110 @@
+@meta
+id: 14-03
+title: The whole file in one command
+chapter: 14
+type: lesson
+skills: sub-range, sub-basic
+par: 45
+minutes: 5
+vscode: Ctrl-H, Replace All, and hope
+open: order.status.ts
+
+@brief
+The status `'PENDING'` is being renamed `'AWAITING_PAYMENT'` because
+the product team keep confusing it with "pending fulfilment". Every
+occurrence in this file changes: the union type, the constants, the
+guards, the comparison in `describe`. Seven in all.
+
+Read the file before you run anything. Confirm for yourself that every
+`'PENDING'` here really should change and that nothing else in the file
+looks like one. That reading is not a formality. This is the last
+lesson in the chapter where a whole-file replace is safe without any
+further thought, and you should know why it is safe here.
+
+The range that means "every line" is a single character.
+
+@keys
+| `:%s/old/new/g` `Enter` | every line in the file, every match on each line |
+| `%` | as a range, all lines — short for `1,$` |
+| `:s/old/new/g` `Enter` | for comparison: this line only |
+
+@hints
+The command is the same as the last two lessons with one character
+added in front of the `s`. That character is a range.
+--
+`%` means every line. `:%s/…/…/g` is the one substitute most people
+learn first and use most.
+--
+`:%s/'PENDING'/'AWAITING_PAYMENT'/g` and Enter. Include the quotes in
+both halves so that the pattern cannot match anything but the literal.
+
+@solution
+    :%s/'PENDING'/'AWAITING_PAYMENT'/g<Enter>  :wq<Enter>
+
+Thirty-nine keystrokes, seven changes, and the count would be the same
+for seventy.
+
+`%` is a range, the first of several this chapter uses. It is short for
+`1,$`, line one to the last line. When you see `:%s` read it as "in the
+whole file, substitute". The `g` at the end still means the whole of
+each line; the two are independent and you usually want both.
+
+Now the honest part. In this file the rename was safe because you read
+it and checked: the literal appears in exactly one meaning, it is
+always quoted, and nothing customer-facing is built from it. Most files
+are not like that. The word you are renaming appears in a comment where
+it should stay, or in a string a customer sees, or inside a longer
+identifier where the replacement makes nonsense. Every remaining
+lesson in this chapter is about one of the tools for that situation:
+narrower ranges, stricter patterns, and a flag that asks you before
+each change. Learn `:%s` first, and then learn when not to trust it.
+
+@start order.status.ts
+export type OrderStatus = 'PENDING' | 'PAID' | 'SHIPPED' | 'CANCELLED';
+
+export const INITIAL_STATUS: OrderStatus = 'PENDING';
+
+export const OPEN_STATUSES: OrderStatus[] = ['PENDING', 'PAID'];
+
+export const CANCELLABLE_STATUSES: OrderStatus[] = ['PENDING', 'PAID'];
+
+export function isPending(status: OrderStatus) {
+  return status === 'PENDING';
+}
+
+export function canPay(status: OrderStatus) {
+  return status === 'PENDING';
+}
+
+export function describe(status: OrderStatus) {
+  if (status === 'PENDING') {
+    return 'awaiting payment';
+  }
+
+  return status.toLowerCase();
+}
+
+@expected order.status.ts
+export type OrderStatus = 'AWAITING_PAYMENT' | 'PAID' | 'SHIPPED' | 'CANCELLED';
+
+export const INITIAL_STATUS: OrderStatus = 'AWAITING_PAYMENT';
+
+export const OPEN_STATUSES: OrderStatus[] = ['AWAITING_PAYMENT', 'PAID'];
+
+export const CANCELLABLE_STATUSES: OrderStatus[] = ['AWAITING_PAYMENT', 'PAID'];
+
+export function isPending(status: OrderStatus) {
+  return status === 'AWAITING_PAYMENT';
+}
+
+export function canPay(status: OrderStatus) {
+  return status === 'AWAITING_PAYMENT';
+}
+
+export function describe(status: OrderStatus) {
+  if (status === 'AWAITING_PAYMENT') {
+    return 'awaiting payment';
+  }
+
+  return status.toLowerCase();
+}

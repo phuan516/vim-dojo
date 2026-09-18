@@ -1,0 +1,83 @@
+@meta
+id: 15-11
+title: Reverse the file
+chapter: 15
+type: lesson
+skills: global-move
+par: 15
+minutes: 5
+vscode: cut the last line, paste it at the top, ten times
+open: rollback.sql
+
+@brief
+The migration creates the tables, then the indexes, then the foreign
+keys. Somebody wrote `rollback.sql` by copying that list and changing
+`CREATE` to `DROP`, which means it tries to drop `customer` while three
+other tables still point at it. A rollback has to undo things in the
+opposite order to the one they were done in.
+
+Reverse the file. Ten lines, last to first.
+
+The command after a `:g` pattern can be any Ex command, and `:m` moves
+a line. `:m0` moves it to the very top, above line 1. Think about what
+happens when every line in the file, in order, is moved to the top.
+
+@keys
+| `:g/^/m0` | for every line, move it to the top |
+| `:m0` | move the current line above line 1 |
+| `^` | as a pattern on its own: matches every line |
+
+@hints
+The pattern needs to match every line. The shortest pattern that does
+that is the start-of-line anchor with nothing after it.
+--
+`:m0` on line 1 does nothing. `:m0` on line 2 puts it above line 1.
+`:m0` on line 3 puts it above both. Keep going.
+--
+`:g/^/m0` and Enter. Seven characters that reverse a file of any
+length.
+
+@solution
+    :g/^/m0<Enter>  :wq<Enter>
+
+Twelve keystrokes. This one is old enough to be a vim proverb.
+
+Walk through it once so you own the mechanism rather than the incantation.
+`:g` marks all ten lines. It visits line 1 and moves it to the top:
+no change. It visits what was line 2 and moves it above line 1: now the
+order is 2, 1. It visits line 3: 3, 2, 1. By the time it reaches the
+last mark the file is back to front. Every line was moved exactly once
+and the marks kept track of which lines had been visited, which is why
+moving lines around underneath the loop does not confuse it.
+
+That fact, that `:g` marks first and then acts, is the one that makes
+`:m` and its cousin `:t` safe to use inside it. Chapter 24 covers the
+rest of the `:m`, `:t` and `:d` family in their own right. Here they
+are only interesting because of what `:g` can do with them.
+
+For a file with a header line to keep in place, `:2,$g/^/m1` reverses
+everything below it.
+
+@start rollback.sql
+DROP TABLE customer;
+DROP TABLE "order";
+DROP TABLE payment;
+DROP TABLE refund;
+DROP INDEX order_customer_id_idx;
+DROP INDEX payment_order_id_idx;
+DROP INDEX refund_payment_id_idx;
+ALTER TABLE "order" DROP CONSTRAINT order_customer_id_fkey;
+ALTER TABLE payment DROP CONSTRAINT payment_order_id_fkey;
+ALTER TABLE refund DROP CONSTRAINT refund_payment_id_fkey;
+
+@expected rollback.sql
+ALTER TABLE refund DROP CONSTRAINT refund_payment_id_fkey;
+ALTER TABLE payment DROP CONSTRAINT payment_order_id_fkey;
+ALTER TABLE "order" DROP CONSTRAINT order_customer_id_fkey;
+DROP INDEX refund_payment_id_idx;
+DROP INDEX payment_order_id_idx;
+DROP INDEX order_customer_id_idx;
+DROP TABLE refund;
+DROP TABLE payment;
+DROP TABLE "order";
+DROP TABLE customer;

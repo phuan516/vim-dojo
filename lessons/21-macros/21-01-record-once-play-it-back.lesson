@@ -1,0 +1,95 @@
+@meta
+id: 21-01
+title: Record once, play it back
+chapter: 21
+type: lesson
+skills: macro-record, macro-play
+par: 45
+minutes: 6
+vscode: eight cursors with Ctrl+D, End, type, and hope the paste lands
+open: order-status.ts
+
+@brief
+`OrderStatus` is a numeric enum and the API has started leaking the
+numbers. Every member needs an explicit string value equal to its own
+name:
+
+    PENDING = 'PENDING',
+
+Eight members. On one line the edit is a yank of the name, an append, a
+paste and a bit of punctuation. `.` cannot hold that: it is two inserts
+and a yank, not one change.
+
+You know from chapter 20 that a register is a box of keystrokes. This
+chapter is about filling one by *performing* the edit, then running the
+box on every other line. Vim calls the box a macro. It is nothing more
+than the register you already know, with a recorder pointed at it.
+
+@keys
+| `qa` | start recording into register `a` |
+| `q` | stop recording |
+| `@a` | play register `a` as keystrokes |
+| `^` `$` | first non-blank, end of line: the macro moves to known columns |
+
+@hints
+Press `qa`, do the edit on `PENDING` exactly as you would by hand, move
+down a line, press `q`. Then `@a` on each remaining line. `recording @a`
+shows at the bottom while the recorder is on.
+--
+The line already ends in a comma, so drop it first with `$x`. Then `^`
+and `yiw` to take the name, `A = '` and `Esc`, `p` puts the name back
+after the quote, `a',` and `Esc`, then `j` so the next `@a` starts on
+the next line. The `x` has to come before the yank: a delete lands in
+the unnamed register too, and it would overwrite the name.
+--
+`j` then `qa$x^yiwA = '<Esc>pa',<Esc>jq`, then `@a` seven times.
+
+@solution
+    j  qa $x ^yiw A = ' <Esc> p a', <Esc> j q   @a @a @a @a @a @a @a   :wq<Enter>
+
+Forty keystrokes, and the recording is most of them. Each replay
+is two.
+
+Three things to notice. First, the `$` at the front and the `^` after
+it. When you press `qa` the cursor is wherever it is; when `@a` runs on
+a later line it is wherever the previous `j` left it. A macro that
+begins by moving to a known column works from anywhere. A macro that
+assumes the column is the one you recorded from works once.
+
+Second, the `j` at the end. It is not part of the edit. It is there so
+that the macro leaves the cursor where the next macro needs to start.
+The recording is a unit of *work plus setup for the next unit*, and
+that is the design habit this chapter keeps coming back to.
+
+Third, you did not have to plan. You did the edit once, slowly, looking
+at the screen, and the recorder took notes. If you make a mistake while
+recording, press `q`, `u` until the line is clean, and record again.
+Nothing is lost but a few seconds.
+
+`:reg a` shows what was captured. It reads exactly as you typed it,
+with `^[` standing for `Esc`. You will use that view later in the
+chapter to fix a macro instead of re-recording it.
+
+@start order-status.ts
+export enum OrderStatus {
+  PENDING,
+  CONFIRMED,
+  PAID,
+  PACKED,
+  SHIPPED,
+  DELIVERED,
+  CANCELLED,
+  REFUNDED,
+}
+
+@expected order-status.ts
+export enum OrderStatus {
+  PENDING = 'PENDING',
+  CONFIRMED = 'CONFIRMED',
+  PAID = 'PAID',
+  PACKED = 'PACKED',
+  SHIPPED = 'SHIPPED',
+  DELIVERED = 'DELIVERED',
+  CANCELLED = 'CANCELLED',
+  REFUNDED = 'REFUNDED',
+}

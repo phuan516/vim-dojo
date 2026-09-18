@@ -1,0 +1,183 @@
+@meta
+id: 20-12
+title: Scenario — the fixtures file
+chapter: 20
+type: scenario
+skills: register-named, register-append, register-blackhole, obj-paragraph, buffer-switch, dot-repeat
+par: 145
+minutes: 12
+vscode: three tabs, four cut-and-pastes, and a lot of scrolling
+vimrc: set hidden
+open: order.provider.spec.ts order.fixture.ts order.entity.ts
+
+@brief
+A ticket, not an exercise.
+
+    TST-71  The provider spec declares its fixtures inline: one at the
+            top, and one somebody appended at the bottom of the file.
+            Move both into order.fixture.ts as named exports and
+            import them into the spec.
+
+Three buffers are open. `:bn` and `:bp` move between them.
+
+  1. order.provider.spec.ts — the `pendingOrder` and `shippedOrder`
+     objects leave this file entirely, blank lines included. The
+     `import { Order }` line is no longer needed and becomes
+     `import { pendingOrder, shippedOrder } from './order.fixture';`
+     in the same place.
+
+  2. order.fixture.ts — already has the `Order` import. Below it, a
+     blank line, then the two fixtures in the same order, each with
+     `export ` in front of `const`, separated by one blank line.
+
+  3. order.entity.ts — open for reference only. Leave it alone.
+
+Both fixtures should travel in one register and land in one put.
+
+@keys
+| `"adap` | delete a paragraph into `a` |
+| `"AdG` | append everything to the end of the file |
+| `"ap` | put the collection |
+| `ci{` | change inside the braces |
+| `I` then `.` | insert at the start of the line, repeat it on another |
+| `n` | the last search survives a buffer switch |
+| `:bn` `:bp` `:wqa` | move between buffers, write and quit everything |
+
+@hints
+Fix the import line first, while you are at the top of the spec. `ci{`
+on the `import { Order }` line replaces what is between the braces;
+`ciw` on `entity` finishes it.
+--
+The top fixture is a paragraph with a blank line after it, so `"adap`
+takes both. The bottom fixture runs to the end of the file, so `"AdG`
+from its first line appends it and the blank line above it.
+--
+In the fixture file, `"ap` puts both blocks below the import. `O` `Esc`
+above the first block gives the blank line. Then `Iexport ` `Esc` on the
+first `const`. Your last search was `const shipped` and it still is, so
+`n` finds the second block and `.` repeats the insert.
+--
+`:wqa` writes every buffer and quits. Nothing else needs to happen to
+the entity.
+
+@solution
+One route, buffer by buffer.
+
+**order.provider.spec.ts** — `/Order }` Enter, `ci{`, type
+` pendingOrder, shippedOrder ` and `Esc`. `/entity` Enter, `ciwfixture`,
+`Esc`. Then `/const pending` Enter, `"adap`. `/const shipped` Enter,
+`"AdG`.
+
+**order.fixture.ts** — `:bn`, `"ap`, `O` `Esc`, `j`, `Iexport ` `Esc`,
+`n`, `.`. `:wqa`.
+
+The register did the carrying. Two blocks from opposite ends of one
+file, one put in another, and nothing was retyped except the word
+`export`, which the dot command typed the second time. Without the
+capital-letter append this is two round trips between buffers; without
+a named register at all it is two round trips with the unnamed register
+one stray `dd` away from losing a fixture.
+
+Notice `"AdG` rather than a second `dap`. The last paragraph of a file
+has no blank line after it, so `ap` reaches up and takes the one before
+instead. `dG` is honest about what it deletes: everything from here to
+the end.
+
+@start order.provider.spec.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { Order } from './order.entity';
+
+const pendingOrder: Order = {
+  id: 'ord_001',
+  customerId: 'cus_042',
+  status: 'PENDING',
+  total: 1999,
+};
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const provider = new OrderProvider(orderRepository, paymentService);
+
+  it('cancels a pending order', async () => {
+    reveal(orderRepository).findOne.mockResolvedValue(pendingOrder);
+
+    await provider.cancel(pendingOrder.id);
+
+    expect(reveal(paymentService).refund).toHaveBeenCalledWith(pendingOrder.id);
+  });
+
+  it('refuses to cancel a shipped order', async () => {
+    reveal(orderRepository).findOne.mockResolvedValue(shippedOrder);
+
+    await expect(provider.cancel(shippedOrder.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+  });
+});
+
+const shippedOrder: Order = {
+  id: 'ord_002',
+  customerId: 'cus_042',
+  status: 'SHIPPED',
+  total: 4500,
+};
+
+@expected order.provider.spec.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { pendingOrder, shippedOrder } from './order.fixture';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const provider = new OrderProvider(orderRepository, paymentService);
+
+  it('cancels a pending order', async () => {
+    reveal(orderRepository).findOne.mockResolvedValue(pendingOrder);
+
+    await provider.cancel(pendingOrder.id);
+
+    expect(reveal(paymentService).refund).toHaveBeenCalledWith(pendingOrder.id);
+  });
+
+  it('refuses to cancel a shipped order', async () => {
+    reveal(orderRepository).findOne.mockResolvedValue(shippedOrder);
+
+    await expect(provider.cancel(shippedOrder.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+  });
+});
+
+@start order.fixture.ts
+import { Order } from './order.entity';
+
+@expected order.fixture.ts
+import { Order } from './order.entity';
+
+export const pendingOrder: Order = {
+  id: 'ord_001',
+  customerId: 'cus_042',
+  status: 'PENDING',
+  total: 1999,
+};
+
+export const shippedOrder: Order = {
+  id: 'ord_002',
+  customerId: 'cus_042',
+  status: 'SHIPPED',
+  total: 4500,
+};
+
+@start order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'SETTLED' | 'CANCELLED';

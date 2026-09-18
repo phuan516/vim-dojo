@@ -1,0 +1,167 @@
+@meta
+id: 20-17
+title: Paste while typing
+chapter: 20
+type: lesson
+skills: register-zero, register-expression
+par: 69
+minutes: 6
+vscode: type half the line, Ctrl-V, type the rest
+open: order.provider.ts order.provider.spec.ts
+
+@brief
+`p` works in normal mode. In insert mode there is `Ctrl-R` followed by
+a register name, which types the register's contents where the cursor
+is, as though you had typed them. `Ctrl-R 0` inserts the last yank.
+`Ctrl-R a` inserts register `a`. `Ctrl-R =` opens the expression prompt
+and inserts the result. Any register works, including `%` and `"`.
+
+Two assertions in the spec are missing their argument:
+
+  1. `toThrow()` in the shipped-order test should carry the code the
+     provider throws, as a string: `toThrow('ORDER_ALREADY_SHIPPED')`.
+     Yank the code from the provider rather than typing it.
+
+  2. `toBe()` in the settle test should be three units at the provider's
+     unit price. Let the expression register do the multiplication.
+
+@keys
+| `Ctrl-R 0` | insert the last yank, in insert mode |
+| `Ctrl-R a` | insert register `a` |
+| `Ctrl-R =expr` `Enter` | insert the result of an expression |
+| `Ctrl-R "` | insert the unnamed register |
+
+@hints
+In the provider, `/ALREADY` Enter and `yiw` takes the whole code —
+underscores are word characters. `:bn` to the spec.
+--
+`/toThrow(` Enter, `f(`, `a` to append inside the parens, then a quote,
+`Ctrl-R 0`, a quote, `Esc`. The register types the code for you.
+--
+`/toBe(` Enter, `f(`, `a`, then `Ctrl-R =3*1849` Enter, `Esc`. `:wqa`.
+
+@solution
+    /ALREADY<Enter> yiw  :bn<Enter>
+    /toThrow(<Enter> f( a'<Ctrl-R>0'<Esc>
+    /toBe(<Enter> f( a<Ctrl-R>=3*1849<Enter><Esc>  :wqa<Enter>
+
+Leaving insert mode to put and coming back costs keys and breaks the
+line of thought, and for anything more than a word it is also where the
+cursor ends up one character off. `Ctrl-R` keeps you typing.
+
+There is a wrinkle. `Ctrl-R` inserts the text as if typed, so
+autoindent and any abbreviations apply to it, and a register holding
+several lines of code can come out re-indented. `Ctrl-R Ctrl-R 0`
+inserts the register literally, and is the one to use for code.
+
+`Ctrl-R` works on the command line too, and that is the next lesson:
+a search or a substitute built from what you have already yanked.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+const UNIT_PRICE = 1849;
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async settle(id: string, units: number) {
+    const order = await this.findOne(id);
+    const total = units * UNIT_PRICE;
+
+    await this.paymentService.capture(order.id, total);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SETTLED', total },
+    });
+  }
+}
+
+@start order.provider.spec.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { shippedOrder } from './order.fixture';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const provider = new OrderProvider(orderRepository, paymentService);
+
+  it('refuses to cancel a shipped order', async () => {
+    reveal(orderRepository).findOne.mockResolvedValue(shippedOrder);
+
+    await expect(provider.cancel(shippedOrder.id)).rejects.toThrow();
+  });
+
+  it('settles three units at the unit price', async () => {
+    reveal(orderRepository).findOne.mockResolvedValue(shippedOrder);
+    reveal(orderRepository).update.mockImplementation(async ({ values }) => ({ ...shippedOrder, ...values }));
+
+    const result = await provider.settle(shippedOrder.id, 3);
+
+    expect(result.total).toBe();
+  });
+});
+
+@expected order.provider.spec.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { shippedOrder } from './order.fixture';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const provider = new OrderProvider(orderRepository, paymentService);
+
+  it('refuses to cancel a shipped order', async () => {
+    reveal(orderRepository).findOne.mockResolvedValue(shippedOrder);
+
+    await expect(provider.cancel(shippedOrder.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+  });
+
+  it('settles three units at the unit price', async () => {
+    reveal(orderRepository).findOne.mockResolvedValue(shippedOrder);
+    reveal(orderRepository).update.mockImplementation(async ({ values }) => ({ ...shippedOrder, ...values }));
+
+    const result = await provider.settle(shippedOrder.id, 3);
+
+    expect(result.total).toBe(5547);
+  });
+});

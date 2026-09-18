@@ -1,0 +1,94 @@
+@meta
+id: 31-05
+title: Lists, and why vim.opt is not vim.o
+chapter: 31
+type: lesson
+skills: lua-config
+par: 115
+minutes: 6
+vscode: no equivalent — JSON settings have no +=
+open: init.lua
+
+@brief
+Not every vim option is a boolean or a number. Some are comma-separated
+lists (`wildmode`, `listchars`, `clipboard`, `completeopt`), and in a
+vimrc you grow them with `set option+=value` rather than assigning the
+whole thing and clobbering what was there.
+
+`vim.opt` exists to make that work in Lua. It gives you a wrapper object
+rather than a raw value, so a list option can be written as a Lua table
+and can be grown with a method:
+
+    set wildmode=longest,full   ->  vim.opt.wildmode = { 'longest', 'full' }
+    set shortmess+=c            ->  vim.opt.shortmess:append('c')
+    set clipboard-=unnamed      ->  vim.opt.clipboard:remove('unnamed')
+
+There is a second table, `vim.o`, which sets the same options as plain
+values: `vim.o.wildmode = 'longest,full'` works and is marginally faster.
+The difference only bites on lists — `vim.o.wildmode = { ... }` assigns a
+table to something that wants a string and errors at startup, and `vim.o`
+has no `:append`. The rule that keeps you out of trouble: use `vim.opt`
+everywhere, and reach for `vim.o` only when you are reading a value back.
+
+Add three lines to the config, in this order, from these vimrc lines:
+
+    set scrolloff=8
+    set wildmode=longest,full
+    set shortmess+=c
+
+Graded in vim. You are writing the Lua, not running it.
+
+@keys
+| `vim.opt.x = { 'a', 'b' }` | a list option, as a Lua table |
+| `vim.opt.x:append('v')` | the Lua spelling of `set x+=v` |
+| `G` `o` | open a line at the bottom |
+
+@hints
+Two assignments and one method call. Only the `+=` line becomes a method
+call.
+--
+Lua tables use braces and commas: `{ 'longest', 'full' }`. Single quotes
+and double quotes are the same thing in Lua.
+--
+`Go`, then the three lines with Enter between them, then Esc and `:wq`.
+
+@solution
+    G o
+    vim.opt.scrolloff = 8<Enter>
+    vim.opt.wildmode = { 'longest', 'full' }<Enter>
+    vim.opt.shortmess:append('c')<Esc>
+    :wq<Enter>
+
+The colon in `:append` is Lua's method-call syntax — it passes the object
+on the left as the first argument, the same way `obj.method(obj, 'c')`
+would. You do not need to care beyond writing it correctly, but it does
+explain why it is `:append` and not `.append`.
+
+Three practical notes:
+
+- `vim.opt` also has `:remove()` and `:get()`. `vim.opt.wildmode:get()`
+  hands you back a Lua table, which is how you inspect an option from a
+  script rather than reading it off `:set wildmode?`.
+- Window- and buffer-local options have their own tables: `vim.opt_local`,
+  `vim.wo` and `vim.bo`. `setlocal spell` is `vim.opt_local.spell = true`,
+  and that is what goes in an `after/ftplugin/markdown.lua`.
+- Vim's own `set` is still there. `vim.cmd('set wildmode=longest,full')`
+  runs verbatim, and is a perfectly respectable way to postpone porting a
+  line you are unsure about.
+
+@start init.lua
+-- ~/.config/nvim/init.lua
+
+-- Display
+vim.opt.number = true
+vim.opt.shiftwidth = 2
+
+@expected init.lua
+-- ~/.config/nvim/init.lua
+
+-- Display
+vim.opt.number = true
+vim.opt.shiftwidth = 2
+vim.opt.scrolloff = 8
+vim.opt.wildmode = { 'longest', 'full' }
+vim.opt.shortmess:append('c')

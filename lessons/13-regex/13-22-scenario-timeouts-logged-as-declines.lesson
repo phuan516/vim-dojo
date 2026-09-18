@@ -1,0 +1,234 @@
+@meta
+id: 13-22
+title: Scenario — timeouts logged as declines
+chapter: 13
+type: scenario
+skills: regex-zs-ze, regex-groups, regex-quantifiers, regex-verymagic, cgn, dot-repeat, obj-quote, search-slash
+par: 130
+minutes: 15
+vscode: three tabs, a find-and-replace on the log that you would have to undo twice
+open: payment.service.ts capture.log errors.json
+
+@brief
+A ticket, not an exercise.
+
+    PAY-731  When the gateway times out on capture, we record the
+             failure as PAYMENT_DECLINED. Customers are getting decline
+             emails for orders that were never declined. Fix the
+             service, and correct the excerpt attached to the incident
+             so the write-up is accurate.
+
+Three files, open as three buffers. `:w` before `:bn`, and `:wqa` to
+finish — with three files open, `:wq` refuses.
+
+  1. payment.service.ts — in `capture`, the branch for a `504` from the
+     gateway throws `PAYMENT_DECLINED`. It should throw
+     `PAYMENT_GATEWAY_TIMEOUT`. The `402` branch is a real decline and
+     keeps its code, and so does the fallback at the bottom.
+
+  2. payment.service.ts — the retry predicate lists `502` and `503` as
+     retryable statuses. Add `504` to that list, after `503`.
+
+  3. capture.log — the excerpt attached to the incident. Every
+     `payment.capture` line whose `gateway_status` is `504` records
+     `reason=PAYMENT_DECLINED`; correct those to `reason=GATEWAY_TIMEOUT`.
+     The lines with `gateway_status=402` are genuine declines and stay
+     as they are.
+
+  4. errors.json — nothing to add. `PAYMENT_GATEWAY_TIMEOUT` is already
+     registered. It is open so you can check, and to be left alone.
+
+@keys
+| `/pattern` `Enter` then `2j` | search is still the fastest way to a line |
+| `ci'` | change inside the quotes |
+| `/503]/e` | land on the `]` — under `\v` the bracket would need its backslash |
+| `i` | insert before the cursor |
+| `504.*reason\=\zs` | context, a gap, more context, then the match starts |
+| `cgn` then `.` | change the match, then the next |
+| `:w` `:bn` `:wqa` | write, next buffer, write all and quit |
+
+@hints
+The service file has three `PAYMENT_DECLINED` strings. The one you want
+is the one two lines under `504`. Search for the number, step down
+twice, change inside the quotes.
+--
+For the retry list, land on the `]` after `503` and insert in front of
+it. A search lands on the start of its match, so ask for the end with
+`/e`. The bracket needs no escape in the default dialect.
+--
+In the log, the condition is `504` and the match is `PAYMENT_DECLINED`,
+with a gap between them. `\zs` after the gap and the `reason=` puts the
+cursor and the match on the reason alone, and `cgn` changes only that.
+Three lines, so `cgn` once and `.` twice.
+--
+`:wqa` at the end. If `:wq` tells you there are more files to edit,
+that is why.
+
+@solution
+**payment.service.ts** — `/504` `Enter`, `2j`, `ci'PAYMENT_GATEWAY_TIMEOUT`,
+`Esc`. Then `/503]/e` `Enter`, `i, 504`, `Esc`. `:w`, `:bn`.
+
+**capture.log** — `/504.*reason=\zsPAYMENT_DECLINED` `Enter` lands on
+the reason of the first timed-out capture, and only those: the `402`
+lines never match. `cgnGATEWAY_TIMEOUT`, `Esc`, `.`, `.`. `:wqa`.
+
+**errors.json** — not touched.
+
+About a hundred and fifteen keystrokes, sixty of them the two new codes.
+
+The log is the part that this chapter was for. A plain search for
+`PAYMENT_DECLINED` finds five lines, two of which must not change, and
+you would be alternating `n` and `.` and checking the status on each
+line by eye. The pattern carries the check — `504`, somewhere before
+the reason — and `\zs` makes the match start where the edit starts, so
+`cgn` and `.` do exactly three changes and no wrong ones. Context on
+the left of `\zs`, edit on the right: that is the shape of most real
+regex work in an editor, and it is a shape no other tool can express
+without a replacement string.
+
+The two edits in the service file used no regex at all. That is also
+the lesson. A search for `504` and a `2j` is faster than any pattern
+that could describe "the throw in the 504 branch", and the `503]`
+search was plain text because the text was already unique — the only
+trick was the `/e` offset, so that the cursor arrived on the bracket
+rather than the number. Reach for a pattern when a literal lands on
+the wrong thing first. When it does not, do not.
+
+@start payment.service.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { GatewayClient } from './gateway.client';
+import { logger } from '../logger';
+
+@injectable()
+export class PaymentService {
+  constructor(@inject(GatewayClient) protected gatewayClient: GatewayClient) {}
+
+  public async capture(args: { orderId: string; amount: number; requestId: string }) {
+    const response = await this.gatewayClient.post('/v2/payments', {
+      orderId: args.orderId,
+      amount: args.amount,
+      idempotencyKey: args.requestId,
+    });
+
+    if (response.status === 201) {
+      return response.data;
+    }
+
+    if (response.status === 402) {
+      logger.warn('payment.capture declined', { orderId: args.orderId, requestId: args.requestId });
+      throw exception('PAYMENT_DECLINED');
+    }
+
+    if (response.status === 504) {
+      logger.warn('payment.capture timed out', { orderId: args.orderId, requestId: args.requestId });
+      throw exception('PAYMENT_DECLINED');
+    }
+
+    const retryable = [502, 503].includes(response.status);
+
+    if (retryable) {
+      throw exception('PAYMENT_GATEWAY_UNAVAILABLE');
+    }
+
+    throw exception('PAYMENT_DECLINED');
+  }
+
+  public async refund(orderId: string, amount: number) {
+    const response = await this.gatewayClient.post('/v2/refunds', { orderId, amount });
+
+    if (response.status !== 201) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@expected payment.service.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { GatewayClient } from './gateway.client';
+import { logger } from '../logger';
+
+@injectable()
+export class PaymentService {
+  constructor(@inject(GatewayClient) protected gatewayClient: GatewayClient) {}
+
+  public async capture(args: { orderId: string; amount: number; requestId: string }) {
+    const response = await this.gatewayClient.post('/v2/payments', {
+      orderId: args.orderId,
+      amount: args.amount,
+      idempotencyKey: args.requestId,
+    });
+
+    if (response.status === 201) {
+      return response.data;
+    }
+
+    if (response.status === 402) {
+      logger.warn('payment.capture declined', { orderId: args.orderId, requestId: args.requestId });
+      throw exception('PAYMENT_DECLINED');
+    }
+
+    if (response.status === 504) {
+      logger.warn('payment.capture timed out', { orderId: args.orderId, requestId: args.requestId });
+      throw exception('PAYMENT_GATEWAY_TIMEOUT');
+    }
+
+    const retryable = [502, 503, 504].includes(response.status);
+
+    if (retryable) {
+      throw exception('PAYMENT_GATEWAY_UNAVAILABLE');
+    }
+
+    throw exception('PAYMENT_DECLINED');
+  }
+
+  public async refund(orderId: string, amount: number) {
+    const response = await this.gatewayClient.post('/v2/refunds', { orderId, amount });
+
+    if (response.status !== 201) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@start capture.log
+2026-05-14T09:12:02Z INFO  payment.capture order=ord_9118 request=req_5c1e9a gateway_status=201 result=captured
+2026-05-14T09:12:40Z ERROR payment.capture order=ord_9121 request=req_77b0d3 gateway_status=504 reason=PAYMENT_DECLINED
+2026-05-14T09:12:41Z INFO  email.sent order=ord_9121 template=payment_declined to=marc@example.com
+2026-05-14T09:13:07Z ERROR payment.capture order=ord_9125 request=req_a4f2c8 gateway_status=504 reason=PAYMENT_DECLINED
+2026-05-14T09:13:08Z INFO  email.sent order=ord_9125 template=payment_declined to=lena@example.com
+2026-05-14T09:14:11Z ERROR payment.capture order=ord_9127 request=req_0b9e11 gateway_status=402 reason=PAYMENT_DECLINED
+2026-05-14T09:14:12Z INFO  email.sent order=ord_9127 template=payment_declined to=amir@example.com
+2026-05-14T09:15:43Z INFO  payment.capture order=ord_9121 request=req_77b0d3 gateway_status=201 result=captured
+2026-05-14T09:16:30Z ERROR payment.capture order=ord_9131 request=req_c91d02 gateway_status=402 reason=PAYMENT_DECLINED
+2026-05-14T09:17:02Z ERROR payment.capture order=ord_9134 request=req_d4e77a gateway_status=504 reason=PAYMENT_DECLINED
+2026-05-14T09:17:03Z INFO  email.sent order=ord_9134 template=payment_declined to=jo@example.com
+2026-05-14T09:18:20Z INFO  payment.capture order=ord_9138 request=req_e10b44 gateway_status=201 result=captured
+
+@expected capture.log
+2026-05-14T09:12:02Z INFO  payment.capture order=ord_9118 request=req_5c1e9a gateway_status=201 result=captured
+2026-05-14T09:12:40Z ERROR payment.capture order=ord_9121 request=req_77b0d3 gateway_status=504 reason=GATEWAY_TIMEOUT
+2026-05-14T09:12:41Z INFO  email.sent order=ord_9121 template=payment_declined to=marc@example.com
+2026-05-14T09:13:07Z ERROR payment.capture order=ord_9125 request=req_a4f2c8 gateway_status=504 reason=GATEWAY_TIMEOUT
+2026-05-14T09:13:08Z INFO  email.sent order=ord_9125 template=payment_declined to=lena@example.com
+2026-05-14T09:14:11Z ERROR payment.capture order=ord_9127 request=req_0b9e11 gateway_status=402 reason=PAYMENT_DECLINED
+2026-05-14T09:14:12Z INFO  email.sent order=ord_9127 template=payment_declined to=amir@example.com
+2026-05-14T09:15:43Z INFO  payment.capture order=ord_9121 request=req_77b0d3 gateway_status=201 result=captured
+2026-05-14T09:16:30Z ERROR payment.capture order=ord_9131 request=req_c91d02 gateway_status=402 reason=PAYMENT_DECLINED
+2026-05-14T09:17:02Z ERROR payment.capture order=ord_9134 request=req_d4e77a gateway_status=504 reason=GATEWAY_TIMEOUT
+2026-05-14T09:17:03Z INFO  email.sent order=ord_9134 template=payment_declined to=jo@example.com
+2026-05-14T09:18:20Z INFO  payment.capture order=ord_9138 request=req_e10b44 gateway_status=201 result=captured
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "PAYMENT_DECLINED": { "statusCode": 402, "sentry": false },
+  "PAYMENT_GATEWAY_TIMEOUT": { "statusCode": 504, "sentry": true },
+  "PAYMENT_GATEWAY_UNAVAILABLE": { "statusCode": 503, "sentry": true },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}

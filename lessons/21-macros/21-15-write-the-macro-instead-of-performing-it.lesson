@@ -1,0 +1,95 @@
+@meta
+id: 21-15
+title: Write the macro instead of performing it
+chapter: 21
+type: lesson
+skills: macro-edit, macro-count
+par: 76
+minutes: 7
+vscode: nothing; a keyboard-macro you can type as text does not exist
+open: shipping-zones.ts
+
+@brief
+Twelve shipping zones, pasted as `zone,rate`, each to become a record:
+
+    uk,4.99    →    { zone: 'uk', rate: 4.99 },
+
+You know exactly what the macro is before you start; you have recorded
+this shape four times already this chapter. So do not record it.
+Write it. A register can be assigned on the command line, and the
+notation is the one `:reg` shows you, with one addition for the keys
+that have no printable form.
+
+@keys
+| `:let @a="..."` | put a string into register `a` |
+| `\<Esc>` | inside double quotes, the `Esc` key |
+| `:reg a` | check what went in |
+| `12@a` | run it |
+
+@hints
+The macro on one line is `^i{ zone: '` `Esc` `f,s', rate: ` `Esc`
+`A },` `Esc` `j`. Write that out with `\<Esc>` wherever you would press
+`Esc`, in double quotes, and hand it to `:let @a=`.
+--
+`:let @a="^i{ zone: '\<Esc>f,s', rate: \<Esc>A },\<Esc>j"` and Enter.
+Then `j` and `12@a`.
+--
+If it does something odd, `:reg a` shows what actually went in. The
+usual mistake is a `\<Esc>` inside single quotes, where it is seven
+plain characters.
+
+@solution
+    :let @a="^i{ zone: '\<Esc>f,s', rate: \<Esc>A },\<Esc>j"<Enter>   j   12@a   :wq<Enter>
+
+Sixty-six keystrokes, about the same as recording it. That is not the
+point.
+
+Recording is the right way to build a macro when you are working it
+out as you go. Writing it is the right way when it already exists as
+text: in a ticket, in a message from a colleague, in your own notes
+from last month. `:let @a=` takes it in from the command line, and the
+same line can go in your vimrc so the macro is there every morning,
+which chapter 28 will come back to.
+
+The `\<Esc>` notation is worth learning properly because it is used
+all over vim. Inside a double-quoted string, `\<Esc>`, `\<CR>`,
+`\<C-v>` and so on are the named keys. Inside single quotes nothing is
+special, which is safer for patterns with backslashes in them and
+useless for keys. When the macro has an `Esc` in it, use double quotes.
+
+The last lesson pasted a macro into the file to fix a letter. This one
+skips the file. For a short macro with a small mistake, retyping the
+whole `:let` is often quicker than paste, fix and yank. For a long
+one, the buffer wins. Both end in the same register.
+
+@start shipping-zones.ts
+export const shippingZones = [
+  uk,4.99
+  ie,6.50
+  fr,8.99
+  de,8.99
+  nl,8.99
+  be,8.99
+  es,10.99
+  it,10.99
+  pt,10.99
+  us,14.99
+  ca,14.99
+  au,22.99
+];
+
+@expected shipping-zones.ts
+export const shippingZones = [
+  { zone: 'uk', rate: 4.99 },
+  { zone: 'ie', rate: 6.50 },
+  { zone: 'fr', rate: 8.99 },
+  { zone: 'de', rate: 8.99 },
+  { zone: 'nl', rate: 8.99 },
+  { zone: 'be', rate: 8.99 },
+  { zone: 'es', rate: 10.99 },
+  { zone: 'it', rate: 10.99 },
+  { zone: 'pt', rate: 10.99 },
+  { zone: 'us', rate: 14.99 },
+  { zone: 'ca', rate: 14.99 },
+  { zone: 'au', rate: 22.99 },
+];

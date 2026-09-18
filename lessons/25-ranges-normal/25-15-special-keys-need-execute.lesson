@@ -1,0 +1,93 @@
+@meta
+id: 25-15
+title: When :normal needs :execute
+chapter: 25
+type: lesson
+skills: ex-normal
+par: 45
+minutes: 7
+vscode: type quotes and commas on six lines by hand
+open: tags.ts
+
+@brief
+Six bare tag names inside an array that expects string literals. Each one
+becomes an indented, quoted, comma-terminated element:
+
+    blue-mug        →       'blue-mug',
+
+On one line that is `I  '`, Esc, `A',`. The Esc is in the middle, and
+that is the problem. Everything after `:normal ` is taken literally, so
+typing an actual Esc key there ends the command line instead of going
+into the file. `:normal` supplies an Esc at the *end* of each line and
+nowhere else.
+
+The fix is to build the string in an expression, where `\<Esc>` is
+ordinary text that vim turns into the key. `:execute` evaluates the
+expression and runs the result as a command line.
+
+@keys
+| `:execute "2,7normal I  '\<Esc>A',"` | run those keys, Esc and all, on lines 2 to 7 |
+| `\<Esc>` `\<CR>` `\<C-a>` | the key notation, inside a double-quoted string |
+| `:execute` | evaluate a string, then run it as an Ex command |
+
+@hints
+Write the keys for a single line first, with Esc where you would press
+it. Then the whole thing has to become a string.
+--
+The range goes inside the string, in front of `normal` — `:execute` does
+not take one of its own.
+--
+`:execute "2,7normal I  '\<Esc>A',"` Enter, then `:wq`. Double quotes,
+not single: `\<Esc>` is only interpreted inside double quotes.
+
+@solution
+    :execute "2,7normal I  '<Esc>A',"<Enter>  :wq<Enter>
+
+written out in full as
+
+    :execute "2,7normal I  '\<Esc>A',"
+
+Thirty-nine keystrokes. It is the longest command in the chapter so far
+and there is no shorter honest version, because a real Esc cannot be
+typed into a command line as data.
+
+The rule is small: **`:normal` cannot contain a special key, `:execute`
+can.** Esc, Enter, Ctrl-A, Ctrl-V — anything with a name in angle
+brackets — has to go through `:execute` and a double-quoted string.
+Single quotes will not do it; vim only interprets `\<...>` inside double
+quotes.
+
+The most common case is Enter rather than Esc:
+
+    :execute "normal! ci(\<CR>"          replace an argument list with a newline
+    :execute "%normal! A\<C-a>"          increment the last number on every line
+    :execute "'a,'bnormal! @q\<CR>"      rarely needed — @q ends cleanly on its own
+
+And a shape worth stealing, since `:execute` builds a command line out of
+any string:
+
+    :execute "normal! " . repeat("x", 12)
+
+`:normal` on its own is right whenever the keys are all printable, which
+is most of the time — `A;`, `I// `, `@q`, `dw`. Reach for `:execute` the
+moment one of them is not.
+
+@start tags.ts
+export const tags = [
+blue-mug
+grey-mug
+enamel-pin
+canvas-tote
+sticker-pack
+desk-mat
+];
+
+@expected tags.ts
+export const tags = [
+  'blue-mug',
+  'grey-mug',
+  'enamel-pin',
+  'canvas-tote',
+  'sticker-pack',
+  'desk-mat',
+];

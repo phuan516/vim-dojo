@@ -1,0 +1,124 @@
+@meta
+id: 30-06
+title: Two things with the same name
+chapter: 30
+type: lesson
+skills: ctags
+par: 40
+minutes: 6
+vscode: F12 opens a peek list when there is more than one result
+vimrc: set hidden
+open: src/domain/order/order.provider.ts
+
+@brief
+Two classes in this tree have a method called `refund`. That is normal —
+`findOne`, `create`, `handle` and `refund` are everywhere in a real
+codebase, and a tags file indexes names, not types. It cannot know which
+one you meant.
+
+`Ctrl-]` takes the first match and says nothing. Sometimes that is the
+one you wanted. Here it is not.
+
+    PAY-311  PaymentService.refund compares the gateway status to the
+             string '200'. It is a number. Every refund is reported as
+             failed.
+
+Fix the comparison in the payment service. `OrderProvider.refund` is
+fine and must not change.
+
+@keys
+| `g]` | like `Ctrl-]`, but list the matches and ask which one |
+| `:tselect name` | the same list, by name |
+| `:tjump name` | jump if there is one match, list if there are several |
+| `Ctrl-W g]` | pick from the list, open it in a split |
+| `:tnext` `:tprevious` | step through the matches without the list |
+
+@hints
+Put the cursor on `refund` in the call inside `cancel`, then `g]`
+instead of `Ctrl-]`.
+--
+The list shows both definitions with their file and the line that
+defines them. Type the number you want and press Enter.
+--
+`/refund(order` `Enter`, `g]`, `2` `Enter`. Then `/'200'` `Enter` and
+take the two quotes off.
+
+@solution
+    /refund(order<Enter>  g]  2<Enter>
+    /'200'<Enter>  x  f' x  :wqa<Enter>
+
+`g]` is the one to reach for by default. It costs one extra keystroke
+when there is a single match and it saves you from silently editing the
+wrong `create` when there are nine.
+
+`:tjump` — and `g Ctrl-]`, its cursor-word form — splits the difference:
+straight there when the name is unique, a list when it is not. Plenty of
+people map `Ctrl-]` to `g Ctrl-]` and never think about it again.
+
+This is also the first honest limit of a tags file. A language server
+knows that the thing to the left of `.refund` is a `PaymentService`, so
+it would have gone straight to the right definition with no list at all.
+The index cannot know that, because it never type-checked anything. What
+you get in exchange is that it works on any file, in any language, on
+any machine, in a second — including the ones where no server exists.
+
+The list is a reasonable price. Remember it when you get to the rename
+lesson, where the same blindness costs rather more.
+
+@start tags
+!_TAG_FILE_FORMAT	2	//
+!_TAG_FILE_SORTED	1	//
+OrderProvider	src/domain/order/order.provider.ts	/^export class OrderProvider {$/;"	c
+PaymentService	src/infrastructure/services/payment.service.ts	/^export class PaymentService {$/;"	c
+cancel	src/domain/order/order.provider.ts	/^  public async cancel(id: string) {$/;"	m	class:OrderProvider
+refund	src/domain/order/order.provider.ts	/^  public async refund(order: Order) {$/;"	m	class:OrderProvider
+refund	src/infrastructure/services/payment.service.ts	/^  public async refund(orderId: string) {$/;"	m	class:PaymentService
+
+@start src/domain/order/order.provider.ts
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+export class OrderProvider {
+  constructor(protected paymentService: PaymentService) {}
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    await this.refund(order);
+
+    return order;
+  }
+
+  public async refund(order: Order) {
+    if (order.total === 0) {
+      return order;
+    }
+
+    return this.paymentService.refund(order.id);
+  }
+}
+
+@start src/infrastructure/services/payment.service.ts
+export class PaymentService {
+  public async refund(orderId: string) {
+    const response = await this.http.post('/refunds', { orderId });
+
+    if (response.status !== '200') {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data.receiptId;
+  }
+}
+
+@expected src/infrastructure/services/payment.service.ts
+export class PaymentService {
+  public async refund(orderId: string) {
+    const response = await this.http.post('/refunds', { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data.receiptId;
+  }
+}

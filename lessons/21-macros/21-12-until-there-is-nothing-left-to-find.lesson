@@ -1,0 +1,185 @@
+@meta
+id: 21-12
+title: Until there is nothing left to find
+chapter: 21
+type: lesson
+skills: macro-recursive
+par: 70
+minutes: 8
+vscode: find next, edit twice, find next, seven times
+open: order.provider.ts
+
+@brief
+`OrderProvider` still logs with `console.log`. The platform team wants
+every call on the structured logger, with the payload wrapped:
+
+    console.log('cancel', id);    →    this.logger.info('cancel', { id });
+
+Seven calls, spread through the file, each with a different message
+and a different single-word argument.
+
+Record a macro whose first move is the search for `console.log(` and
+whose last move is `@a`. The search finds the next call wherever it
+is; the edit removes the thing being searched for; the recursion runs
+until the search comes up empty.
+
+@keys
+| `/console\.log(` | the next call, anywhere below, wrapping to the top |
+| `cf(` | change up to and including the bracket |
+| `f,` `w` | onto the comma, then onto the argument |
+| `e` | to the end of the argument |
+| `@a` at the end | run again |
+
+@hints
+`qaq` first. Then `qa`, the search, and the edit: `cf(this.logger.info(`
+`Esc` replaces the call name and the bracket. `f,w` puts the cursor on
+the argument; `i{ ` `Esc`, `ea }` `Esc` wrap it. Then `@a`, `q`.
+--
+The search has to fail eventually or the macro never stops. It does,
+because each edit turns `console.log(` into `this.logger.info(`, and
+the last search finds nothing at all.
+--
+`qaq` then `qa/console\.log(<Enter>cf(this.logger.info(<Esc>f,wi{ <Esc>ea }<Esc>@aq`, then `@a`.
+
+@solution
+    qaq   qa /console\.log( <Enter> cf( this.logger.info( <Esc> f,w i{  <Esc> e a } <Esc> @a q   @a   :wq<Enter>
+
+Sixty-two keystrokes. Twelve of them are the search, and the search is
+what makes this one different from the last lesson.
+
+A recursive macro over consecutive lines ends when a guard fails on
+the first line past the data. A recursive macro driven by a search
+ends when the search fails, which happens exactly when no unedited
+target remains anywhere in the file. That is a strong guarantee. It
+does not matter where the calls are, how far apart, or whether one of
+them is above where you started: the search wraps round and finds it.
+
+The guarantee holds only because the edit consumes the match. If the
+pattern still matched after the edit, the search would keep succeeding
+for ever and the macro would go round the file until you pressed
+`Ctrl-C`. So before you type the final `@a` in a recording that starts
+with `/`, ask: after this edit, does the pattern still match this
+line? If it does, either change the pattern or use a count.
+
+The `\.` in the pattern is chapter 13: a bare `.` would match any
+character, which here would be harmless, and elsewhere would not.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+export class OrderProvider {
+  constructor(
+    protected orderRepository: OrderRepository,
+    protected paymentService: PaymentService,
+    protected logger: Logger,
+  ) {}
+
+  public async findOne(id: string) {
+    console.log('findOne', id);
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      console.log('missing', id);
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    console.log('cancel', id);
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      console.log('refused', order);
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+    console.log('refunded', order);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async markShipped(id: string) {
+    const order = await this.findOne(id);
+    console.log('markShipped', order);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+
+  public async findByCustomer(customerId: string) {
+    console.log('findByCustomer', customerId);
+
+    return this.orderRepository.findMany({ where: { customerId } });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+export class OrderProvider {
+  constructor(
+    protected orderRepository: OrderRepository,
+    protected paymentService: PaymentService,
+    protected logger: Logger,
+  ) {}
+
+  public async findOne(id: string) {
+    this.logger.info('findOne', { id });
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      this.logger.info('missing', { id });
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    this.logger.info('cancel', { id });
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      this.logger.info('refused', { order });
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+    this.logger.info('refunded', { order });
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async markShipped(id: string) {
+    const order = await this.findOne(id);
+    this.logger.info('markShipped', { order });
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+
+  public async findByCustomer(customerId: string) {
+    this.logger.info('findByCustomer', { customerId });
+
+    return this.orderRepository.findMany({ where: { customerId } });
+  }
+}

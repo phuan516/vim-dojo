@@ -1,0 +1,75 @@
+@meta
+id: 24-16
+title: Repeat the last command line
+chapter: 24
+type: lesson
+skills: cmdline-edit
+par: 28
+minutes: 5
+vscode: Alt-Up, Alt-Up, Alt-Up, Alt-Up
+open: order-status.enum.ts
+
+@brief
+The enum members are supposed to follow the order lifecycle:
+`PENDING`, `PAID`, `SHIPPED`, `DELIVERED`, `CANCELLED`, `REFUNDED`.
+Somebody appended the first two to the bottom. `PENDING` on line 6
+has to go to the top of the list, and `PAID` on line 7 directly below
+it.
+
+You know `:m-2`. Each of these lines needs it four times. `@:` repeats
+the last command line, and like most things in normal mode it takes a
+count: `3@:` runs it three more times. Type `:m-2` once per line and
+let `@:` do the rest.
+
+@keys
+| `@:` | repeat the last command line |
+| `3@:` | repeat it three times |
+| `@@` | after `@:`, repeat it again |
+| `:m-2` | the current line, one slot up |
+
+@hints
+The cursor follows the line as it moves, so a repeated `:m-2` keeps
+bubbling the same line.
+--
+From line 6 to line 2 is four moves: one typed, three repeated. Same
+for `PAID` once `PENDING` is out of its way.
+--
+`6G:m-2` Enter `3@:`, then `7G:m-2` Enter `3@:`, then `:wq`.
+
+@solution
+    6G :m-2<Enter> 3@:   7G :m-2<Enter> 3@:   :wq<Enter>
+
+Twenty-four keystrokes.
+
+`@:` is the dot command for the command line. Anything you ran with a
+colon, `@:` runs again, and a count in front runs it that many times.
+It is why the relative form `:m-2` was worth learning over `:6m1`: a
+command with no absolute numbers in it is safe to repeat from anywhere.
+Bubbling a line up by watching it move and pressing `@:` until it
+looks right is a better experience than counting the destination, and
+it is not slower.
+
+The same trick works for `:t.` to stamp out copies, `:j` to keep
+joining, `:>` to keep indenting, and for a `:normal` sequence, which
+is the chapter 25 way of running normal-mode keys from the command
+line and is the other thing people put `@:` in front of.
+
+@start order-status.enum.ts
+export enum OrderStatus {
+  SHIPPED = 'SHIPPED',
+  DELIVERED = 'DELIVERED',
+  CANCELLED = 'CANCELLED',
+  REFUNDED = 'REFUNDED',
+  PENDING = 'PENDING',
+  PAID = 'PAID',
+}
+
+@expected order-status.enum.ts
+export enum OrderStatus {
+  PENDING = 'PENDING',
+  PAID = 'PAID',
+  SHIPPED = 'SHIPPED',
+  DELIVERED = 'DELIVERED',
+  CANCELLED = 'CANCELLED',
+  REFUNDED = 'REFUNDED',
+}

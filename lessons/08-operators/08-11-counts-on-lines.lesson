@@ -1,0 +1,97 @@
+@meta
+id: 08-11
+title: Counting lines into the verb
+chapter: 08
+type: lesson
+skills: delete-d
+par: 18
+minutes: 4
+vscode: click the first line, Shift-click the last, Delete
+open: order.provider.ts
+
+@brief
+A block of debug logging and a method nobody calls have both survived
+code review. Between them that is eleven lines to remove.
+
+Pressing `dd` eleven times works and is a waste. A count in front of a
+verb multiplies it, exactly as it did with `x`, so a run of adjacent
+lines is one command — and one `u` if you get the number wrong.
+
+Take out the debug block, including the blank line that followed it, and
+the whole `legacyRefund` method, including the blank line above it.
+Nothing else changes.
+
+Turn on `:set relativenumber` if you have not already. It exists for this.
+
+@keys
+| `5dd` | delete five lines from the cursor down |
+| `7j` | seven lines down |
+| `u` | undo, if the count was wrong |
+
+@hints
+Two deletions, not eleven. Count the lines you want *including* the blank
+one that goes with each block.
+--
+The count goes in front: `5dd` deletes the current line and the four
+below it. With `relativenumber` on, the number is sitting in the margin
+next to the last line you want gone.
+--
+`7j` `5dd` takes the comment, the three logs and the blank line after
+them. From there `5j` lands on the blank line above `legacyRefund`, and
+`6dd` takes it and the method.
+
+@solution
+    7j 5dd  5j 6dd  :wq<Enter>
+
+Ten keystrokes for eleven lines.
+
+The count is doing two jobs. It is faster, obviously. More importantly it
+makes the deletion one unit: one entry in the undo history, one thing in
+the register, one thing to put back somewhere else with `p` if it turns
+out the method was wanted after all.
+
+Counting lines by eye is the weak part, which is why `relativenumber` is
+worth turning on — the number you need is printed next to the line you
+are looking at. Chapter 9 gives you a better answer still: `d}` deletes
+to the end of the paragraph and needs no number at all.
+
+@start order.provider.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class OrderProvider {
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    // debug: remove before merge
+    console.log('order', order.id);
+    console.log('status', order.status);
+    console.log('total', order.total);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async legacyRefund(id: string) {
+    const order = await this.findOne(id);
+
+    return this.paymentService.refundLegacy(order.id, order.total);
+  }
+}
+
+@expected order.provider.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class OrderProvider {
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}

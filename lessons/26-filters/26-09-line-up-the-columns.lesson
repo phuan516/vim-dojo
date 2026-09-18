@@ -1,0 +1,71 @@
+@meta
+id: 26-09
+title: Line the columns up
+chapter: 26
+type: lesson
+skills: filter-bang
+par: 26
+minutes: 5
+vscode: an alignment extension, or the space bar, many times
+open: orders.fixture.txt
+
+@brief
+A fixture table that someone appended two rows to without lining anything
+up. Every value is separated by at least one space; they should be
+separated by enough spaces that the columns agree.
+
+`column -t` reads whitespace-separated fields and prints them padded to
+the widest value in each column. It is on every machine you will ever ssh
+into and almost nobody knows it is there.
+
+The five table lines are lines 2 to 6. Select them and filter the
+selection: the comment on line 1 is prose and would be mangled.
+
+@keys
+| `V` then a motion | select whole lines |
+| `:` in visual mode | starts a command line already reading `:'<,'>` |
+| `:'<,'>!column -t` | the selected lines through `column -t` |
+
+@hints
+Make a linewise visual selection over the five table rows first.
+--
+With a selection live, pressing `:` fills in the range for you — you do
+not type `'<,'>`, it is already there. Then `!column -t`.
+--
+`j`, `V4j`, `:!column -t` Enter, `:wq`.
+
+@solution
+    j  V4j  :!column -t<Enter>  :wq<Enter>
+
+Twenty keystrokes to align a table that would take a minute and a half
+with the space bar, and the result is right rather than nearly right.
+
+The visual-then-colon habit is the one to take away. Any time the block
+you want is easier to *see* than to address — a table, a selection you
+made with `V}`, a ragged log extract — select it and press `:`. Vim
+writes `'<,'>` for you and every ex command you know works on exactly
+what is highlighted: `:'<,'>sort`, `:'<,'>s/x/y/g`, `:'<,'>!column -t`,
+`:'<,'>!sort -u`.
+
+Two notes on `column -t` itself, since you will reach for it again.
+Fields are split on runs of whitespace, so it cannot align anything where
+a value contains a space. And `-s,` changes the separator: `:%!column -s,
+-t` turns a CSV into something readable, which is the fastest way to make
+sense of a dumped file. Turning it back is `:%!column -t -o,` or, more
+often, `u`.
+
+@start orders.fixture.txt
+# seed rows for the order fixtures, keep the columns lined up
+id status total currency
+ord_1001 SHIPPED 42.50 GBP
+ord_1002 PENDING 7.00 GBP
+ord_1003 CANCELLED 129.99 EUR
+ord_1004 REFUNDED 8.25 USD
+
+@expected orders.fixture.txt
+# seed rows for the order fixtures, keep the columns lined up
+id        status     total   currency
+ord_1001  SHIPPED    42.50   GBP
+ord_1002  PENDING    7.00    GBP
+ord_1003  CANCELLED  129.99  EUR
+ord_1004  REFUNDED   8.25    USD

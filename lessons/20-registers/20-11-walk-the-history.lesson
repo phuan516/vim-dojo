@@ -1,0 +1,90 @@
+@meta
+id: 20-11
+title: Walk the history
+chapter: 20
+type: lesson
+skills: register-named
+par: 59
+minutes: 6
+vscode: undo until it reappears, copy it, redo everything, paste
+open: registry.ts
+
+@brief
+You will not always know which numbered register holds the line you
+want. Counting deletes backwards is error-prone, and `:reg` is slow to
+read when the lines look alike. Vim has a trick for exactly this: after
+`"1p`, the dot command puts the *next* register. `"1p` `u` `.` `u` `.`
+walks down the history one delete at a time, undoing each wrong guess,
+until the right line appears.
+
+Four registrations in this registry are for classes that no longer
+exist: `LegacyRefundProvider`, `EmailService`, `InvoiceRepository` and
+`AuditProvider`. Delete all four, in file order. Then it turns out
+`EmailService` was not removed — it moved to infrastructure. Its
+registration goes back, at the bottom of the file, from the history.
+Find it by walking, not by counting.
+
+@keys
+| `"1p` | put the most recent delete |
+| `u` `.` | undo it, and put the next one down instead |
+| `:reg 1234` | the other way to find it |
+
+@hints
+Delete the four lines with `dd`, using search and `n` to get from one
+to the next rather than reading line numbers.
+--
+`G` to the bottom, then `"1p`. Wrong line? `u` then `.` — the dot
+increments the register for you. Keep going until `EmailService`
+lands.
+--
+`/Legacy` Enter `dd`, `/Email` Enter `dd`, `/Invoice` Enter `dd`,
+`/Audit` Enter `dd`, `G`, `"1p`, `u.`, `u.`.
+
+@solution
+    /Legacy<Enter> dd /Email<Enter> dd /Invoice<Enter> dd /Audit<Enter> dd
+    G "1p u. u.  :wq<Enter>
+
+`EmailService` was the second of four deletes, so it sits in `"3`, and
+`"3p` gets it directly if you counted right. The walk is for when you
+did not count, which is most of the time: `"1p` shows you `"1`, and each
+`u.` after that shows the next one down. Three deletes ago is never more
+than three steps away.
+
+This is the one place the dot command changes what it repeats. Normally
+`.` replays the last change exactly; after a put from a numbered
+register it bumps the number first. It is a deliberate special case in
+vim, and it exists because walking the history by hand — `"1p`, `u`,
+`"2p`, `u`, `"3p` — is fiddly enough that people did not do it.
+
+@start registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { CustomerRepository } from '../domain/customer/customer.repository';
+import { CustomerProvider } from '../domain/customer/customer.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('LegacyRefundProvider', { useClass: LegacyRefundProvider });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('EmailService', { useClass: EmailService });
+container.register('CustomerRepository', { useClass: CustomerRepository });
+container.register('InvoiceRepository', { useClass: InvoiceRepository });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('AuditProvider', { useClass: AuditProvider });
+container.register('PaymentService', { useClass: PaymentService });
+
+@expected registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { CustomerRepository } from '../domain/customer/customer.repository';
+import { CustomerProvider } from '../domain/customer/customer.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerRepository', { useClass: CustomerRepository });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('PaymentService', { useClass: PaymentService });
+container.register('EmailService', { useClass: EmailService });

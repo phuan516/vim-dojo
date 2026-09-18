@@ -1,0 +1,61 @@
+@meta
+id: 08-09
+title: Drill — five misspelled keys
+chapter: 08
+type: drill
+skills: change-c
+par: 76
+minutes: 5
+reps: 8
+vscode: double-click each key, retype it, five times
+open: status.ts
+
+@brief
+Five keys in this map are misspelled. Spell them properly:
+`pending`, `shipped`, `cancelled`, `refunded`, `failed`.
+
+The rep is three keys and then the word: down, to the front of the line,
+change the word, type it, out.
+
+@keys
+| `cw` | change to the end of the word |
+| `^` | first non-blank character of the line |
+| `j` | down a line |
+| `Esc` | out of insert mode |
+
+@hints
+`j` `^` puts you on the first character of the key, and `cw` replaces it
+whole.
+--
+Do not press `Esc` and then look at the screen. Type the word, `Esc`,
+`j`, `^`, and let the next one start before you have checked the last.
+
+@solution
+    then five times: j ^ cw<word><Esc>  :wq<Enter>
+
+Everything except the words themselves is five keystrokes a line, and the
+words you would have typed in any editor.
+
+What the drill is really building is the habit of getting to the front of
+a word before you change it. `^` is a free, exact landing spot, and from
+there `cw` has no ambiguity about what it is going to take. Beginners
+tend to eyeball the cursor into roughly the right place and then find
+`cw` ate half a word. Land, then change.
+
+@start status.ts
+export const STATUS_LABELS = {
+  pendng: 'Awaiting payment',
+  shiped: 'On its way',
+  cancelld: 'Cancelled by customer',
+  refundd: 'Refunded in full',
+  faild: 'Payment failed',
+};
+
+@expected status.ts
+export const STATUS_LABELS = {
+  pending: 'Awaiting payment',
+  shipped: 'On its way',
+  cancelled: 'Cancelled by customer',
+  refunded: 'Refunded in full',
+  failed: 'Payment failed',
+};

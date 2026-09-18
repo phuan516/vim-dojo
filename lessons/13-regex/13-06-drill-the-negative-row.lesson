@@ -1,0 +1,62 @@
+@meta
+id: 13-06
+title: Drill — the negative row
+chapter: 13
+type: drill
+skills: regex-classes
+par: 14
+minutes: 4
+reps: 8
+vscode: scan the amount column by eye, click the row, Ctrl+Shift+K
+open: settlement.csv
+
+@brief
+Eight times: one row in this settlement file has a negative amount, and
+the importer rejects the whole file because of it. Delete that row.
+
+The dash in the `notes` column marks an empty note, so searching for a
+dash is not enough, and the SKUs have a dash followed by digits. A
+comma, a dash, a digit — that is the shape of a negative amount and
+nothing else in the file.
+
+@keys
+| `\d` | a digit |
+| `dd` | delete the line |
+
+@hints
+The amount is a field, so it has a comma in front of it. Put the comma
+in the pattern.
+--
+`/,-\d` `Enter` and `dd`.
+
+@solution
+/,-\d<Enter>  dd  :wq<Enter>
+
+Twelve keystrokes. The pattern is three characters and each of them is
+carrying weight: the comma rules out the SKUs, the dash rules out the
+positive amounts, the `\d` rules out the empty notes.
+
+By rep eight the class should be arriving in your fingers as one unit —
+`\d` is a key, not a backslash and then a letter. The same goes for
+`\w` and `\s` once you have used them a few times.
+
+@start settlement.csv
+order_id,customer_id,sku,amount,notes,status
+ord_9101,cus_4471,SKU-2231,1499,-,PAID
+ord_9104,cus_1180,SKU-0917,2599,-,PAID
+ord_9112,cus_4471,SKU-2231,1499,replacement,PAID
+ord_9118,cus_3302,SKU-1540,4200,-,PAID
+ord_9120,cus_2210,SKU-0917,-2599,customer-return,PAID
+ord_9125,cus_7754,SKU-3300,15990,-,PENDING
+ord_9127,cus_1180,SKU-1540,2199,-,PAID
+ord_9131,cus_9021,SKU-2231,1499,gift-wrap,PAID
+
+@expected settlement.csv
+order_id,customer_id,sku,amount,notes,status
+ord_9101,cus_4471,SKU-2231,1499,-,PAID
+ord_9104,cus_1180,SKU-0917,2599,-,PAID
+ord_9112,cus_4471,SKU-2231,1499,replacement,PAID
+ord_9118,cus_3302,SKU-1540,4200,-,PAID
+ord_9125,cus_7754,SKU-3300,15990,-,PENDING
+ord_9127,cus_1180,SKU-1540,2199,-,PAID
+ord_9131,cus_9021,SKU-2231,1499,gift-wrap,PAID

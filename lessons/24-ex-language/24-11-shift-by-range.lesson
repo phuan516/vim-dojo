@@ -1,0 +1,109 @@
+@meta
+id: 24-11
+title: Shift lines by range
+chapter: 24
+type: lesson
+skills: ex-shift
+par: 29
+minutes: 5
+vscode: select the lines, Tab; select the others, Shift-Tab twice
+open: order.provider.ts
+vimrc: set shiftwidth=2 expandtab
+
+@brief
+Three blocks in this provider came through a paste at the wrong depth.
+Line 6 and lines 12 to 13 are one level too shallow. Lines 18 to 24,
+the whole body of `findOne`, are two levels too deep.
+
+`>` and `<` are the shift commands, and they take a range like
+everything else. One `>` shifts by one `shiftwidth`, two spaces here.
+Doubling the character doubles the shift: `:18,24<<` pulls the lines
+back two levels in one command. Blank lines inside the range are left
+alone, so you can include them without thinking about it.
+
+@keys
+| `:6>` | indent line 6 by one level |
+| `:12,13>` | indent lines 12 to 13 by one level |
+| `:18,24<<` | outdent lines 18 to 24 by two levels |
+| `:> 4` | indent four lines starting at the current one |
+
+@hints
+Three commands, three ranges. The direction of the arrow is the
+direction the text moves.
+--
+Stack the arrows for more than one level. `<<` in a range is not the
+normal-mode `<<`; it is two levels of shift.
+--
+`:6>` Enter, `:12,13>` Enter, `:18,24<<` Enter, `:wq`.
+
+@solution
+    :6><Enter>  :12,13><Enter>  :18,24<<<Enter>  :wq<Enter>
+
+Twenty-five keystrokes.
+
+The range form is not much shorter than `>>` with a count, but it
+composes. `:g/^  throw/>` indents every shallow `throw` in the file.
+`:'a,'b>` indents between two marks. And `:18,24<<` is the only one of
+these that does two levels in one go; `<<` in normal mode does one, and
+you would type it twice or give it `2` as a count on the operator.
+
+If you want the block re-indented to whatever depth is *correct* rather
+than shifted by a fixed amount, that is `=`, and chapter 23 covered it.
+Shift is for when you know the delta; `=` is for when you know the
+answer.
+
+@start order.provider.ts
+export class OrderProvider {
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+    throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+    where: { id },
+    values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async findOne(id: string) {
+        const order = await this.orderRepository.findOne({ where: { id } });
+
+        if (!order) {
+          throw exception('ORDER_NOT_FOUND');
+        }
+
+        return order;
+  }
+}
+
+@expected order.provider.ts
+export class OrderProvider {
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+}

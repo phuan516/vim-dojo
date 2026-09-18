@@ -1,0 +1,87 @@
+@meta
+id: 09-15
+title: Delete a method with a paragraph jump
+chapter: 09
+type: lesson
+skills: op-linewise, op-motion
+par: 12
+minutes: 5
+vscode: select four lines carefully, Delete, then fix the blank lines
+open: order.provider.ts
+
+@brief
+`legacyRefund` has been unused since the payment service rewrite. Take it
+out of the provider.
+
+The method goes, and so does one of the blank lines around it — the file
+should end up with exactly one blank line between `findOne` and `cancel`,
+like every other gap in the file. Nothing else changes.
+
+@keys
+| `}` | forward to the next blank line |
+| `{` | back to the previous blank line |
+| `d}` | delete from here to the next blank line |
+| `4j` | four lines down |
+
+@hints
+In a code file, blank lines are the structure. A method with blank lines
+either side of it is a paragraph, and you have a motion for paragraphs.
+--
+`d}` deletes from the cursor to the next blank line. Start it *on* the
+blank line above the method and the leading gap goes too.
+--
+`4j` lands on the blank line above `legacyRefund`. Then `d}`.
+
+@solution
+    4j d} :wq<Enter>
+
+Eight keystrokes for a four-line method, with no counting and no
+selecting. Count the lines instead and you get it wrong the day someone
+adds a line to the method.
+
+Starting on the blank line rather than on the `public` line is the whole
+trick. `}` moves to the *next* blank line, so from the gap above the
+method it runs to the gap below it, and the delete takes the method plus
+one blank line — leaving the other one as the separator you wanted. Start
+on the `public` line and you would delete the method but keep both gaps,
+and be left with a double blank line to tidy.
+
+There is a subtlety underneath that is worth knowing about. `}` is a
+charwise motion, but when it starts in the first column and ends in the
+first column, vim promotes the whole thing to linewise — which is why you
+get clean whole lines here rather than a half-joined mess. The rule shows
+up with `{`, `(` and `)` too.
+
+`d}` is the everyday way to remove a block of code in vim before you know
+text objects. Once you have `dap` from chapter 10 you will use that
+instead for paragraphs, but `d}` needs nothing but what you already have,
+and `y}` and `c}` fall out of it for free.
+
+@start order.provider.ts
+export class OrderProvider {
+  public async findOne(id: string) {
+    return this.orderRepository.findOne({ where: { id } });
+  }
+
+  public async legacyRefund(id: string) {
+    const order = await this.findOne(id);
+    return this.paymentService.refundLegacy(order.id, order.total);
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+    return this.orderRepository.update({ where: { id }, values: { status: 'CANCELLED' } });
+  }
+}
+
+@expected order.provider.ts
+export class OrderProvider {
+  public async findOne(id: string) {
+    return this.orderRepository.findOne({ where: { id } });
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+    return this.orderRepository.update({ where: { id }, values: { status: 'CANCELLED' } });
+  }
+}

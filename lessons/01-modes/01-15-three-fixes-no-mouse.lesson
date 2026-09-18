@@ -1,0 +1,106 @@
+@meta
+id: 01-15
+title: Three fixes, four modes, no mouse
+chapter: 01
+type: lesson
+skills: mode-awareness, insert-i, insert-a, esc, cmdline, survival-motion
+par: 62
+minutes: 8
+vscode: three clicks and three retypes
+open: refund.provider.ts
+
+@brief
+Everything this chapter has given you, on one file, with nothing new
+added. Three defects in refund.provider.ts, and each one wants a different
+door.
+
+  1. `refund` is missing `async`. It goes where you would expect, between
+     `public` and `refund`.
+  2. The line that awaits the repository has lost its semicolon.
+  3. The returned status is `'FAILED'`. Refunds start life as `'QUEUED'`,
+     and the two words are the same length, which is a hint about which
+     mode to use.
+
+Nothing else in the file changes. Finish with `ZZ`.
+
+Only `h j k l`, `0` and `$` for movement — no arrow keys, no mouse. Some
+of it will feel slow. Read the solution afterwards for why that is on
+purpose.
+
+@keys
+| `0` | first column |
+| `l` | one character right |
+| `$` | last character of the line |
+| `i` `a` | insert left, insert right |
+| `R` | replace mode, overwrite in place |
+| `Esc` | out of all of them |
+| `ZZ` | write if changed, then quit |
+
+@hints
+Work top to bottom so your `j` presses all go the same way. The first fix
+is on the `public refund` line, nine lines down.
+--
+For `async`, get to column zero and walk right to the `r` of `refund`,
+then `i`. Remember the trailing space — `async ` — or you will get
+`asyncrefund`.
+--
+The semicolon is one line further down: `$a;` and `Esc`. The status is two
+below that: `$`, then `h` back to the `F` of `FAILED`, then `R` and the
+six replacement characters.
+
+@solution
+    j×9  0  l×9  i async <space> <Esc>
+    j  $ a ; <Esc>
+    j j $ h×9  R QUEUED <Esc>
+    ZZ
+
+Three modes, three shapes. Insert to add something that was missing,
+append to put a character on the end of a line, replace to swap a
+fixed-width value without disturbing what is around it. Choosing the door
+before you start typing is most of what fluency looks like at this stage.
+
+Now the honest part. Nine `l` presses to reach one word, and nine `h`
+presses to reach one quotation mark, is a bad way to move, and you should
+feel that it is bad. Every chapter from here to 12 is about deleting those
+presses. `9l` does the same walk in two keys. `w` hops a word at a time.
+`f'` jumps to the next quote directly. `/QUEUED` searches. By chapter 12
+this entire lesson is about fifteen keystrokes.
+
+What you have actually learned in chapter 1 is the part that does not
+change: vim has modes, the mode you are in decides what your keys mean,
+the bottom of the screen tells you which one it is, and `Esc` always goes
+home. Everything after this is vocabulary.
+
+@start refund.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderRepository } from './order.repository';
+
+@injectable()
+export class RefundProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  public refund(orderId: string) {
+    const order = await this.orderRepository.findOne({ where: { id: orderId } })
+
+    return { orderId, amount: order.total, status: 'FAILED' };
+  }
+}
+
+@expected refund.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderRepository } from './order.repository';
+
+@injectable()
+export class RefundProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  public async refund(orderId: string) {
+    const order = await this.orderRepository.findOne({ where: { id: orderId } });
+
+    return { orderId, amount: order.total, status: 'QUEUED' };
+  }
+}

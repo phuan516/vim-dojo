@@ -1,0 +1,139 @@
+@meta
+id: 22-09
+title: Normal-mode keys on the selection
+chapter: 22
+type: lesson
+skills: visual-line
+par: 43
+minutes: 5
+vscode: Alt+click before each `, ctx`, Shift+End, Left, Delete
+open: order.provider.ts
+
+@brief
+Chapter 15 gave you `:g/pattern/normal keys`: a loop of normal-mode
+keystrokes over every line that matches. The range from a selection
+drives the same loop without a pattern. `:'<,'>normal keys` runs the
+keys once on each selected line, cursor at the start of the line each
+time.
+
+The logger in `cancel` no longer takes a context argument. Remove
+`, ctx` from every log call in `cancel`. The calls are different
+lengths, so the comma is in a different column on each line; the one in
+`markShipped` keeps its `ctx` for now.
+
+@keys
+| `:'<,'>normal keys` | run `keys` in normal mode on each selected line |
+| `f,` | find the comma |
+| `dt)` | delete up to the closing bracket |
+
+@hints
+On one line, by hand, you would do `f,dt)`. That is the keys sequence.
+The selection decides which lines get it.
+--
+Select the body of `cancel`, not its signature — the signature has a
+comma too. From the first line of the body, `Vi{` takes the lines
+between the method's braces. Then `:`, the range appears, then
+`normal f,dt)`.
+--
+`/async cancel` `Enter`, `j`, `Vi{`, `:normal f,dt)` `Enter`. Lines
+with no comma are skipped: `f,` fails, and a failed key stops that
+line's sequence without touching it.
+
+@solution
+    /async cancel<Enter> j V i { :normal f,dt)<Enter> :wq<Enter>
+
+Thirty-six keystrokes. `:s/, ctx)/)/` would also have done it, and on
+this file it is the shorter answer. Reach for `:normal` when the edit
+is positional rather than textual — "the second argument", "after the
+first comma", "the last word" — because a normal-mode sequence already
+knows how to say those things and a regex has to be taught.
+
+The fact that `f,` failing aborts the rest of the line is a feature.
+It means a `:normal` over a loosely chosen region only ever touches the
+lines the first key can find something on. The flip side is that `f,`
+finds the *first* comma, whatever it is in. Had one of the messages
+contained a comma, that line would have been cut in the wrong place,
+and the signature line — which also has a comma — is exactly why the
+selection starts one line down.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { Logger } from '../../infrastructure/logger';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(Logger) protected logger: Logger,
+  ) {}
+
+  public async cancel(id: string, ctx: RequestContext) {
+    this.logger.info('cancel requested', ctx);
+    const order = await this.orderRepository.findOne({ where: { id } });
+    if (!order) {
+      this.logger.warn('cancel of unknown order', ctx);
+      throw exception('ORDER_NOT_FOUND');
+    }
+    this.logger.info('refunding', ctx);
+    await this.paymentService.refund(order.id);
+    this.logger.info('refund complete', ctx);
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async markShipped(id: string, ctx: RequestContext) {
+    this.logger.info('markShipped', ctx);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { Logger } from '../../infrastructure/logger';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(Logger) protected logger: Logger,
+  ) {}
+
+  public async cancel(id: string, ctx: RequestContext) {
+    this.logger.info('cancel requested');
+    const order = await this.orderRepository.findOne({ where: { id } });
+    if (!order) {
+      this.logger.warn('cancel of unknown order');
+      throw exception('ORDER_NOT_FOUND');
+    }
+    this.logger.info('refunding');
+    await this.paymentService.refund(order.id);
+    this.logger.info('refund complete');
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async markShipped(id: string, ctx: RequestContext) {
+    this.logger.info('markShipped', ctx);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+}

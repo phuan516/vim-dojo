@@ -1,0 +1,108 @@
+@meta
+id: 18-05
+title: Create a file where you are standing
+chapter: 18
+type: lesson
+skills: netrw
+par: 150
+minutes: 5
+vscode: right-click the folder, New File
+open: src/domain/customer/customer.provider.ts
+
+@brief
+The customer module has no barrel file. Every import into it spells out
+`customer/customer.entity` and `customer/customer.provider`, and the
+team want `src/domain/customer/index.ts` so callers can import from
+`../customer` instead.
+
+Create that file, from the browser, without typing its directory. It
+needs exactly these three lines:
+
+    export * from './customer.entity';
+    export * from './customer.provider';
+    export * from './customer.repository';
+
+`:Explore` puts you in the customer directory. In a netrw listing, `%`
+asks for a file name, creates it in the directory you are looking at,
+and opens it. `d` does the same for a directory. `D` deletes and `R`
+renames the entry under the cursor; you do not need either today.
+
+@keys
+| `:Ex` | browse the current file's directory |
+| `%` | new file here — netrw asks for the name |
+| `d` | new directory here |
+| `D` `R` | delete, rename the entry under the cursor |
+
+@hints
+`:Ex` first. The listing's header shows which directory you are in;
+that is where `%` will create the file.
+--
+Press `%`, type `index.ts`, Enter. You are now editing an empty buffer
+at the right path. `i`, the three lines, `Esc`, `:wq`.
+--
+`:Ex` Enter, `%index.ts` Enter, `i`, the three `export` lines, `Esc`,
+`:wq`. Nothing else.
+
+@solution
+    :Ex<Enter> %index.ts<Enter>
+    i export * from './customer.entity'; ...(three lines)... <Esc> :wq<Enter>
+
+`:e src/domain/customer/index.ts` would have done it too, and with Tab
+completion it is not many more keys. `%` earns its keep when you are
+already looking at the directory, which is the normal case: you browsed
+there to check what exists, saw what was missing, and made it on the
+spot.
+
+The typing dominates the count here, as it will whenever a lesson has
+you write a file. Par assumes you type the three lines once.
+
+@start src/domain/customer/customer.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { CustomerRepository } from './customer.repository';
+
+@injectable()
+export class CustomerProvider {
+  constructor(
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return customer;
+  }
+}
+
+@start src/domain/customer/customer.entity.ts
+export type Customer = {
+  id: string;
+  email: string;
+  name: string;
+};
+
+@start src/domain/customer/customer.repository.ts
+import { injectable } from 'tsyringe';
+import { Customer as CustomerRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Customer } from './customer.entity';
+
+@injectable()
+export class CustomerRepository extends BaseRepository<CustomerRecord, Customer> {
+  public toEntity(record: CustomerRecord): Customer {
+    return {
+      id: record.id,
+      email: record.email,
+      name: record.name,
+    };
+  }
+}
+
+@expected src/domain/customer/index.ts
+export * from './customer.entity';
+export * from './customer.provider';
+export * from './customer.repository';

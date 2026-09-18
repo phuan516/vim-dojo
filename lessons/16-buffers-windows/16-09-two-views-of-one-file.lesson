@@ -1,0 +1,198 @@
+@meta
+id: 16-09
+title: Two views of one file
+chapter: 16
+type: lesson
+skills: split-window, window-nav
+par: 215
+minutes: 7
+vscode: split editor right, then open the same file in it, and watch the two copies argue
+open: order.provider.ts
+
+@brief
+A window is a view of a buffer, and nothing says there can be only one.
+`:sp` splits the current window in two, one above the other, both
+showing the buffer you were in. Scroll one to the bottom and the other
+stays where it was. Edit in either and the change is in both instantly,
+because there is only one buffer; the windows are two cameras pointed
+at it.
+
+This is for the file that is too long to see at once. Here, `cancel`
+at the bottom of the provider already calls `this.emailService.send`,
+because someone wrote the call and forgot the plumbing. Split the
+window, put the bottom one on the call so you can see the name being
+used, and in the top one add the plumbing:
+
+  1. An import, directly under the `PaymentService` import:
+
+         import { EmailService } from '../../infrastructure/services/email.service';
+
+  2. A constructor parameter, directly under the `PaymentService` one:
+
+         @inject(EmailService) protected emailService: EmailService,
+
+`:wqa` writes the buffer once and closes both windows.
+
+@keys
+| `:sp` | split horizontally; the new window is on top and has the cursor |
+| `Ctrl-W s` | the same, as a chord |
+| `Ctrl-W j` | move to the window below |
+| `Ctrl-W k` | move to the window above |
+| `:wqa` | write, close every window, quit |
+
+@hints
+`:sp`, then `Ctrl-W j` and `G` so the lower window shows the end of
+`cancel`. `Ctrl-W k` back up; the upper window is still at the top of
+the file.
+--
+The import: `/payment.service`, `o`, type it, `Esc`. The parameter:
+`/PaymentService)`, `o`, type it, `Esc`. Both lines are long; that is
+the cost of the ticket, not of the split.
+--
+`:wqa`. A plain `:wq` would only close one of the two windows, and vim
+would still be open.
+
+@solution
+    :sp<Enter>  Ctrl-W j  G  Ctrl-W k
+    /payment.service<Enter>  o import { EmailService } from '../../infrastructure/services/email.service'; <Esc>
+    /PaymentService)<Enter>  o @inject(EmailService) protected emailService: EmailService, <Esc>
+    :wqa<Enter>
+
+Around a hundred and ninety keystrokes, nearly all of them the two
+lines the ticket asked for. The split and the two window moves are
+ten.
+
+What you get for those ten is the thing VS Code makes awkward: a second
+view of the same file, live, no second copy, no "which one did I edit".
+Two windows on one buffer is the standard way to write a call at the
+bottom while reading the signature at the top, or to keep a test's
+setup in view while writing the assertion below it.
+
+The other thing to notice: `:sp` is the first command in this chapter
+that changed the layout without changing the list. `:ls` after it
+still shows one buffer. Windows come and go; the buffer is what you
+are editing.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(customerId: string) {
+    return this.orderRepository.findByCustomer({ customerId });
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_NOT_PENDING');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    await this.emailService.send({
+      customerId: order.customerId,
+      template: 'order-cancelled',
+    });
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(customerId: string) {
+    return this.orderRepository.findByCustomer({ customerId });
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_NOT_PENDING');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    await this.emailService.send({
+      customerId: order.customerId,
+      template: 'order-cancelled',
+    });
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}

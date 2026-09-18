@@ -1,0 +1,194 @@
+@meta
+id: 19-08
+title: Drill — rename across the tree
+chapter: 19
+type: drill
+skills: cdo
+par: 74
+minutes: 5
+reps: 8
+vscode: Replace All in Files
+vimrc: set nohidden
+open: src/domain/order/order.entity.ts
+
+@brief
+`Order.placedAt` is now `createdAt`: the entity, the repository's
+`toEntity`, and the provider. The column was renamed in the migration
+already. Eight times: search, substitute over the list with `| update`,
+quit. By the fourth rep the `| update` should come out without thinking.
+
+@keys
+| `:vim /pattern/ **/*.ts` | fill the list |
+| `:cdo s/old/new/g \| update` | change every hit line, write each file |
+
+@hints
+`:vim /placedAt/ **/*.ts`. The short form is enough; vim knows what you
+mean.
+--
+`:cdo s/placedAt/createdAt/g | update`, then `:q`.
+
+@solution
+    :vim /placedAt/ **/*.ts<Enter>  :cdo s/placedAt/createdAt/g | update<Enter>  :q<Enter>
+
+Two lines, and the second one is the same every time you do a rename.
+The `g` matters on the repository line, which has the name twice. The
+`| update` matters everywhere, and this lesson runs with `hidden` off so
+that leaving it out stops after the first file.
+
+@start src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  placedAt: Date;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@expected src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  createdAt: Date;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      placedAt: record.placedAt,
+    };
+  }
+}
+
+@expected src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      createdAt: record.createdAt,
+    };
+  }
+}
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    const ageInDays = (Date.now() - order.placedAt.getTime()) / 86_400_000;
+
+    if (order.status === 'SHIPPED' || ageInDays > 30) {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.sendRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    const ageInDays = (Date.now() - order.createdAt.getTime()) / 86_400_000;
+
+    if (order.status === 'SHIPPED' || ageInDays > 30) {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.sendRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}

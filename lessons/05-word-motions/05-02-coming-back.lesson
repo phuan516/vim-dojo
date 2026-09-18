@@ -1,0 +1,59 @@
+@meta
+id: 05-02
+title: Coming back a word
+chapter: 05
+type: lesson
+skills: word-b, word-w
+par: 19
+minutes: 3
+vscode: Ctrl-Left
+open: ticket.md
+
+@brief
+You will overshoot. Everyone overshoots — you press `w` one time too many
+and land past the thing you were aiming at. The fix is not to undo the
+motion in your head, it is to walk back.
+
+This time do not travel forwards at all. Jump to the end of the line and
+come back. The line should read:
+
+    Refunds issued after the cutoff are still charged to the closed customer account.
+
+@keys
+| `b` | back to the start of the previous word |
+| `w` | forward to the start of the next word |
+| `$` | end of the line |
+| `i` | insert to the left of the cursor |
+
+@hints
+`$` puts you on the last character of the line in one press. From there
+the target is only a couple of words back.
+--
+`b` is `w` in reverse. It also lands on the first character of a word,
+which is again where an insert wants to start.
+--
+`$` then `b` then `b` sits you on the `c` of `customer`. Then `i`, type
+`closed` and a space, `Esc`, `:wq`.
+
+@solution
+    $ bb  i closed <Esc>  :wq<Enter>
+
+`b` and `w` both stop on the first character of a word, so they are
+mirror images and you can bounce between them freely. Overshoot by one,
+press `b`, carry on. There is no penalty and no mode to get out of.
+
+Watch what `b` did at the end of the line: it stepped over the full stop
+as if it were a word of its own, because to vim it is one. Hold that
+thought — the fifth lesson of this chapter is entirely about it, and in code it changes
+everything.
+
+Coming at a target from the right is a real technique, not a consolation
+prize. When the thing you want is nearer the end of the line than the
+start, `$` and two `b` presses beat nine `w` presses, and you did not
+have to count anything.
+
+@start ticket.md
+Refunds issued after the cutoff are still charged to the customer account.
+
+@expected ticket.md
+Refunds issued after the cutoff are still charged to the closed customer account.

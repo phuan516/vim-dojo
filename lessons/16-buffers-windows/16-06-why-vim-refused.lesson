@@ -1,0 +1,217 @@
+@meta
+id: 16-06
+title: Why vim refused
+chapter: 16
+type: lesson
+skills: buffer-switch, buffer-list
+par: 125
+minutes: 6
+vscode: the unsaved dot on the tab, and nothing stops you clicking away
+open: order.entity.ts order.repository.ts order.provider.ts
+vimrc: set nohidden
+
+@brief
+Every hop so far has been preceded by `:w`, and you were told the
+reason would come. Here it is. Out of the box, vim will not let a
+window switch away from a buffer with unsaved changes if that buffer is
+not visible anywhere else. Make an edit, type `:bn`, and you get
+
+    E37: No write since last change (add ! to override)
+
+The buffer has not been lost; vim has just declined to hide it. There
+are three ways through. Write first, which is what you have been doing.
+Add `!` to the command, `:bn!`, which hides the buffer with its changes
+intact rather than discarding them. Or set the `hidden` option, which
+makes every buffer hideable and turns the refusal off for good. The
+starter vimrc this dojo ships sets `hidden`, so you may never have met
+E37; this lesson turns it off so that you do.
+
+Three edits, one per file, and this time do not write until the very
+end. Let vim refuse once so you have seen it, then get past it.
+
+  1. `order.entity.ts`: `currency: string;` directly under `total`.
+  2. `order.repository.ts`: `currency: record.currency,` under `total`
+     in `toEntity`.
+  3. `order.provider.ts`: the refund call becomes
+     `this.paymentService.refund(order.id, order.currency)`.
+
+Then look at `:ls` before you finish. A hidden buffer with unsaved
+changes shows `h` and `+` where the current one shows `%a`. Write them
+all with `:wa` and leave with `:qa`.
+
+@keys
+| `:bn!` | next buffer, hiding this one even though it is modified |
+| `:b! name` | the same for a named hop |
+| `:set hidden` | stop asking; in a vimrc, `set hidden` |
+| `:wa` | write every modified buffer, hidden or not |
+| `:qa` | quit every window; refuses if anything is still unsaved |
+| `:qa!` | quit and throw away unsaved changes in every buffer |
+
+@hints
+Make the entity edit, then `:bn` and read the message. Then `:bn!`.
+--
+`h +` in `:ls` is a buffer you cannot see with changes you have not
+written. It is the reason `:qa` will refuse until you `:wa`.
+--
+`:wa` then `:qa`, or `:wqa` which is both. Either way, nothing hidden
+is lost.
+
+@solution
+    /total<Enter>  o currency: string; <Esc>  :bn!<Enter>
+    /total<Enter>  o currency: record.currency, <Esc>  :bn!<Enter>
+    /refund(<Enter>  f)  i , order.currency <Esc>  :wa<Enter>  :qa<Enter>
+
+About a hundred and ten keystrokes with the two forced hops; four
+more if you `:bn` first and are refused, which is worth doing once.
+
+`hidden` is the setting almost everyone turns on and then forgets they
+turned on. With it, buffers behave like VS Code tabs: you can wander
+between files with unsaved changes in several of them, and `:ls` keeps
+the score with `+`. What you give up is a guard rail. Vim still refuses
+to exit while a modified buffer exists, but `:qa` is now the only
+thing standing between you and forgetting a file, and it will tell you
+which one.
+
+`:wqa` is the safe exit either way. `:qa!` is the one to think about
+before pressing Enter: it discards every unwritten change in every
+buffer, including the ones you cannot see.
+
+@start order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@expected order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  currency: string;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}
+
+@expected order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      currency: record.currency,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id, order.currency);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}

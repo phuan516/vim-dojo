@@ -1,0 +1,64 @@
+@meta
+id: 06-02
+title: Zero versus caret
+chapter: 06
+type: lesson
+skills: line-start
+par: 18
+minutes: 4
+vscode: Home once for the text, Home twice for the margin
+open: order.provider.ts
+
+@brief
+The refund call inside `cancel` is not awaited. If the payment service is
+slow, the method returns before the money moves, and the caller is told the
+cancellation succeeded. Add the missing keyword so the call is awaited.
+
+The word goes at the start of the code on that line — not at the start of
+the line. Those are four spaces apart, and the grader can tell the
+difference.
+
+@keys
+| `0` | column one, indentation included |
+| `^` | the first character on the line that is not a space or tab |
+| `I` | insert before the first non-blank — `^` and `i` fused into one key |
+
+@hints
+`0` is the wrong tool here: it would put the keyword in the margin, outside
+the indentation.
+--
+`^` stops at the first real character on the line, however deep the
+indentation goes.
+--
+`2j` gets you to the refund call. Then `^`, then `i`, then type the keyword
+and a space, then `Esc`.
+
+@solution
+    2j ^ i await  <Esc> :wq<Enter>
+
+`I` would have done the same in one key fewer — it is exactly `^` followed
+by `i`, which is why chapter 3 could teach it before you had met `^`.
+
+The distinction to keep is this. `0` is a column. `^` is the code. In a file
+indented two, four or eight spaces, `^` lands on the same character every
+time while `0` lands in the whitespace, and almost everything you want to do
+in a source file happens at the code.
+
+`0` still earns its place: column one is where a diff marker, a Markdown
+bullet or a git conflict marker lives, and it is the reliable reset when the
+line has left you confused. Reach for `^` by default in code and `0` when
+you genuinely mean the margin.
+
+@start order.provider.ts
+export class OrderProvider {
+  public async cancel(id: string) {
+    this.paymentService.refund(id);
+  }
+}
+
+@expected order.provider.ts
+export class OrderProvider {
+  public async cancel(id: string) {
+    await this.paymentService.refund(id);
+  }
+}

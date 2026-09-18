@@ -1,0 +1,150 @@
+@meta
+id: 07-08
+title: Drill — block, end, semicolon
+chapter: 07
+type: drill
+skills: paragraph-motion, line-end
+par: 46
+minutes: 5
+reps: 8
+vscode: six scroll-and-clicks, or a regex you will get wrong
+open: fixtures.ts
+
+@brief
+Six fixture objects, none of them terminated. Put a semicolon on the closing
+brace of each. The export list at the bottom is already correct.
+
+Nothing to work out. Jump the block, step back one line, append, step down
+onto the gap again. The dojo will hand you the file eight times.
+
+@keys
+| `}` | forward to the next blank line |
+| `k` | up a line |
+| `A` | append at the end of the line |
+| `j` | down a line |
+
+@hints
+`}` overshoots onto the blank line below the block, so `k` puts you on the
+closing brace.
+--
+End the rep with `j` to step back onto the gap. From the brace itself the
+next `}` would only move you one line; from the gap it clears a whole block.
+Six keys per block, six blocks, and the rep never changes.
+
+@solution
+    } k A ; <Esc> j   } k A ; <Esc> j   } k A ; <Esc> j
+    } k A ; <Esc> j   } k A ; <Esc> j   } k A ; <Esc>
+    :wq<Enter>
+
+Thirty-nine keystrokes for six edits spread over forty lines.
+
+`}` then `k` is a pattern you will use for the rest of your life: the
+paragraph motion is deliberately coarse, so you aim past the target and step
+back one. The `j` that closes the rep is the other half of the same idea —
+you put yourself back on the gap, because the gap is where `}` works from. The alternative — counting `6j`, `5j`, `6j` down the file — is
+wrong as soon as one fixture gains a field, and this file is exactly the
+kind that gains fields.
+
+@start fixtures.ts
+const orderPending = {
+  id: 'ord_1042',
+  customerId: 'cus_88',
+  status: 'PENDING',
+  amount: 4999,
+}
+
+const orderCompleted = {
+  id: 'ord_1043',
+  customerId: 'cus_91',
+  status: 'COMPLETED',
+  amount: 1250,
+}
+
+const orderCancelled = {
+  id: 'ord_1044',
+  customerId: 'cus_88',
+  status: 'CANCELLED',
+  amount: 899,
+}
+
+const orderRefunded = {
+  id: 'ord_1045',
+  customerId: 'cus_92',
+  status: 'REFUNDED',
+  amount: 15750,
+}
+
+const orderShipped = {
+  id: 'ord_1046',
+  customerId: 'cus_17',
+  status: 'SHIPPED',
+  amount: 2400,
+}
+
+const orderExpired = {
+  id: 'ord_1047',
+  customerId: 'cus_53',
+  status: 'EXPIRED',
+  amount: 640,
+}
+
+export const orderFixtures = [
+  orderPending,
+  orderCompleted,
+  orderCancelled,
+  orderRefunded,
+  orderShipped,
+  orderExpired,
+];
+
+@expected fixtures.ts
+const orderPending = {
+  id: 'ord_1042',
+  customerId: 'cus_88',
+  status: 'PENDING',
+  amount: 4999,
+};
+
+const orderCompleted = {
+  id: 'ord_1043',
+  customerId: 'cus_91',
+  status: 'COMPLETED',
+  amount: 1250,
+};
+
+const orderCancelled = {
+  id: 'ord_1044',
+  customerId: 'cus_88',
+  status: 'CANCELLED',
+  amount: 899,
+};
+
+const orderRefunded = {
+  id: 'ord_1045',
+  customerId: 'cus_92',
+  status: 'REFUNDED',
+  amount: 15750,
+};
+
+const orderShipped = {
+  id: 'ord_1046',
+  customerId: 'cus_17',
+  status: 'SHIPPED',
+  amount: 2400,
+};
+
+const orderExpired = {
+  id: 'ord_1047',
+  customerId: 'cus_53',
+  status: 'EXPIRED',
+  amount: 640,
+};
+
+export const orderFixtures = [
+  orderPending,
+  orderCompleted,
+  orderCancelled,
+  orderRefunded,
+  orderShipped,
+  orderExpired,
+];

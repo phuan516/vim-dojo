@@ -1,0 +1,129 @@
+@meta
+id: 23-04
+title: Complete a whole line
+chapter: 23
+type: lesson
+skills: complete-line
+par: 27
+minutes: 4
+vscode: copy the line from above, paste it, fix the indent
+open: order.repository.ts
+
+@brief
+`findRecentByCustomer` is half written. Two of its lines are stubs —
+one starts `wh`, one starts `ret` — and each of them should be
+identical to a line that already exists in `findByCustomer` above:
+
+    where: { customerId: args.customerId, deleted: null },
+    return records.map((record) => this.toEntity(record));
+
+Do not yank and paste. Completion can finish a line the same way it
+finishes a word, and it fixes the indentation for you.
+
+@keys
+| `Ctrl-X Ctrl-L` (insert mode) | complete the whole line from the buffer |
+| `Ctrl-L` again | next matching line |
+| `Ctrl-N` / `Ctrl-P` | move through the candidates |
+
+@hints
+`/wh$` finds the first stub. `A` to append at its end, then the two
+key chord.
+--
+`Ctrl-X` opens a sub-mode; `Ctrl-L` inside it means "lines". The
+match is the nearest line above that starts with the same text.
+--
+`A` `Ctrl-X Ctrl-L` `Esc`, then `/ret$` and the same again.
+
+@solution
+    /wh$<Enter> A<Ctrl-X><Ctrl-L><Esc>
+    /ret$<Enter> A<Ctrl-X><Ctrl-L><Esc>
+    :wq<Enter>
+
+Twenty-three keystrokes for two lines that are 110 characters between
+them.
+
+`Ctrl-X` is a prefix. On its own it does nothing; it waits for a
+second key that says what kind of completion you want. `Ctrl-L` is
+lines: vim looks backward for a line that starts with what you have
+typed so far, ignoring indentation, and inserts it — re-indented to
+match the line you are on. That is why the stubs did not need to be
+at the right column.
+
+The nearest match above wins. If it is the wrong one, `Ctrl-L` again
+moves to the next one further up, and `Ctrl-N` comes back. Use it for
+the lines a codebase repeats constantly: `where` clauses, `@inject`
+constructor lines, `expect(...)` calls in tests, import statements.
+
+@start order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public async findRecentByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      wh
+      orderBy: { placedAt: 'desc' },
+      take: 10,
+    });
+
+    ret
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      placedAt: record.placedAt,
+    };
+  }
+}
+
+@expected order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public async findRecentByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+      orderBy: { placedAt: 'desc' },
+      take: 10,
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      placedAt: record.placedAt,
+    };
+  }
+}

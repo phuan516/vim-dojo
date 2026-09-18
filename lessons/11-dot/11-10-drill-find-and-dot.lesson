@@ -1,0 +1,45 @@
+@meta
+id: 11-10
+title: Drill — semicolon and dot along a line
+chapter: 11
+type: drill
+skills: dot-repeat
+par: 25
+minutes: 4
+reps: 8
+vscode: eight clicks and eight Deletes in one very long line
+open: retry-ids.ts
+
+@brief
+A generator has emitted this array with doubled commas — eight pairs, one
+extra comma in each. Delete the spare.
+
+Find the first, delete it, then `;.` your way to the end of the line.
+
+@keys
+| `f,` | forward to the next comma |
+| `x` | delete the character under the cursor |
+| `;` | next comma |
+| `.` | delete again |
+
+@hints
+Two keys to start, two keys per pair after that.
+--
+Keep alternating. Stop when the line stops changing — `f` never leaves the
+line, so `;` will simply refuse to move once the last pair is done.
+
+@solution
+    f,x   then  ;.  seven times
+
+The point of the drill is the pause you are not taking. `;.` is a single
+motion of the hand, and after eight of them in a row it should feel like
+holding down a key rather than issuing sixteen commands.
+
+Whenever you find yourself about to fix the same small thing several times
+along one line, this is the shape to reach for first.
+
+@start retry-ids.ts
+export const RETRY_IDS = ['ORD-1182',,'ORD-1183',,'ORD-1184',,'ORD-1185',,'ORD-1186',,'ORD-1187',,'ORD-1188',,'ORD-1189',,'ORD-1190'];
+
+@expected retry-ids.ts
+export const RETRY_IDS = ['ORD-1182','ORD-1183','ORD-1184','ORD-1185','ORD-1186','ORD-1187','ORD-1188','ORD-1189','ORD-1190'];

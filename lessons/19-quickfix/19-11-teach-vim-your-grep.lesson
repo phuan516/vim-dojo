@@ -1,0 +1,269 @@
+@meta
+id: 19-11
+title: Teach vim your grep
+chapter: 19
+type: lesson
+skills: vimgrep
+par: 44
+minutes: 5
+vscode: the "files to include" box, filled in every time
+vimrc: set grepprg=grep\ -rn\ --include=*.ts\ $*\ src nohidden
+open: docs/logging.md
+
+@brief
+Every time you type `:grep -r ... src` you are re-typing the same
+shape. The `grepprg` option is that shape, saved. It holds the command
+line vim runs, with `$*` standing for whatever you type after `:grep`.
+This lesson's vimrc sets it to `grep -rn --include=*.ts $* src`, so
+`:grep logger.debug` runs `grep -rn --include=*.ts logger.debug src`:
+recursive, line-numbered, TypeScript only, under `src`. `grepformat` is
+the companion option that tells vim how to read the output; the default
+already understands the `file:line:text` that `-n` produces.
+
+The job: the incident is over and every `logger.debug(` call under
+`src` goes, whole line. There is one in `docs/logging.md`, open in
+front of you, as an example of how the logger is used. It is
+documentation and stays, and with this `grepprg` it is never in the
+list. The `debug` method itself, in `logger.ts`, stays too.
+
+`:cdo` runs any command, not just `s`. `:d` deletes a line.
+
+@keys
+| `grepprg` | the command `:grep` runs; `$*` is your arguments |
+| `grepformat` | how vim reads the output; the default handles `file:line:text` |
+| `:cdo d \| update` | delete each hit's line, write |
+
+@hints
+`:grep logger.debug`. Nothing else; the option supplies the rest. It
+is a grep regex, so the dot matches any character, which here is fine.
+--
+`:cdo d | update`. Then `:q`.
+
+@solution
+    :grep logger.debug<Enter>  :cdo d | update<Enter>  :q<Enter>
+
+The option line for your own vimrc, when you have ripgrep installed:
+
+    set grepprg=rg\ --vimgrep grepformat=%f:%l:%c:%m
+
+`rg --vimgrep` prints `file:line:col:text` and respects `.gitignore`,
+so `node_modules` never turns up. The backslashes escape the spaces,
+which `:set` would otherwise read as the start of the next option.
+`:grep` uses `grepprg`; `:vimgrep` never does.
+
+`:cdo d` is worth a second look. Deleting a line shifts everything
+below it, and the second hit in the order provider was below the first.
+Vim adjusts the remaining entries in a buffer when its lines move, so
+the second `d` landed on the right line. That adjustment holds for any
+edit you make while a list is live, which is what makes walking a list
+and editing as you go safe.
+
+@start docs/logging.md
+# Logging
+
+Inject `Logger` and call `this.logger.info` for anything an operator
+might need. `this.logger.debug('cache miss', { key })` is for local
+investigation only and should not reach main.
+
+@start src/infrastructure/logger.ts
+export type LogEntry = {
+  level: 'debug' | 'info' | 'error';
+  message: string;
+  context?: Record<string, unknown>;
+};
+
+export class Logger {
+  public write(entry: LogEntry) {
+    process.stdout.write(JSON.stringify(entry) + '\n');
+  }
+
+  public info(message: string, context?: Record<string, unknown>) {
+    this.write({ level: 'info', message, context });
+  }
+
+  public debug(message: string, context?: Record<string, unknown>) {
+    this.write({ level: 'debug', message, context });
+  }
+}
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+    this.logger.debug('cancel: loaded', { id, status: order.status });
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.sendRefund(order.id);
+
+    this.logger.debug('cancel: refunded', { id });
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.sendRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start src/domain/payment/payment.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { PaymentRepository } from './payment.repository';
+import { PaymentProducer } from './payment.producer';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class PaymentProvider {
+  constructor(
+    @inject(PaymentRepository) protected paymentRepository: PaymentRepository,
+    @inject(PaymentProducer) protected paymentProducer: PaymentProducer,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async reverse(id: string) {
+    const payment = await this.paymentRepository.findOne({ where: { id } });
+
+    if (!payment) {
+      throw exception('PAYMENT_NOT_FOUND');
+    }
+
+    const receipt = await this.paymentService.sendRefund(payment.orderId);
+    this.logger.debug('reverse: gateway receipt', { receipt });
+
+    await this.paymentProducer.refundIssued({ paymentId: id, receipt });
+
+    return receipt;
+  }
+}
+
+@expected src/domain/payment/payment.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { PaymentRepository } from './payment.repository';
+import { PaymentProducer } from './payment.producer';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class PaymentProvider {
+  constructor(
+    @inject(PaymentRepository) protected paymentRepository: PaymentRepository,
+    @inject(PaymentProducer) protected paymentProducer: PaymentProducer,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async reverse(id: string) {
+    const payment = await this.paymentRepository.findOne({ where: { id } });
+
+    if (!payment) {
+      throw exception('PAYMENT_NOT_FOUND');
+    }
+
+    const receipt = await this.paymentService.sendRefund(payment.orderId);
+
+    await this.paymentProducer.refundIssued({ paymentId: id, receipt });
+
+    return receipt;
+  }
+}
+
+@start src/infrastructure/services/payment.service.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { HttpClient } from '../http/http.client';
+
+@injectable()
+export class PaymentService {
+  constructor(@inject(HttpClient) protected http: HttpClient) {}
+
+  public async sendRefund(orderId: string) {
+    const response = await this.http.post('/sendRefund', { orderId });
+    this.logger.debug('gateway status', { status: response.status });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@expected src/infrastructure/services/payment.service.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { HttpClient } from '../http/http.client';
+
+@injectable()
+export class PaymentService {
+  constructor(@inject(HttpClient) protected http: HttpClient) {}
+
+  public async sendRefund(orderId: string) {
+    const response = await this.http.post('/sendRefund', { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}

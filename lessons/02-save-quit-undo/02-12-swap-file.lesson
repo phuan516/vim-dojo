@@ -1,0 +1,102 @@
+@meta
+id: 02-12
+title: The swap file after a crash
+chapter: 02
+type: lesson
+skills: write, quit
+par: 97
+minutes: 6
+vscode: the "restore unsaved changes?" prompt on restart
+open: crash-recovery.md
+
+@brief
+The first time vim greets you with a wall of text starting `E325: ATTENTION`
+you will assume you have broken something. You have not. While you edit,
+vim keeps a hidden file beside yours — `.order.provider.ts.swp` for
+`order.provider.ts` — holding every change you have not written yet. If
+vim dies, or the ssh session drops, or the laptop sleeps badly, that file
+outlives the crash.
+
+The warning means one of two things. Either the editor died and your
+unsaved work is sitting there waiting, or the file is genuinely open in
+another window right now. The choices vim offers you are the same either
+way, and the two you need are `R` to recover and `D` to delete the swap.
+
+The team runbook for this is half written. Add the commands to the three
+steps that are missing them, using exactly the text given here:
+
+    3. Compare it with what is on disk: :w recovered.md then diff outside vim
+    4. If the recovered buffer is the one you want, write it: :w
+    5. Delete the swap file or vim asks again every time: :!rm .orders.md.swp
+
+Everything else in the file stays as it is. Save when the three lines are
+complete.
+
+@keys
+| `:recover` | load the swap file for the current file by hand |
+| `:!cmd` | run a shell command without leaving vim |
+| `:w name` | write the buffer elsewhere so you can compare the two |
+| `:e!` | reread the file from disk, abandoning the buffer |
+
+@hints
+Three lines, three appends. Each addition goes at the end of an existing
+line, so `$a` and type.
+--
+The lines are next to each other, so after each `Esc` a single `j` puts
+you on the next one.
+--
+The colons and exclamation marks are part of the text you are typing into
+a markdown file. Nothing here is executed.
+
+@solution
+    jjjjjjjjjj $ a  :w recovered.md then diff outside vim <Esc>
+    j $ a  :w <Esc>
+    j $ a  :!rm .orders.md.swp <Esc>
+    ZZ
+
+The recovery itself, when it happens to you for real, is four moves.
+Open the file. Press `R` at the prompt. Look at the buffer — it is the
+unsaved version, and it may be newer than anything on disk, so check it
+rather than trusting it. Write it if it is right. Then delete the swap
+file, because vim will keep warning you until it is gone.
+
+Two things that save arguments later. A swap warning on a file a colleague
+has open right now is not a crash — recovering it and writing would stamp
+on their work, so quit and go and ask them. And a swap file that is
+*older* than the file on disk usually means someone else already saved the
+real fix; recovering it takes you backwards.
+
+The swap file is a crash net, not an undo history. It holds the current
+unwritten state of the buffer, not the path you took to get there. Undo
+history is a separate thing, and by default it dies with the process —
+which is the subject of the next lesson.
+
+@start crash-recovery.md
+# Recovering from a vim crash
+
+Vim keeps a swap file next to the file you are editing. It holds every
+change you have made and not yet written. It survives a crash, and the
+next time you open the file vim shows E325 and offers you the choices.
+
+## Steps
+
+1. Read the message. Note the process id and whether it still runs.
+2. Press R at the prompt to recover the buffer from the swap file.
+3. Compare it with what is on disk:
+4. If the recovered buffer is the one you want, write it:
+5. Delete the swap file or vim asks again every time:
+
+@expected crash-recovery.md
+# Recovering from a vim crash
+
+Vim keeps a swap file next to the file you are editing. It holds every
+change you have made and not yet written. It survives a crash, and the
+next time you open the file vim shows E325 and offers you the choices.
+
+## Steps
+
+1. Read the message. Note the process id and whether it still runs.
+2. Press R at the prompt to recover the buffer from the swap file.
+3. Compare it with what is on disk: :w recovered.md then diff outside vim
+4. If the recovered buffer is the one you want, write it: :w
+5. Delete the swap file or vim asks again every time: :!rm .orders.md.swp

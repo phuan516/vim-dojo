@@ -1,0 +1,109 @@
+@meta
+id: 27-14
+title: A standing instruction
+chapter: 27
+type: lesson
+skills: autocmd, argdo
+par: 59
+minutes: 7
+vscode: a format-on-save extension, configured in three places
+open: orders-2026-07.csv orders-2026-08.csv orders-2026-09.csv
+
+@brief
+Three monthly exports from the orders table. Every one of them has a space
+after each comma, which the importer will not accept.
+
+You could fix each file with a substitute and write it. Three substitutes,
+three writes, and the fourth export next month gets the same treatment.
+
+Instead, tell vim to do it on the way out. An autocommand is a standing
+instruction with three parts — an event, a file pattern, and a command:
+
+    :autocmd BufWritePre *.csv %s/, /,/ge
+
+"Just before any `.csv` buffer is written, run that substitute on it." The
+buffer is fixed in memory a moment before it hits the disk, and it applies
+to every CSV you write for the rest of the session without you thinking
+about it again.
+
+Set it up and get all three files written. Only the first is loaded, so
+something has to visit the other two.
+
+@keys
+| `:autocmd BufWritePre *.csv %s/, /,/ge` | run a command before every write |
+| `:autocmd BufWritePost *` | after the write instead |
+| `:autocmd BufRead,BufNewFile *.md setlocal tw=80` | two events, one command |
+| `:argdo w` | run `:w` in every file in the arglist |
+| `:autocmd BufWritePre` | list what is already registered for that event |
+
+@hints
+One autocommand, registered once, covers all three files. The work left
+after that is getting vim to actually write each of them.
+--
+`:autocmd BufWritePre *.csv %s/, /,/ge` registers it. `:argdo w` walks
+the arglist writing each file, which fires the event three times.
+--
+`:autocmd BufWritePre *.csv %s/, /,/ge` `Enter`, then `:argdo w` `Enter`,
+then `:qa` `Enter`.
+
+@solution
+    :autocmd BufWritePre *.csv %s/, /,/ge<Enter>  :argdo w<Enter>  :qa<Enter>
+
+Fifty-one keystrokes for three files, and the fifty-second file would be
+free.
+
+Read the parts:
+
+    autocmd  BufWritePre  *.csv  %s/, /,/ge
+             ^event       ^pat   ^command run in the buffer
+
+**The event.** `:help autocmd-events` lists about a hundred. The ones you
+will actually use: `BufRead` and `BufNewFile` (a file arrives),
+`BufWritePre` and `BufWritePost` (a file leaves), `FileType` (vim decided
+what it is), `InsertLeave`, `VimEnter`, `CursorHold`.
+
+**The pattern.** Matched against the file name, with `*` wildcards. It is
+not a directory glob unless you write one: `*.csv` matches any CSV
+anywhere, `*/exports/*` matches by path.
+
+**The command.** Any Ex command, run with that buffer current.
+
+Two details that are not optional. The `e` flag on the substitute means
+"no error if there is nothing to match" — without it, a clean CSV makes
+the write fail with `E486` and you cannot save the file. Every autocommand
+substitute you ever write wants that `e`. And `BufWritePre` changes the
+buffer, so your undo history now has the reformatting in it: `u` after a
+save undoes the autocommand's work, not yours.
+
+`:argdo w` is doing the rounds here because `:wqa` only writes buffers that
+have been loaded, and vim loads only the first file at startup.
+
+@start orders-2026-07.csv
+order_id, status, total_pence
+01H8XA, CANCELLED, 4500
+01H8XB, SHIPPED, 12000
+
+@expected orders-2026-07.csv
+order_id,status,total_pence
+01H8XA,CANCELLED,4500
+01H8XB,SHIPPED,12000
+
+@start orders-2026-08.csv
+order_id, status, total_pence
+01H9QC, PENDING, 2300
+01H9QD, CANCELLED, 8900
+
+@expected orders-2026-08.csv
+order_id,status,total_pence
+01H9QC,PENDING,2300
+01H9QD,CANCELLED,8900
+
+@start orders-2026-09.csv
+order_id, status, total_pence
+01HAZE, SHIPPED, 15750
+01HAZF, CANCELLED, 600
+
+@expected orders-2026-09.csv
+order_id,status,total_pence
+01HAZE,SHIPPED,15750
+01HAZF,CANCELLED,600

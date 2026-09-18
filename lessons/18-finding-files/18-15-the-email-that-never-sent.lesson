@@ -1,0 +1,246 @@
+@meta
+id: 18-15
+title: Scenario — the email that never sent
+chapter: 18
+type: scenario
+skills: edit-file, find-path, wildmenu, buffer-switch, search-slash
+par: 235
+minutes: 12
+vscode: three tabs and the sidebar
+vimrc: set path=.,** wildmenu wildmode=longest:full,full
+open: src/domain/order/order.provider.ts
+
+@brief
+A ticket, not an exercise.
+
+    ORD-507  Customers are not told when an order is cancelled.
+             EmailService is injected into OrderProvider and registered
+             in the container, and nothing ever calls it. Send the
+             cancellation email after the refund. While you are there,
+             the code the email service throws is not in the error
+             table: it should throw EMAIL_SEND_FAILED, and that code
+             needs registering as a 502 that alerts.
+
+One file is open. You find the rest. `path` and `wildmenu` are set.
+
+  1. order.provider.ts — in `cancel`, directly after the refund line:
+
+         await this.emailService.sendOrderCancelled({ orderId: order.id });
+
+  2. The email service — it currently throws `EMAIL_FAILED`. Make it
+     `EMAIL_SEND_FAILED`. Its import is right there in the provider.
+
+  3. default.json — add, as the last entry:
+
+         "EMAIL_SEND_FAILED": { "statusCode": 502, "sentry": true }
+
+     Mind the comma on the line above it.
+
+The registry and the payment service are correct. Leave them alone.
+
+@keys
+| `gf` | open the file whose path is under the cursor |
+| `:find name` `Tab` | find a file by name, anywhere in `path` |
+| `:w` | write before you leave a buffer |
+| `Ctrl-O` | back to where you jumped from |
+
+@hints
+Do the provider first while you are in it. `/refund(` puts you on the
+refund call; `o` opens the line below with the right indent. Write it.
+--
+The email service import is four lines from the top of the provider.
+Put the cursor on its path and `gf`. Search for `EMAIL_`, then `fF`
+and insert `SEND_` before it.
+--
+You know the error table is `default.json` and you do not care where it
+is: `:find def` Tab. `/REFUND` gets you to the last entry; `$a,` adds
+the comma; `o` and the new entry.
+--
+Par assumes each line is typed once. Nothing here needs a visual
+selection or a register.
+
+@solution
+A reasonable route, file by file.
+
+**order.provider.ts** — `/refund(` Enter, `o`, the `sendOrderCancelled`
+line, `Esc`, `:w`.
+
+**email.service.ts** — `/email.service` Enter puts you on the import,
+`gf` opens it. `/EMAIL_` Enter, `fF`, `iSEND_`, `Esc`, `:w`.
+
+**default.json** — `:find def` Tab Enter. `/REFUND` Enter, `$a,` `Esc`,
+`o`, the new entry, `Esc`, `:wq`.
+
+Three files, three different ways of reaching them, and none of them
+was a path typed in full. The provider was open. The service was one
+`gf` away because the provider imports it. The error table was a name
+you knew and a directory you did not, which is exactly what `:find` is
+for.
+
+That is the pattern for the whole chapter: the file you want is almost
+always either imported by the one you are in, or has a name you can
+half-remember. Reach for `gf` first, `:find` second, and the browser
+only when you genuinely do not know what you are looking for.
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+    await this.emailService.sendOrderCancelled({ orderId: order.id });
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start src/infrastructure/services/email.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class EmailService {
+  public async sendOrderCancelled(args: { orderId: string }) {
+    const response = await this.http.post(`/email/order-cancelled`, args);
+
+    if (response.status !== 202) {
+      throw exception('EMAIL_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@expected src/infrastructure/services/email.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class EmailService {
+  public async sendOrderCancelled(args: { orderId: string }) {
+    const response = await this.http.post(`/email/order-cancelled`, args);
+
+    if (response.status !== 202) {
+      throw exception('EMAIL_SEND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@start src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@expected src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true },
+  "EMAIL_SEND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@start src/configuration/registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+import { EmailService } from '../infrastructure/services/email.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('PaymentService', { useClass: PaymentService });
+container.register('EmailService', { useClass: EmailService });
+
+@start src/infrastructure/services/payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string) {
+    const response = await this.http.post(`/refunds`, { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}

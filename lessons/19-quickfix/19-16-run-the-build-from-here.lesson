@@ -1,0 +1,241 @@
+@meta
+id: 19-16
+title: Run the build from here
+chapter: 19
+type: lesson
+skills: make-errorformat
+par: 68
+minutes: 7
+vscode: the Problems panel after a build task
+vimrc: set makeprg=cat\ tsc-output.txt errorformat=%f(%l\\,%c):\ %m hidden
+open: README.md
+
+@brief
+`:make` runs the program named in `makeprg`, captures its output,
+parses it with `errorformat`, and jumps to the first error. In a
+TypeScript project `makeprg` would be `npx tsc --noEmit`. There is no
+compiler in this dojo, so for this lesson it is `cat tsc-output.txt`:
+saved output, delivered the way a real build would deliver it. Nothing
+on the quickfix side changes; only where the lines came from.
+
+Four errors this time. Fix each and `:cn`. If vim shows the output and
+asks you to press Enter, press it. In a real project you would run
+`:make` again at the end and expect an empty list; here the file is
+static, so there is no point.
+
+@keys
+| `:make` | run `makeprg`, errors into the quickfix list, jump to the first |
+| `:make!` | the same without jumping |
+| `makeprg` | the build command; the default is `make` |
+
+@hints
+`:make`. The first error is a misspelling of `exception`; the cursor is
+on it, and `ciw` with the right spelling fixes it.
+--
+The second is a duplicated `status` line in the entity: `dd`. The
+third is a call with one argument too many; the cursor is on the extra
+argument, and the comma and space before it have to go too.
+--
+From the extra argument, `2h` puts you on the comma and `dt)` deletes
+up to the closing paren. The fourth is `response.body` where the type
+has `data`: `ciw`. `:wq`.
+
+@solution
+    :make<Enter>
+    ciw exception <Esc> :w<Enter> :cn<Enter>
+    dd :w<Enter> :cn<Enter>
+    2h dt) :w<Enter> :cn<Enter>
+    ciw data <Esc> :wq<Enter>
+
+The loop this sets up is the one that makes vim feel like an IDE
+without being one: `:make`, fix, `:cn`, fix, `:make` again until the
+list is empty. `makeprg` and `errorformat` are both options, so they
+can be set per filetype, and vim ships compiler definitions for many
+tools: `:compiler tsc` sets both for TypeScript in one go, and
+`:compiler` with no argument lists what is available.
+
+`:make` runs the whole program and waits for it. On a large project
+that is a pause you notice; on a small one it is nothing. Either way
+the result is the same list you have been using all chapter, and every
+command you know works on it.
+
+@start README.md
+# Orders service
+
+Cancelling an order refunds it through `PaymentService.sendRefund`, which
+is named after the gateway's `/sendRefund` endpoint. A refund the gateway
+rejects raises `REFUND_FAILED`. Refund events go out on the
+`payment.sendRefund` routing key, which the ledger service consumes.
+
+@start src/domain/customer/customer.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { CustomerRepository } from './customer.repository';
+
+@injectable()
+export class CustomerProvider {
+  constructor(
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      throw exeption('CUSTOMER_NOT_FOUND');
+    }
+
+    return customer;
+  }
+}
+
+@expected src/domain/customer/customer.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { CustomerRepository } from './customer.repository';
+
+@injectable()
+export class CustomerProvider {
+  constructor(
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return customer;
+  }
+}
+
+@start src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  status: OrderStatus;
+  total: number;
+  placedAt: Date;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@expected src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  placedAt: Date;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start src/domain/payment/payment.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { PaymentRepository } from './payment.repository';
+import { PaymentProducer } from './payment.producer';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class PaymentProvider {
+  constructor(
+    @inject(PaymentRepository) protected paymentRepository: PaymentRepository,
+    @inject(PaymentProducer) protected paymentProducer: PaymentProducer,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async reverse(id: string) {
+    const payment = await this.paymentRepository.findOne({ where: { id } });
+
+    if (!payment) {
+      throw exception('PAYMENT_NOT_FOUND');
+    }
+
+    const receipt = await this.paymentService.issueRefund(payment.orderId, payment.amount);
+
+    await this.paymentProducer.refundIssued({ paymentId: id, receipt });
+
+    return receipt;
+  }
+}
+
+@expected src/domain/payment/payment.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { PaymentRepository } from './payment.repository';
+import { PaymentProducer } from './payment.producer';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class PaymentProvider {
+  constructor(
+    @inject(PaymentRepository) protected paymentRepository: PaymentRepository,
+    @inject(PaymentProducer) protected paymentProducer: PaymentProducer,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async reverse(id: string) {
+    const payment = await this.paymentRepository.findOne({ where: { id } });
+
+    if (!payment) {
+      throw exception('PAYMENT_NOT_FOUND');
+    }
+
+    const receipt = await this.paymentService.issueRefund(payment.orderId);
+
+    await this.paymentProducer.refundIssued({ paymentId: id, receipt });
+
+    return receipt;
+  }
+}
+
+@start src/infrastructure/services/payment.service.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { HttpClient } from '../http/http.client';
+
+@injectable()
+export class PaymentService {
+  constructor(@inject(HttpClient) protected http: HttpClient) {}
+
+  public async issueRefund(orderId: string) {
+    const response = await this.http.post('/issueRefund', { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.body;
+  }
+}
+
+@expected src/infrastructure/services/payment.service.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { HttpClient } from '../http/http.client';
+
+@injectable()
+export class PaymentService {
+  constructor(@inject(HttpClient) protected http: HttpClient) {}
+
+  public async issueRefund(orderId: string) {
+    const response = await this.http.post('/issueRefund', { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@start tsc-output.txt
+src/domain/customer/customer.provider.ts(15,13): error TS2552: Cannot find name 'exeption'. Did you mean 'exception'?
+src/domain/order/order.entity.ts(5,3): error TS2300: Duplicate identifier 'status'.
+src/domain/payment/payment.provider.ts(22,76): error TS2554: Expected 1 arguments, but got 2.
+src/infrastructure/services/payment.service.ts(16,21): error TS2339: Property 'body' does not exist on type 'HttpResponse'.

@@ -1,0 +1,74 @@
+@meta
+id: 09-14
+title: Delete to the end of the file
+chapter: 09
+type: lesson
+skills: op-linewise, op-motion
+par: 12
+minutes: 4
+vscode: click, Ctrl-Shift-End, Delete
+open: runbook.md
+
+@brief
+The bottom half of this runbook describes the process from before the
+payment service rewrite. Following it now would corrupt the ledger.
+
+Everything from the `--- old notes` line downwards goes. The three
+numbered steps stay exactly as they are.
+
+@keys
+| `7G` | to line seven |
+| `G` | to the last line of the file |
+| `dG` | delete from this line to the last line, inclusive |
+| `dgg` | delete from this line to the first line, inclusive |
+
+@hints
+The dead part runs from a line you can point at all the way to the end of
+the file. You have a motion that means "the end of the file".
+--
+`dG` deletes from the current line to the last one. Get onto the first
+dead line first.
+--
+`7G` puts you on the `---` line. Then `dG`.
+
+@solution
+    7G dG :wq<Enter>
+
+Eight keystrokes to delete an arbitrary number of lines, and you never
+had to know how many there were.
+
+`dG` is your first *linewise* operator-motion pair. `G` moves between
+lines, not within them, so `dG` takes whole lines — it does not matter
+what column the cursor was in when you pressed it. Compare `d$`, where the
+column is everything. The motion decides, always.
+
+The pair of them is worth learning together:
+
+    dG      from here to the bottom
+    dgg     from here to the top
+    yG      copy from here to the bottom
+    cgg     wipe everything above and start typing
+
+`dgg` is how you cut a file's preamble off in three keystrokes, and it
+has a habit of surprising people who expect `gg` to be safe because it is
+only a movement. Nothing in vim is only a movement once an operator is
+waiting.
+
+@start runbook.md
+# Refund runbook
+
+1. Check the payment service is up.
+2. Retry the failed batch with `npm run refunds:retry`.
+3. If it still fails, page the on-call engineer.
+
+--- old notes, pre-rewrite, do not follow ---
+Run the legacy script by hand from the jump box.
+Then edit the ledger CSV and re-upload it to the SFTP drop.
+Tell finance to reconcile manually before close of business.
+
+@expected runbook.md
+# Refund runbook
+
+1. Check the payment service is up.
+2. Retry the failed batch with `npm run refunds:retry`.
+3. If it still fails, page the on-call engineer.

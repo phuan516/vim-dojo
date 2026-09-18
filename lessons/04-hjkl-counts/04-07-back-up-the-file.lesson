@@ -1,0 +1,140 @@
+@meta
+id: 04-07
+title: Counting upwards as well
+chapter: 04
+type: lesson
+skills: hjkl, count-prefix, relativenumber
+par: 62
+minutes: 6
+vscode: scroll down, click, scroll back up, click again
+open: runbook.md
+vimrc: set relativenumber number
+
+@brief
+`k` takes a count exactly like `j` does, and the margin gives you the
+number for it just as readily — the lines above the cursor count upwards
+from 1 as well.
+
+This runbook needs two additions, and they are deliberately in the wrong
+order for you:
+
+  1. The last line of the file, which currently ends `incident doc`,
+     should read `incident doc and link the batch id.`
+
+  2. The paragraph under **Retrying a failed batch** ends with
+     `already settled.` Append ` Owner: payments.` to that line — a
+     space, then the words.
+
+Do the last line first, then come back up for the second. That upward
+jump is the lesson.
+
+Thirty-two lines is already past the point where an arrow key is
+defensible: down, down, down, overshoot, back up, and a second edit
+means doing it all again in reverse. Two counts do the whole thing.
+
+Both `relativenumber` and `number` are on here, so the cursor line shows
+its real line number and everything else shows a distance. That pairing
+is what most people run with.
+
+@keys
+| `31j` | down thirty-one lines |
+| `9k` | up nine lines |
+| `A` | append at the end of the line |
+
+@hints
+Read the distance to the last line off the margin, jump, and make the
+first edit.
+--
+After that edit the margin has renumbered around your new position. Read
+it again — do not reuse the number you read a moment ago.
+--
+From the bottom, the `already settled.` line is nine lines up:
+`9k`, then `A`.
+
+@solution
+    31j A  and link the batch id. <Esc>
+    9k A  Owner: payments. <Esc>
+    :wq<Enter>
+
+The interesting keystrokes are `31j` and `9k`. Everything between them
+is typing, which vim cannot help you with.
+
+The habit this is building is: look, read the margin, jump, edit, look
+again. Beginners coming from an editor with a mouse tend to move in a
+straight line down a file and then scroll back if they missed something,
+because scrolling back is expensive. It is not expensive here. A jump
+back up costs the same as a jump down, so you can work in whatever order
+the job actually wants.
+
+Note that the file scrolled under you rather than the cursor running off
+the bottom of the screen. Vim keeps the cursor where you put it and moves
+the text — you will never again need to think about the scroll position
+as a separate thing.
+
+@start runbook.md
+# Payments runbook
+
+## Who to call
+
+The payments on-call rota is in the team handbook. Escalate to the
+platform team only after the provider status page has been checked.
+
+## Symptoms
+
+Charges time out after thirty seconds. The gateway returns 504 and the
+order is left in PENDING.
+
+## First checks
+
+1. Provider status page
+2. Our own error rate in the dashboard
+3. The webhook queue depth
+4. The retry worker logs
+
+## Retrying a failed batch
+
+Run the reconcile task with the batch id. It is safe to run twice; the
+task is idempotent and skips anything already settled.
+
+## Known false alarms
+
+A spike in PENDING orders at the top of the hour is the scheduled export
+holding a lock for about forty seconds. It clears on its own.
+
+## After the incident
+
+Write the timeline up in the incident doc
+
+@expected runbook.md
+# Payments runbook
+
+## Who to call
+
+The payments on-call rota is in the team handbook. Escalate to the
+platform team only after the provider status page has been checked.
+
+## Symptoms
+
+Charges time out after thirty seconds. The gateway returns 504 and the
+order is left in PENDING.
+
+## First checks
+
+1. Provider status page
+2. Our own error rate in the dashboard
+3. The webhook queue depth
+4. The retry worker logs
+
+## Retrying a failed batch
+
+Run the reconcile task with the batch id. It is safe to run twice; the
+task is idempotent and skips anything already settled. Owner: payments.
+
+## Known false alarms
+
+A spike in PENDING orders at the top of the hour is the scheduled export
+holding a lock for about forty seconds. It clears on its own.
+
+## After the incident
+
+Write the timeline up in the incident doc and link the batch id.

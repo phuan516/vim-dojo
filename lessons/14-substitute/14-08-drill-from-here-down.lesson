@@ -1,0 +1,59 @@
+@meta
+id: 14-08
+title: Drill — from here down
+chapter: 14
+type: drill
+skills: sub-range
+par: 30
+minutes: 4
+reps: 8
+vscode: find the marker, shift-click the last line, Ctrl-H in selection
+open: queues.ts
+
+@brief
+Eight times: everything below the `// v2 consumers` marker is on v2
+now and still says `v1`. The retired v1 block above the marker keeps
+its names.
+
+Search to the marker, substitute from there to the end, save.
+
+@keys
+| `/text` `Enter` | put the cursor on the marker line |
+| `:.,$s/old/new/` `Enter` | from the cursor line to the end of the file |
+
+@hints
+The search is the range's starting point. Land on the marker and the
+rest is `.,$`.
+--
+`/v2 con` `Enter`, then `:.,$s/v1/v2/` and Enter.
+
+@solution
+    /v2 con<Enter>  :.,$s/v1/v2/<Enter>  :wq<Enter>
+
+Twenty-five keystrokes, and `v1` in the retired block is never at risk
+because the range does not reach it. By the last rep the search and
+the range should feel like one movement: aim, then sweep downward.
+
+@start queues.ts
+// v1 consumers, retired on 1 October
+export const ORDER_CREATED = 'orders.created.v1';
+export const ORDER_PAID = 'orders.paid.v1';
+export const ORDER_SHIPPED = 'orders.shipped.v1';
+
+// v2 consumers
+export const REFUND_CREATED = 'refunds.created.v1';
+export const REFUND_APPROVED = 'refunds.approved.v1';
+export const REFUND_REJECTED = 'refunds.rejected.v1';
+export const REFUND_SETTLED = 'refunds.settled.v1';
+
+@expected queues.ts
+// v1 consumers, retired on 1 October
+export const ORDER_CREATED = 'orders.created.v1';
+export const ORDER_PAID = 'orders.paid.v1';
+export const ORDER_SHIPPED = 'orders.shipped.v1';
+
+// v2 consumers
+export const REFUND_CREATED = 'refunds.created.v2';
+export const REFUND_APPROVED = 'refunds.approved.v2';
+export const REFUND_REJECTED = 'refunds.rejected.v2';
+export const REFUND_SETTLED = 'refunds.settled.v2';

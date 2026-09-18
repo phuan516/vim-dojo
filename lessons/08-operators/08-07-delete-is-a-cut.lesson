@@ -1,0 +1,71 @@
+@meta
+id: 08-07
+title: Delete is a cut, not a shred
+chapter: 08
+type: lesson
+skills: delete-d, put-p
+par: 13
+minutes: 4
+vscode: Alt-Up, or cut the line and paste it somewhere else
+open: order.entity.ts
+
+@brief
+Here is the thing nobody tells you on day one: vim has no separate cut
+command, because delete already is one. Everything `x`, `dd` and their
+relatives remove goes into a register and stays there until the next
+delete or yank overwrites it.
+
+So moving a line is not "delete, then retype". It is "delete, then put it
+back somewhere else", and the second half is a single key.
+
+`customerId` belongs directly under `id` in this entity — the codebase
+orders identifiers first, then state. Move it. Do not retype it.
+
+@keys
+| `dd` | delete the line into the register |
+| `p` | put the register back *after* the cursor line |
+| `P` | put it *before* the cursor line |
+| `k` | up a line |
+
+@hints
+The line you want is not lost after you delete it. Get it out of the way
+first and then worry about where it goes.
+--
+`p` puts the last thing you deleted or yanked back into the file. For a
+line, that means a whole new line below the one you are on. `P` puts it
+above.
+--
+`3j` `dd` takes `customerId`. You are now on `total`. Go up to `status`
+and `P` puts the line above it.
+
+@solution
+    3j dd  k P  :wq<Enter>
+
+Six keystrokes to move a line, and the line itself is never retyped, so
+it cannot pick up a typo on the way.
+
+Two things follow. The first is practical: if you delete something by
+accident you have `u`, and if you deleted it on purpose and then changed
+your mind about where it goes, `p` is still holding it.
+
+The second is a warning. There is only one unnamed register, and every
+delete writes to it — including `x`. Delete a line, then delete a stray
+character before you put, and the character is what you get back. When a
+move goes wrong that is almost always why. Chapter 20 gives you twenty-six
+named registers to keep things apart; until then, put first, tidy after.
+
+@start order.entity.ts
+export type Order = {
+  id: string;
+  status: OrderStatus;
+  customerId: string;
+  total: number;
+};
+
+@expected order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+};

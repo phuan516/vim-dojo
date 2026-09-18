@@ -1,0 +1,82 @@
+@meta
+id: 10-16
+title: Arrays and angle brackets
+chapter: 10
+type: lesson
+skills: obj-brace, obj-paren
+par: 79
+minutes: 6
+vscode: select between the brackets and count on your eyes
+open: order.repository.ts
+
+@brief
+The delimiter objects are a family, not three special cases. Every one of
+them works the same way:
+
+    i( a(    round brackets — calls and parameter lists
+    i{ a{    curly braces — objects and blocks
+    i[ a[    square brackets — arrays and index expressions
+    i< a<    angle brackets — generics and JSX props
+
+Once that clicks there is nothing left to learn about them. The only
+question you ever ask is which delimiter, and the answer is on the screen
+in front of you.
+
+Two jobs in this file. A 500 from the payment provider means the request
+was wrong, so retrying it just fails again slower — the retry list should
+be `[502, 503, 504, 429]`. And `LegacyOrderRecord` was renamed to
+`OrderRecord` when the legacy tables were dropped, so both type arguments
+need updating.
+
+@keys
+| `ci[` | change what is inside the square brackets |
+| `ci<` | change what is inside the angle brackets |
+| `a[` `a<` | with the brackets |
+| `i]` `i>` | the same objects, closing-bracket spelling |
+
+@hints
+Three edits, three different kinds of bracket, one idea.
+--
+`ci[` for the array, `ci<` for each of the two type arguments.
+--
+`f[` and `f<` get you onto the bracket, which counts as inside it. Then
+the object, then type.
+
+@solution
+    f[ ci[ 502, 503, 504, 429 <Esc>
+    3j 0 f< ci< OrderRecord <Esc>
+    j 0 f< ci< OrderRecord <Esc>
+    :wq<Enter>
+
+Sixty-seven keystrokes, forty-two of them typed content.
+
+The angle-bracket pair is the one people forget exists, and it is the one
+that pays off most in TypeScript. A generic argument is exactly the kind
+of thing that is annoying to select: it is buried in the middle of a long
+declaration, it contains commas, and the closing bracket is easy to
+mistake for a comparison. `ci<` does not care.
+
+It works in JSX too, where `i<` is the contents of the opening tag —
+useful when a component's props all change at once. Do not confuse it
+with the tag object `it`, which is the next lesson and means something
+quite different.
+
+@start order.repository.ts
+export const RETRYABLE_CODES = [500, 502, 503, 504];
+
+@injectable()
+export class OrderRepository extends BaseRepository<LegacyOrderRecord> {
+  public async findMany(where: Partial<LegacyOrderRecord>) {
+    return this.model.findMany({ where });
+  }
+}
+
+@expected order.repository.ts
+export const RETRYABLE_CODES = [502, 503, 504, 429];
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord> {
+  public async findMany(where: Partial<OrderRecord>) {
+    return this.model.findMany({ where });
+  }
+}

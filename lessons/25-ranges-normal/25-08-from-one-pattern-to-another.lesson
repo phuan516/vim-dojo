@@ -1,0 +1,87 @@
+@meta
+id: 25-08
+title: From one pattern to another
+chapter: 25
+type: lesson
+skills: range-pattern
+par: 23
+minutes: 5
+vscode: click the first marker, scroll, shift-click the last, Delete
+open: container.ts
+
+@brief
+The generated registration block in `container.ts` is dead. A loader
+walks the directory at boot now, and the block between the two markers —
+markers included — is what has to go.
+
+Both ends of a range are addresses, and either end can be a pattern. So
+a block delimited by two lines you can search for is a single range:
+left address finds the top, right address finds the bottom.
+
+You do not need to know how many lines are between them, and the command
+keeps working when the generator adds three more.
+
+@keys
+| `:/BEGIN/,/END/d` | from the next `BEGIN` line to the next `END` line after it |
+| `:/a/,/b/y` | yank that block |
+| `:/a/,/b/>` | indent it |
+
+@hints
+Two pattern addresses with a comma between them. The markers are in
+capitals and each word appears once.
+--
+The right-hand pattern is searched for starting below the line the
+left-hand one found, so the two cannot cross.
+--
+`:/BEGIN/,/END/d` Enter, then `:wq`.
+
+@solution
+    :/BEGIN/,/END/d<Enter>  :wq<Enter>
+
+Twenty keystrokes for a block of any length, and both marker lines go
+with it because a range includes both of its ends.
+
+The ordering rule is the thing to remember: the **left** address is
+resolved from the cursor, and the **right** address is then resolved from
+the line the left one landed on. That is why `/BEGIN/,/END/` cannot
+accidentally select backwards, and why running it again finds the *next*
+pair rather than the same one.
+
+If a range does end up backwards — `:10,5d`, or two patterns that resolve
+out of order — vim asks `Backwards range given, OK to swap (y/n)?`
+instead of doing something surprising. Answer `n` and think again.
+
+Keeping the markers is the `+1`/`-1` variant from the last lesson:
+
+    :/BEGIN/+1,/END/-1d       empty the block, leave the markers
+    :/BEGIN/+1,/END/-1s/x/y/g rewrite only what is inside it
+
+@start container.ts
+import { container } from 'tsyringe';
+import { PrismaClient } from '@prisma/client';
+import { loadRegistrations } from './configuration/loader';
+
+container.register(PrismaClient, { useValue: new PrismaClient() });
+
+// BEGIN GENERATED — do not edit by hand
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('RefundProvider', { useClass: RefundProvider });
+container.register('CustomerRepository', { useClass: CustomerRepository });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('BatchProvider', { useClass: BatchProvider });
+// END GENERATED
+loadRegistrations(container, './src/domain');
+
+export { container };
+
+@expected container.ts
+import { container } from 'tsyringe';
+import { PrismaClient } from '@prisma/client';
+import { loadRegistrations } from './configuration/loader';
+
+container.register(PrismaClient, { useValue: new PrismaClient() });
+
+loadRegistrations(container, './src/domain');
+
+export { container };

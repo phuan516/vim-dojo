@@ -1,0 +1,96 @@
+@meta
+id: 25-02
+title: Backwards from the end
+chapter: 25
+type: lesson
+skills: range-syntax
+par: 17
+minutes: 3
+vscode: scroll to the bottom, select the last three lines, Delete
+open: RUNBOOK.md
+
+@brief
+The runbook ends with a contact block that points at a rota nobody has
+used since the on-call move. The last three lines of the file go — the
+heading, the blank line and the sentence. Everything above stays.
+
+You know `$` as the last line. It takes arithmetic like `.` does, so
+`$-2` is the third line from the bottom, and you can say "the last three
+lines" without knowing how long the file is. That matters more than it
+sounds: the same command then works on the file after it has grown.
+
+The cursor can stay on line 1.
+
+@keys
+| `:$-2,$d` | the last three lines |
+| `$-1` | the second to last line |
+| `:$d` | delete the last line |
+
+@hints
+Count the lines that must go, from the bottom: three. So the range runs
+from two above the end, to the end.
+--
+Left address `$-2`, right address `$`, command `d`.
+--
+`:$-2,$d` Enter, then `:wq`.
+
+@solution
+    :$-2,$d<Enter>  :wq<Enter>
+
+Twelve keystrokes and no scrolling. The point is that you never looked
+at the bottom of the file. You did not need to know whether the runbook
+was forty lines or four hundred.
+
+Both ends of a range are just addresses, and every address takes an
+offset, so all of these are legal and mean what they look like:
+
+    :$-9,$d       the last ten lines
+    :.-2,.+2y     five lines centred on the cursor
+    :1,$-1>       everything except the last line
+    :$-4,$m0      move the last five lines to the top
+
+One caution: the offsets are evaluated before the command runs, against
+the file as it is now. `:$-2,$d` run twice takes six lines, not the same
+three. Ranges are not idempotent, and `u` is the fix.
+
+@start RUNBOOK.md
+# Payments runbook
+
+## Symptoms
+
+Refunds queue up and never settle. The `refund_queue` depth climbs
+steadily and the gateway dashboard shows timeouts.
+
+## First checks
+
+1. `SELECT count(*) FROM refund_queue WHERE settled_at IS NULL;`
+2. Gateway status page.
+3. The last deploy — `git log --oneline -5 origin/main`.
+
+## Recovery
+
+Drain the queue with `npm run payments:drain`. It is idempotent and
+safe to run twice. Watch the depth fall before you walk away.
+
+## Contact
+
+Page the on-call engineer through the old PagerDuty rota.
+
+@expected RUNBOOK.md
+# Payments runbook
+
+## Symptoms
+
+Refunds queue up and never settle. The `refund_queue` depth climbs
+steadily and the gateway dashboard shows timeouts.
+
+## First checks
+
+1. `SELECT count(*) FROM refund_queue WHERE settled_at IS NULL;`
+2. Gateway status page.
+3. The last deploy — `git log --oneline -5 origin/main`.
+
+## Recovery
+
+Drain the queue with `npm run payments:drain`. It is idempotent and
+safe to run twice. Watch the depth fall before you walk away.

@@ -1,0 +1,170 @@
+@meta
+id: 23-16
+title: Fix the indentation, not the lines
+chapter: 23
+type: lesson
+skills: indent-equals
+par: 44
+minutes: 5
+vscode: select the block, Format Selection
+open: order.provider.ts
+
+@brief
+Someone pasted the body of `cancel` in from a chat window and every
+line landed at a different column. Separately, the `return order;` in
+`findOne` has drifted six spaces to the right.
+
+Put every line back at the indentation the formatter would give it.
+Not one character of the code itself changes, and nothing outside
+those two places is touched — in particular, `ship` is already correct
+and must stay byte for byte as it is.
+
+You know `>>` and `<<`. Do not use them; this is not a shift, it is a
+re-indent, and vim has an operator that knows where each line belongs.
+
+@keys
+| `=={motion}` | re-indent the lines the motion covers |
+| `==` | re-indent the current line |
+| `=i{` | re-indent everything inside the enclosing braces |
+| `=ip` | re-indent the paragraph |
+| `gg=G` | re-indent the whole file |
+
+@hints
+`/return order` finds the drifted line. `==` puts it where it belongs,
+without you saying where.
+--
+For `cancel`, put the cursor on any line inside the method body that
+is not inside a nested block — the `const` line just under the
+signature will do — and re-indent inside the braces.
+--
+`/async cancel` then `j` then `=i{`.
+
+@solution
+    /return order<Enter> ==
+    /async cancel<Enter> j =i{
+    :wq<Enter>
+
+Thirty-eight keystrokes.
+
+`=` is an operator, so it takes the same motions and text objects as
+`d` and `y`, and `==` is the line form like `dd`. It asks the
+filetype's indent script — `filetype indent on` is set for you — where
+each line should sit, and moves it there. It never touches the text
+after the indentation, which is why it is safe to run over code you
+did not write.
+
+`=i{` is the one to remember. From inside a method body it re-indents
+the whole body, nested blocks included, and leaves the signature and
+closing brace alone. `=ip` is the same for a paragraph in a file with
+no braces to hang on. `gg=G` is the whole file, and is what you do
+after a paste has gone wrong somewhere you cannot see; the next
+lesson drills it.
+
+The limit is worth knowing: `=` fixes indentation and nothing else. A
+line with a missing semicolon or a badly placed brace stays that way,
+and an indent script can only be as right as the braces around it. If
+`=` puts something somewhere strange, the syntax above it is broken.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+          return order;
+  }
+
+  public async cancel(id: string) {
+const order = await this.findOne(id);
+
+if (order.status === 'SHIPPED') {
+throw exception('ORDER_ALREADY_SHIPPED');
+}
+
+        const days = (Date.now() - order.placedAt.getTime()) / 86_400_000;
+
+            if (days <= 30) {
+      await this.paymentService.refund(order.id);
+              }
+
+    return this.orderRepository.update({
+where: { id },
+    values: { status: 'CANCELLED' },
+  });
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    const days = (Date.now() - order.placedAt.getTime()) / 86_400_000;
+
+    if (days <= 30) {
+      await this.paymentService.refund(order.id);
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+}

@@ -1,0 +1,61 @@
+@meta
+id: 22-18
+title: Drill — tick every box
+chapter: 22
+type: drill
+skills: visual-block
+par: 16
+minutes: 4
+reps: 8
+vscode: click inside each pair of brackets, type x, eight times
+open: checklist.md
+
+@brief
+Eight times: tick every box on the release checklist. The space inside
+each `[ ]` becomes `x`.
+
+`r` on a block replaces every character in the rectangle with the one
+you press next. No insert mode, no `Esc`.
+
+@keys
+| `Ctrl-V` | start a block |
+| `r` | replace every character in the block with the next key |
+
+@hints
+`2j` to the first item, `3l` to the space inside the brackets.
+`Ctrl-V`, `7j`, `rx`.
+--
+`r` takes one character and finishes on its own. If you find yourself
+pressing `Esc` afterwards, that is a habit, not a requirement.
+
+@solution
+    2 j 3 l Ctrl-V 7 j r x :wq<Enter>
+
+Thirteen keystrokes. Block `r` is the fastest way to paint a column:
+a column of spaces to `x`, a column of `,` to `;`, a column of `-` to
+`|`. The reverse of this drill — untick every box — is the same keys
+with `r` followed by a space.
+
+@start checklist.md
+# Release checklist
+
+- [ ] Migrations applied to staging
+- [ ] Refund window verified against finance sheet
+- [ ] Order cutoff hour confirmed with ops
+- [ ] Payment retries observed in logs
+- [ ] Customer email template signed off
+- [ ] Reconcile export sent to finance
+- [ ] Registry split deployed
+- [ ] Changelog updated
+
+@expected checklist.md
+# Release checklist
+
+- [x] Migrations applied to staging
+- [x] Refund window verified against finance sheet
+- [x] Order cutoff hour confirmed with ops
+- [x] Payment retries observed in logs
+- [x] Customer email template signed off
+- [x] Reconcile export sent to finance
+- [x] Registry split deployed
+- [x] Changelog updated

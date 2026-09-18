@@ -1,0 +1,84 @@
+@meta
+id: 22-05
+title: Started at the wrong end
+chapter: 22
+type: lesson
+skills: visual-char, visual-line
+par: 25
+minutes: 4
+vscode: click, Shift-click, realise you missed the heading, start again
+open: payments.md
+
+@brief
+A selection has two ends: the anchor where you pressed `v`, and the
+cursor, which is the only end you can move. Half the time you discover,
+with the region highlighted, that it needs to grow at the *other* end.
+Dropping the selection and starting again is what a mouse user does.
+
+`o` swaps the ends. The cursor jumps to the anchor, the anchor stays
+where the cursor was, and the selection is untouched. Now the other end
+is the one that moves.
+
+The "Old checkout path" section of the payments doc is out of date.
+Remove the whole section: its heading, its paragraph, and one of the
+two blank lines around it, so that "Refunds" runs straight into
+"Retries" with a single blank line between them.
+
+@keys
+| `o` | swap the cursor to the other end of the selection |
+| `ip` | select the paragraph |
+| `k` | extend the selection upward |
+
+@hints
+Search for a word that is only in the section's paragraph — `gateway`
+will do — and select the paragraph with `vip`. The heading is above it,
+and the cursor is at the bottom.
+--
+`o` moves the cursor to the top of the selection. Now `k` extends it
+upward: the blank line, the heading, the blank line above the heading.
+--
+`/gateway` `Enter`, `vip`, `o`, `kkk`, `d`.
+
+@solution
+    /gateway<Enter> v i p o k k k d :wq<Enter>
+
+Twenty-one keystrokes. Without `o` you would have had to `Esc`, move up
+three lines, and reselect downward — more keys, and a good chance of
+landing a line off. With `o` the region you already had is kept and
+simply grows at the end that needed it.
+
+`o` works in all three visual modes. In block mode there is also `O`,
+which swaps to the other corner on the same line, for when a column
+selection needs to grow to the left instead of the right.
+
+@start payments.md
+# Payments
+
+## Refunds
+
+Refunds go through the payment service and are capped at the order
+total. Partial refunds are allowed.
+
+## Old checkout path
+
+The legacy gateway is still called for orders placed before the
+migration. It is read only and will be removed once the last of
+those orders is closed.
+
+## Retries
+
+Failed captures are retried three times with a backoff of ten
+seconds, then the order is flagged for manual review.
+
+@expected payments.md
+# Payments
+
+## Refunds
+
+Refunds go through the payment service and are capped at the order
+total. Partial refunds are allowed.
+
+## Retries
+
+Failed captures are retried three times with a backoff of ten
+seconds, then the order is flagged for manual review.

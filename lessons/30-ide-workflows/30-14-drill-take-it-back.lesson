@@ -1,0 +1,84 @@
+@meta
+id: 30-14
+title: Drill — take it back
+chapter: 30
+type: drill
+skills: git-in-vim
+par: 71
+minutes: 5
+reps: 8
+vscode: clicking three revert arrows in the diff gutter
+open: config.development.ts
+
+@brief
+Three lines of local fiddling in a config file that were never meant to
+leave your machine. `config.development.ts.orig` is the committed
+version, provided with the lesson, and does not change.
+
+Eight times: split it against the original, walk the changes, take each
+one back, save and quit.
+
+@keys
+| `:vert diffsplit file` | the two versions, side by side |
+| `Ctrl-W l` | into the right-hand window — yours |
+| `]c` | next change |
+| `do` | take the other side's version |
+
+@hints
+The new window opens on the left with the cursor in it. Move right
+before you start obtaining, or you will be editing the copy.
+--
+`]c` `do` three times, then `:wqa`.
+
+@solution
+    :vert diffsplit config.development.ts.orig<Enter>  Ctrl-W l
+    ]c do  ]c do  ]c do  :wqa<Enter>
+
+The muscle being built is the pairing: `]c` to arrive, `do` to decide,
+never scrolling and never retyping a line by hand. Retyping is how a
+"revert" quietly introduces a fourth change.
+
+@start config.development.ts
+export const config = {
+  database: {
+    host: 'localhost',
+    port: 3306,
+  },
+  payment: {
+    endpoint: 'https://sandbox.payments.local/v2',
+    timeout: 60000,
+  },
+  logging: {
+    level: 'trace',
+  },
+};
+
+@expected config.development.ts
+export const config = {
+  database: {
+    host: 'database',
+    port: 3306,
+  },
+  payment: {
+    endpoint: 'https://sandbox.payments.local/v2',
+    timeout: 5000,
+  },
+  logging: {
+    level: 'info',
+  },
+};
+
+@start config.development.ts.orig
+export const config = {
+  database: {
+    host: 'database',
+    port: 3306,
+  },
+  payment: {
+    endpoint: 'https://sandbox.payments.local/v2',
+    timeout: 5000,
+  },
+  logging: {
+    level: 'info',
+  },
+};

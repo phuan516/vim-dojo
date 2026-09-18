@@ -1,0 +1,62 @@
+@meta
+id: 06-11
+title: Drill — t into the closing brace
+chapter: 06
+type: drill
+skills: find-t, line-start
+par: 76
+minutes: 5
+reps: 8
+vscode: four careful clicks into four identical gaps, eight times
+open: order.events.ts
+
+@brief
+Four event payloads, all of them gaining a `reason` field. Each becomes
+`{ orderId, reason }`. Eight passes over the file.
+
+The rep is `^` to the start of the code, `t}` to stop just before the
+closing brace, `i, reason` `Esc`, `j` down.
+
+@keys
+| `^` | first non-blank |
+| `t}` | forward until just before the `}` |
+| `i` | insert before the cursor |
+
+@hints
+If a line comes out as `{ orderId , reason}` you used `f}` instead of `t}`.
+Press `u` and do that line again.
+--
+Ignore the event names entirely. Identical fingerwork is the whole exercise;
+the file is only there to make it real.
+
+@solution
+    2j then, four times: ^ t } i , reason <Esc> j
+
+By the third pass you should no longer be checking where the cursor landed
+before you press `i`. That is the point at which `t` has stopped being a
+thing you think about and become a thing you aim with.
+
+One habit this drill builds quietly: `u` after a line that went wrong, then
+that line again, rather than nudging the text back into shape with more
+insert-mode typing. Undoing and re-aiming is faster, and it trains the aim
+instead of training the repair.
+
+@start order.events.ts
+export class OrderEvents {
+  public async publish(orderId: string, reason: string) {
+    this.events.emit('order.cancelled', { orderId });
+    this.events.emit('order.refunded', { orderId });
+    this.events.emit('order.reopened', { orderId });
+    this.events.emit('order.settled', { orderId });
+  }
+}
+
+@expected order.events.ts
+export class OrderEvents {
+  public async publish(orderId: string, reason: string) {
+    this.events.emit('order.cancelled', { orderId, reason });
+    this.events.emit('order.refunded', { orderId, reason });
+    this.events.emit('order.reopened', { orderId, reason });
+    this.events.emit('order.settled', { orderId, reason });
+  }
+}

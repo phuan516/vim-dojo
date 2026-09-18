@@ -1,0 +1,195 @@
+@meta
+id: 24-20
+title: Scenario — wire up the consumer
+chapter: 24
+type: scenario
+skills: ex-delete, ex-move, ex-copy, ex-join, ex-shift, buffer-switch
+par: 81
+minutes: 12
+vscode: three tabs, an import sorter extension, and copy-paste into the docs
+open: registry.ts order.consumer.ts CONSUMERS.md
+vimrc: set hidden shiftwidth=2 expandtab
+
+@brief
+A ticket, not an exercise.
+
+    ORD-533  OrderConsumer is registered before the providers it needs
+             and the docs still have an empty code block. Tidy the
+             registry, strip the debug logging, document the event.
+
+Three files, open as three buffers.
+
+  1. registry.ts — the imports below the `container` line are unsorted
+     and one is duplicated. Sort them, drop the duplicate, keep
+     `container` first. The `OrderConsumer` registration must be the
+     last registration in the file; the others keep their order.
+
+  2. order.consumer.ts — the two `console.log` lines in
+     `onOrderCreated` go. The two `await` lines that remain are one
+     level too shallow. The `OrderCreatedEvent` type stays exactly as
+     it is; you need a copy of it for the docs.
+
+  3. CONSUMERS.md — the empty `ts` fence gets the `OrderCreatedEvent`
+     type, all five lines, verbatim. Below it the queue URL has been
+     wrapped in the middle of `order.created`; make it one line with
+     nothing added at the break.
+
+@keys
+| `:2,9sort u` | sort lines 2 to 9, dropping duplicates |
+| `:10m$` | move line 10 to the end of the file |
+| `:4,8y a` | yank lines 4 to 8 into register `a` |
+| `:15,16d` | delete lines 15 to 16 |
+| `:15,16>` | indent lines 15 to 16 by one level |
+| `:7pu a` | put register `a` below line 7 |
+| `:15,16j!` | join lines 15 and 16 with nothing between |
+| `:bn` `:wqa` | next buffer; write all and quit |
+
+@hints
+The registry first. After the sort and dedupe the file is one line
+shorter, so read the gutter again before moving the consumer
+registration.
+--
+In the consumer, yank the type into a named register before you do
+anything else, and go straight from there to the docs when the file is
+done. `:pu` takes a line number, so you do not need to find the fence
+with the cursor.
+--
+After the put, the wrapped URL has moved down five lines. `j!`, not
+`j`: a space inside a URL is a bug.
+--
+Par assumes no cursor movement at all, in any of the three files.
+
+@solution
+A route that measures seventy keystrokes.
+
+**registry.ts** — `:2,9sort u`. The imports are now lines 2 to 8 and
+the registrations start on line 10, with `OrderConsumer` first:
+`:10m$`.
+
+**order.consumer.ts** — `:bn`. `:4,8y a` takes the type. `:15,16d`
+drops the logging; the two `await` lines slide up into 15 and 16, so
+`:15,16>` indents them.
+
+**CONSUMERS.md** — `:bn`. `:7pu a` drops the type inside the fence. The
+URL is now on lines 15 and 16: `:15,16j!`. `:wqa`.
+
+This is the whole chapter in one ticket. Delete, move, copy, join and
+shift are one verb each, every one of them takes the same range in
+front, and the register form of yank and put is what carries text
+between files when `m` and `t` cannot. The cursor stayed on line 1 of
+every file, because it had no reason to be anywhere else.
+
+Two things worth noticing. First, the yank happened before the delete,
+and the put used a line number, so nothing depended on where the
+cursor had ended up. Second, every line number was read off the screen
+at the moment it was needed, not planned in advance. Both are the habits
+that make the ex language reliable rather than clever.
+
+@start registry.ts
+import { container } from 'tsyringe';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderConsumer } from '../domain/order/order.consumer';
+import { CustomerRepository } from '../domain/customer/customer.repository';
+import { OrderRepository } from '../domain/order/order.repository';
+import { EmailService } from '../infrastructure/services/email.service';
+import { CustomerProvider } from '../domain/customer/customer.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+
+container.register('OrderConsumer', { useClass: OrderConsumer });
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('CustomerRepository', { useClass: CustomerRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('PaymentService', { useClass: PaymentService });
+container.register('EmailService', { useClass: EmailService });
+
+@expected registry.ts
+import { container } from 'tsyringe';
+import { CustomerProvider } from '../domain/customer/customer.provider';
+import { CustomerRepository } from '../domain/customer/customer.repository';
+import { EmailService } from '../infrastructure/services/email.service';
+import { OrderConsumer } from '../domain/order/order.consumer';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderRepository } from '../domain/order/order.repository';
+import { PaymentService } from '../infrastructure/services/payment.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('CustomerRepository', { useClass: CustomerRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('PaymentService', { useClass: PaymentService });
+container.register('EmailService', { useClass: EmailService });
+container.register('OrderConsumer', { useClass: OrderConsumer });
+
+@start order.consumer.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+type OrderCreatedEvent = {
+  orderId: string;
+  customerId: string;
+  total: number;
+};
+
+@injectable()
+export class OrderConsumer {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async onOrderCreated(event: OrderCreatedEvent) {
+  console.log('order.created', event);
+  console.log(JSON.stringify(event));
+  await this.orderProvider.sendReceipt(event.orderId);
+  await this.orderProvider.notifyWarehouse(event.orderId);
+  }
+}
+
+@expected order.consumer.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+type OrderCreatedEvent = {
+  orderId: string;
+  customerId: string;
+  total: number;
+};
+
+@injectable()
+export class OrderConsumer {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async onOrderCreated(event: OrderCreatedEvent) {
+    await this.orderProvider.sendReceipt(event.orderId);
+    await this.orderProvider.notifyWarehouse(event.orderId);
+  }
+}
+
+@start CONSUMERS.md
+# Consumers
+
+## OrderConsumer
+
+Handles `order.created`. The event payload is:
+
+```ts
+```
+
+The queue is bound at amqp://rabbitmq.internal:5672/orders/order.cre
+ated and the consumer is registered last in the DI registry.
+
+@expected CONSUMERS.md
+# Consumers
+
+## OrderConsumer
+
+Handles `order.created`. The event payload is:
+
+```ts
+type OrderCreatedEvent = {
+  orderId: string;
+  customerId: string;
+  total: number;
+};
+```
+
+The queue is bound at amqp://rabbitmq.internal:5672/orders/order.created and the consumer is registered last in the DI registry.

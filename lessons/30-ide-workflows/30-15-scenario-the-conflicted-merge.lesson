@@ -1,0 +1,196 @@
+@meta
+id: 30-15
+title: Scenario — the conflicted merge
+chapter: 30
+type: scenario
+skills: git-in-vim, global-delete, search-slash, arglist
+par: 137
+minutes: 14
+vscode: the three-way merge editor, and its Accept Both button
+open: src/domain/order/order.provider.ts src/domain/order/order.entity.ts MERGE_MSG
+
+@brief
+A ticket, of the kind that arrives at five to six.
+
+    You pulled main into feature/refund-window. Two files conflict.
+    Resolve them, and write the merge message.
+
+Vim is already git's editor: when a merge stops, git leaves the
+conflicted files marked up and opens this exact kind of buffer for the
+message. Nothing here needs git to be running — a conflict is text, and
+text is the thing you are good at now.
+
+  1. `order.provider.ts` — both sides are right. Main added the guard
+     that refuses to cancel a shipped order. This branch added the
+     thirty day refund window. The method needs both, main's guard
+     first, with a blank line between the two blocks.
+
+  2. `order.entity.ts` — main wins. `cancellationReason` is the name
+     the rest of the service already uses; this branch's
+     `cancelReason` was never agreed. Take main's side and drop this
+     branch's.
+
+  3. `MERGE_MSG` — under the subject line, and separated from it by the
+     blank line that is already there, record what you did:
+
+         Kept the shipped guard from main and the refund window here.
+
+     Leave the commented lines below it alone. Git strips them.
+
+No conflict markers may survive anywhere. `<<<<<<<`, `=======` and
+`>>>>>>>` in a committed file is the most embarrassing diff there is.
+
+@keys
+| `/^<<<` | find the next conflict marker |
+| `dd` `4dd` | delete the marker line, or the side you are not keeping |
+| `cc` | replace a line — a `=======` becomes the blank line between two kept blocks |
+| `:g/^[<=>]\{7}/d` | delete every marker in the file at once |
+| `]c` `[c` | the change-to-change motion, if you diff the sides instead |
+| `:wn` | write and move to the next file |
+
+@hints
+Work top to bottom in each file: `<<<<<<<` goes, then whatever you do
+with `=======`, then `>>>>>>>`.
+--
+In the provider you are keeping both sides, so the `=======` line is
+not deleted — it is *replaced* by the blank line that separates the two
+blocks. `cc` then `Esc` does that in three keystrokes.
+--
+In the entity you are dropping four lines in one go: the `=======`, the
+two lines of this branch's version, and the `>>>>>>>`. Count them and
+use `dd` with a count.
+--
+`:g/^[<=>]\{7}/d` is the quick way to strip markers when you have
+already decided both sides stay exactly as they are. It is the wrong
+tool for the entity, where a whole side has to go with them.
+
+@solution
+    /^<<< <Enter> dd   /^=== <Enter> cc <Esc>   /^>>> <Enter> dd   :wn<Enter>
+    /^<<< <Enter> dd   /^=== <Enter> 4dd   :wn<Enter>
+    j o Kept the shipped guard from main and the refund window here.<Enter> <Esc>
+    :wqa<Enter>
+
+Three things to take from this.
+
+**A conflict is three markers and two blocks.** Once you see it that
+way, resolving is deleting lines and occasionally replacing one. The
+three-way merge editor with its four panes is a picture of the same
+thing, and most of the time the picture is slower than `dd`.
+
+**Decide per conflict, not per file.** `git checkout --ours file` and
+`--theirs file` take a whole file's worth of side, which is almost never
+what you want when both branches were working on the same method. The
+names are also backwards from what people expect during a rebase.
+
+**If the two sides are too close to read**, vim's `-d` flag opens a
+proper diff of several files, and `git mergetool` with `vimdiff`
+configured drops you into a four-window view of local, base, remote and
+the result, where `]c`, `do` and `dp` are exactly the keys you drilled
+two lessons ago — `:diffget LOCAL` and `:diffget REMOTE` being the
+named versions of `do` when there is more than one other buffer.
+
+Last thing, and it is the one that saves careers: after resolving,
+read the whole method through once, top to bottom. A merge that
+compiles is not the same as a merge that is correct, and the compiler
+cannot see that you kept both halves of a guard in the wrong order.
+
+@start src/domain/order/order.provider.ts
+export class OrderProvider {
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+<<<<<<< HEAD
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+=======
+    const days = (Date.now() - order.placedAt.getTime()) / 86_400_000;
+
+    if (days > 30) {
+      throw exception('REFUND_WINDOW_EXPIRED');
+    }
+>>>>>>> feature/refund-window
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+export class OrderProvider {
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    const days = (Date.now() - order.placedAt.getTime()) / 86_400_000;
+
+    if (days > 30) {
+      throw exception('REFUND_WINDOW_EXPIRED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  placedAt: Date;
+<<<<<<< HEAD
+  cancellationReason?: string;
+=======
+  cancelReason?: string;
+  cancelledBy?: string;
+>>>>>>> feature/refund-window
+};
+
+@expected src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  placedAt: Date;
+  cancellationReason?: string;
+};
+
+@start MERGE_MSG
+Merge branch 'main' into feature/refund-window
+
+# Conflicts:
+#	src/domain/order/order.entity.ts
+#	src/domain/order/order.provider.ts
+#
+# It looks like you may be committing a merge.
+# If this is not correct, please run
+#	git update-ref -d MERGE_HEAD
+# and try again.
+
+@expected MERGE_MSG
+Merge branch 'main' into feature/refund-window
+
+Kept the shipped guard from main and the refund window here.
+
+# Conflicts:
+#	src/domain/order/order.entity.ts
+#	src/domain/order/order.provider.ts
+#
+# It looks like you may be committing a merge.
+# If this is not correct, please run
+#	git update-ref -d MERGE_HEAD
+# and try again.

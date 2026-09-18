@@ -1,0 +1,228 @@
+@meta
+id: 14-14
+title: Scenario — the rename ticket
+chapter: 14
+type: scenario
+skills: sub-basic, sub-range, sub-confirm, search-slash
+par: 166
+minutes: 14
+vscode: a project-wide Replace All, then a revert, then doing it by hand
+open: order.entity.ts order.provider.ts order.test.ts order.types.ts
+
+@brief
+A ticket, not an exercise.
+
+    ORD-527  Rename Order.cancellationReason to cancelReason. The
+             GraphQL input type CancelOrderInput keeps its field name
+             until the mobile app ships — that is a public contract.
+
+Four files, open as four buffers. `:bn` moves to the next one. Write
+each file with `:w` before you leave it, and finish with `:wqa`,
+because `:wq` will refuse while other files are still open.
+
+  1. order.entity.ts — the field on `Order` and the helper below it.
+     Everything here changes.
+
+  2. order.provider.ts — the entity field changes wherever it is read
+     or written. The provider also reads the field *from the input*,
+     and the input is the contract. Read each hit.
+
+  3. order.test.ts — the assertions and the factory build an entity;
+     the calls to `provider.cancel` build an input. Same rule.
+
+  4. order.types.ts — the input type. It is open so you can see the
+     contract. Do not change it; the check fails if you do.
+
+The old name never appears inside a longer identifier, so no anchors
+are needed. What is needed is judgement on every hit in files 2 and 3.
+
+@keys
+| `:%s/old/new/g` `Enter` | whole file, no questions — for the file where every hit changes |
+| `:%s/old/new/gc` `Enter` | whole file, ask each time — for the files where some do not |
+| `y` / `n` | take it / leave it |
+| `:w` then `:bn` | save this buffer, move to the next |
+| `:wqa` | write everything and quit |
+
+@hints
+Read the ticket's exception before you touch a key: the *input* keeps
+the old name. An input is anything passed to `cancel` or declared in
+`CancelOrderInput`. An entity is what comes back from the repository
+or the factory.
+--
+File 1 has no inputs in it, so `:%s` with no confirm is honest there.
+Files 2 and 3 each have both, and one line in the provider has one of
+each — the left side of `cancellationReason: input.cancellationReason`
+is the entity, the right side is the input.
+--
+Provider: `:%s/cancellationReason/cancelReason/gc`, answers
+`y y n y y`. Test: the same command, answers `n y y n`. Then `:wqa`.
+
+@solution
+**order.entity.ts** — `:%s/cancellationReason/cancelReason/g`, `:w`,
+`:bn`.
+
+**order.provider.ts** — `:%s/cancellationReason/cancelReason/gc`, and
+read: the guard is entity (`y`), the update values line is entity then
+input (`y`, `n`), the filter and the map are entity (`y`, `y`). `:w`,
+`:bn`.
+
+**order.test.ts** — the same command. The first hit is an argument to
+`provider.cancel` (`n`), the assertion is entity (`y`), the factory
+builds an entity (`y`), the second `cancel` call is input (`n`). Then
+`:wqa` writes the two you changed, leaves the types file alone, and
+quits.
+
+About a hundred and forty keystrokes, nine of them decisions, and the
+decisions are the job. Every one of the substitutes was something you
+already knew; the ticket was a test of whether you would stop and read
+the exception in it, or replace-all and hope. That single line in the
+provider, entity on the left and input on the right, is the whole
+argument for the `c` flag: no range and no pattern separates two
+identical words on one line by what they mean.
+
+@start order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'PAID' | 'SHIPPED' | 'CANCELLED';
+
+export function isCancelled(order: Order) {
+  return order.status === 'CANCELLED' && order.cancellationReason !== undefined;
+}
+
+@expected order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancelReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'PAID' | 'SHIPPED' | 'CANCELLED';
+
+export function isCancelled(order: Order) {
+  return order.status === 'CANCELLED' && order.cancelReason !== undefined;
+}
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { CancelOrderInput } from './order.types';
+
+@injectable()
+export class OrderProvider {
+  constructor(@inject(OrderRepository) protected orderRepository: OrderRepository) {}
+
+  public async cancel(input: CancelOrderInput) {
+    const order = await this.orderRepository.findOne({ where: { id: input.id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    if (order.cancellationReason) {
+      throw exception('ORDER_ALREADY_CANCELLED');
+    }
+
+    return this.orderRepository.update({
+      where: { id: input.id },
+      values: { status: 'CANCELLED', cancellationReason: input.cancellationReason },
+    });
+  }
+
+  public async cancellationReport(customerId: string) {
+    const orders = await this.orderRepository.findByCustomer({ customerId });
+
+    return orders
+      .filter((order) => order.cancellationReason !== undefined)
+      .map((order) => ({ id: order.id, reason: order.cancellationReason }));
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { CancelOrderInput } from './order.types';
+
+@injectable()
+export class OrderProvider {
+  constructor(@inject(OrderRepository) protected orderRepository: OrderRepository) {}
+
+  public async cancel(input: CancelOrderInput) {
+    const order = await this.orderRepository.findOne({ where: { id: input.id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    if (order.cancelReason) {
+      throw exception('ORDER_ALREADY_CANCELLED');
+    }
+
+    return this.orderRepository.update({
+      where: { id: input.id },
+      values: { status: 'CANCELLED', cancelReason: input.cancellationReason },
+    });
+  }
+
+  public async cancellationReport(customerId: string) {
+    const orders = await this.orderRepository.findByCustomer({ customerId });
+
+    return orders
+      .filter((order) => order.cancelReason !== undefined)
+      .map((order) => ({ id: order.id, reason: order.cancelReason }));
+  }
+}
+
+@start order.test.ts
+import { OrderProvider } from './order.provider';
+import { orderFactory } from '../../test/factories';
+
+describe('OrderProvider.cancel', () => {
+  it('records the reason on the order', async () => {
+    const order = await provider.cancel({ id: 'ord_8101', cancellationReason: 'DAMAGED' });
+
+    expect(order.status).toEqual('CANCELLED');
+    expect(order.cancellationReason).toEqual('DAMAGED');
+  });
+
+  it('refuses to cancel twice', async () => {
+    const order = orderFactory.build({ cancellationReason: 'DAMAGED' });
+
+    await expect(provider.cancel({ id: order.id, cancellationReason: 'CHANGED_MIND' })).rejects.toThrow('ORDER_ALREADY_CANCELLED');
+  });
+});
+
+@expected order.test.ts
+import { OrderProvider } from './order.provider';
+import { orderFactory } from '../../test/factories';
+
+describe('OrderProvider.cancel', () => {
+  it('records the reason on the order', async () => {
+    const order = await provider.cancel({ id: 'ord_8101', cancellationReason: 'DAMAGED' });
+
+    expect(order.status).toEqual('CANCELLED');
+    expect(order.cancelReason).toEqual('DAMAGED');
+  });
+
+  it('refuses to cancel twice', async () => {
+    const order = orderFactory.build({ cancelReason: 'DAMAGED' });
+
+    await expect(provider.cancel({ id: order.id, cancellationReason: 'CHANGED_MIND' })).rejects.toThrow('ORDER_ALREADY_CANCELLED');
+  });
+});
+
+@start order.types.ts
+// Public GraphQL input. Field names are a contract with the mobile app.
+export type CancelOrderInput = {
+  id: string;
+  cancellationReason: string;
+};

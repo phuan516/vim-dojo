@@ -1,0 +1,97 @@
+@meta
+id: 13-19
+title: Stop the match early
+chapter: 13
+type: lesson
+skills: regex-zs-ze
+par: 40
+minutes: 6
+vscode: rename three keys by hand, checking each value first
+open: worker.config.ts
+
+@brief
+The config keys that hold a timeout in milliseconds are being renamed to
+say so: `captureTimeout` becomes `captureTimeoutMs`, and the same for
+the other two whose value is a bare number. `heartbeatTimeout` holds an
+ISO duration string and keeps its name. `timeoutUnit` and
+`timeoutRetries` are not timeouts at all.
+
+So the rule is: a key ending in `Timeout`, *whose value is a number*.
+The value is how you tell them apart, but the value is not what you
+edit — you are appending to the key. The pattern has to look past the
+end of the thing it lands on.
+
+`\zs` moved the start of the match forward. Its twin moves the end
+back.
+
+@keys
+| `\ze` | "end the match here" — everything after it is checked but not matched |
+| `/\vTimeout\ze: \d+` | `Timeout`, but only when a number follows — and the match is just `Timeout` |
+| `/pattern/e` | land on the last character of the match — which `\ze` now controls |
+| `a` | append after the cursor |
+| `n.` | next match, same offset, same append |
+
+@hints
+The value has to be in the pattern so the string-valued key is skipped.
+But if the value is part of the match, `/e` lands you on the value.
+--
+`\ze` says "the match stops here, but keep checking". Put it between
+`Timeout` and the `: ` that follows, and the `/e` offset lands on the
+`t` of `Timeout`.
+--
+`/\vTimeout\ze: \d+,$/e` `Enter`, `aMs`, `Esc`, then `n.` twice.
+
+@solution
+/\vTimeout\ze: \d+,$/e<Enter>  aMs<Esc>  n.  n.  :wq<Enter>
+
+Thirty-five keystrokes. Each key was checked against its value and
+edited without touching it.
+
+`\ze` — "zero-width end" — is the mirror of `\zs`. Everything after it
+must be there for the pattern to match, but it is outside the match. So
+`Timeout\ze: \d+` only matches a `Timeout` that is followed by a
+colon, a space and digits, and yet the match is the seven letters of
+`Timeout` and nothing more. The `/e` offset put you on the `t`; `gn`
+would have selected just the word; `hlsearch` highlights just the word.
+
+Other regex engines call this a lookahead and spell it `(?=...)`. Vim's
+version is simpler to type and, with `\zs`, symmetrical: `\zs` is
+"after this", `\ze` is "before this", and together they say "the bit in
+the middle of this". The next lesson is a drill on `\zs`; the scenarios
+at the end of the chapter use both.
+
+There was a way to do this one without `\ze` — land on the `T` and
+press `e` — and it is fine. The point is not that `\ze` was
+indispensable here. It is that "match this, but only when followed by
+that" is a thing you can now say, and a pattern that can say it lands
+on fewer wrong things.
+
+@start worker.config.ts
+import { QUEUE_PREFIX } from './queue.constants';
+
+export const workerConfig = {
+  queue: `${QUEUE_PREFIX}.refunds.v2`,
+  prefetch: 10,
+  captureTimeout: 30000,
+  timeoutUnit: 'ms',
+  refundTimeout: 5000,
+  heartbeatTimeout: 'PT30S',
+  webhookTimeout: 8000,
+  timeoutRetries: 3,
+  deadLetter: `${QUEUE_PREFIX}.refunds.v2.dead`,
+};
+
+@expected worker.config.ts
+import { QUEUE_PREFIX } from './queue.constants';
+
+export const workerConfig = {
+  queue: `${QUEUE_PREFIX}.refunds.v2`,
+  prefetch: 10,
+  captureTimeoutMs: 30000,
+  timeoutUnit: 'ms',
+  refundTimeoutMs: 5000,
+  heartbeatTimeout: 'PT30S',
+  webhookTimeoutMs: 8000,
+  timeoutRetries: 3,
+  deadLetter: `${QUEUE_PREFIX}.refunds.v2.dead`,
+};

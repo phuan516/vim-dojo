@@ -1,0 +1,100 @@
+@meta
+id: 26-14
+title: The jobs vim's regex is bad at
+chapter: 26
+type: lesson
+skills: filter-bang
+par: 40
+minutes: 7
+vscode: type the numbers in by hand and renumber them when a step moves
+open: runbook.md
+
+@brief
+Six steps in an incident runbook, in the right order and unnumbered. On
+call, people say "I got to step four", so they need numbers: `1. ` at the
+front of the first step, `2. ` at the front of the second, and so on.
+
+Vim's substitute cannot count. `:s` can match every one of those lines in
+one command and it can put the same text in front of all of them, but it
+has no idea which match it is on — a counter needs `:g` plus a variable,
+which is chapter 24 material written the long way.
+
+`awk` counts for free. `NR` is the number of the line it is reading, and
+that numbering starts at 1 for whatever you feed it, not at 1 for the
+file. The steps are lines 6 to 11.
+
+@keys
+| `:{range}!awk '{print NR". "$0}'` | prefix each line with its number |
+| `$0` | in awk, the whole line |
+| `NR` | in awk, how many lines it has read so far |
+| `:%!sed 's/old/new/'` | sed, for when it is easier than `:s` |
+
+@hints
+Range, bang, command — the same shape as the first lesson in this
+chapter. The command is the part that is new.
+--
+`awk` takes its program as one quoted argument. Inside it,
+`print NR". "$0` prints the counter, a literal dot and space, then the
+line.
+--
+`:6,11!awk '{print NR". "$0}'` and Enter, then `:wq`.
+
+@solution
+    :6,11!awk '{print NR". "$0}'<Enter>  :wq<Enter>
+
+The point is not awk. The point is knowing when to stop.
+
+Everything in vim's own language — `:s`, `:g`, `:normal`, macros — works
+on one line at a time with no memory of the lines before it. That covers
+most editing. The moment a job needs *state* across lines, vim's tools
+get clumsy and the shell's get simple, because counting, summing,
+grouping and joining are what these programs were written for. Numbering
+is the clearest case: awk keeps the counter for you, and it renumbers
+correctly the day somebody inserts a step in the middle, which is when
+hand-typed numbers rot.
+
+A few more where the shell is plainly the shorter answer:
+
+    :%!awk '{s+=$3} END {print s}'    sum a column, buffer replaced by the total
+    :%!awk '!seen[$0]++'              drop duplicate lines, keep the order
+    :'<,'>!sort -t, -k3 -rn           sort a CSV by the third field, numerically
+    :%!sed 's/  */ /g'                collapse runs of spaces
+    :%!tail -r                        reverse the file, on the systems that have it
+
+And two pieces of grit. In the second one, `awk '!seen...'` starts with a
+`!`, which vim expands to *the previous shell command* in any `:!` line —
+escape it as `\!` or you will run something you did not mean to. The same
+goes for `%` and `#`, which become the current and alternate file names.
+Escape them when you mean them literally.
+
+The other is that `awk` and `sed` are not vim's regex. `\v` means nothing
+to them, `\(` groups in sed but `(` groups in `sed -E`, and `\zs` does not
+exist anywhere but vim. When the pattern is the hard part, keep it in
+vim's `:s`, where you have the syntax memorised. When the *logic* is the
+hard part, hand the lines over.
+
+@start runbook.md
+# Incident runbook: duplicate charges
+
+Work through these in order. The steps are numbered so that whoever is on
+call can say which one they stopped at.
+
+Freeze the payment consumer
+Pull the duplicate charge ids from the ledger
+Refund the second charge in each pair
+Reconcile the ledger against the gateway
+Post the incident note in the payments channel
+Unfreeze the consumer
+
+@expected runbook.md
+# Incident runbook: duplicate charges
+
+Work through these in order. The steps are numbered so that whoever is on
+call can say which one they stopped at.
+
+1. Freeze the payment consumer
+2. Pull the duplicate charge ids from the ledger
+3. Refund the second charge in each pair
+4. Reconcile the ledger against the gateway
+5. Post the incident note in the payments channel
+6. Unfreeze the consumer

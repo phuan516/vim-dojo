@@ -1,0 +1,47 @@
+@meta
+id: 24-12
+title: Drill — indent the body
+chapter: 24
+type: drill
+skills: ex-shift
+par: 12
+minutes: 3
+reps: 8
+vscode: select four lines, Tab
+open: customer.entity.ts
+vimrc: set shiftwidth=2 expandtab
+
+@brief
+Eight times: the four fields on lines 2 to 5 are flush left. They
+belong one level in. One command from wherever the cursor is.
+
+@keys
+| `:2,5>` | indent lines 2 to 5 by one level |
+
+@hints
+Range, then the arrow pointing the way the text should go.
+--
+`:2,5>` and Enter, `:wq`.
+
+@solution
+    :2,5><Enter>  :wq<Enter>
+
+Ten keystrokes. `jV3j>` is five and `j4>>` is four, and both need you to
+be on line 2 first. Type the range form until it stops feeling like
+more typing than it is.
+
+@start customer.entity.ts
+export type Customer = {
+id: string;
+email: string;
+name: string;
+tier: CustomerTier;
+};
+
+@expected customer.entity.ts
+export type Customer = {
+  id: string;
+  email: string;
+  name: string;
+  tier: CustomerTier;
+};

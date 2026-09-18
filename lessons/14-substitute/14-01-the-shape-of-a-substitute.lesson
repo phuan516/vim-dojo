@@ -1,0 +1,84 @@
+@meta
+id: 14-01
+title: The shape of a substitute
+chapter: 14
+type: lesson
+skills: sub-basic
+par: 30
+minutes: 4
+vscode: Ctrl-H, type both boxes, click Replace once
+open: RUNBOOK.md
+
+@brief
+The owner named on the title line of this runbook is out of date. The
+worker belongs to `payments-team` now, not `platform-team`. Nothing else
+in the file mentions the old name.
+
+Chapter 11 handed you a substitute command written out in full and told
+you not to worry about it. This chapter is where you take it apart. A
+substitute has four parts: where to look, what to look for, what to put
+there, and how strictly. This lesson uses the two in the middle and
+leaves the other two at their defaults, which means: this line, first
+match only.
+
+The cursor is already on the line.
+
+@keys
+| `:s/old/new/` `Enter` | on this line, replace the first `old` with `new` |
+| `:[range]s/pattern/replacement/[flags]` | the whole shape — range and flags come later |
+| `u` | undo it if the result surprises you |
+
+@hints
+You do not need to move. The command names the text; the cursor only
+decides which line.
+--
+The pattern is `platform` and the replacement is `payments`. Three
+slashes hold them apart.
+--
+`:s/platform/payments/` and Enter. The `-team` after it is untouched
+because the pattern never mentioned it.
+
+@solution
+    :s/platform/payments/<Enter>  :wq<Enter>
+
+Twenty-six keystrokes for a one-word fix is not a good trade, and it is
+not meant to be. `cw` would beat it. What you are buying is the shape,
+because every other lesson in this chapter is this shape with one part
+filled in differently:
+
+    :[range]s/pattern/replacement/[flags]
+
+Leave the range out and it means the current line. Leave the flags out
+and it means the first match on each line. The pattern is a real vim
+pattern, the same dialect chapter 13 taught, so anything you can search
+for you can substitute. The replacement is mostly literal text, with a
+handful of special characters you will meet one at a time.
+
+Read a substitute out loud as a sentence and it stops looking like
+line noise: *on this line, where it says platform, say payments*.
+
+@start RUNBOOK.md
+# Runbook: order-worker (owner: platform-team)
+
+When the refund queue backs up, restart the worker and watch the depth
+fall. It should be empty within two minutes.
+
+1. Check the depth: `./scripts/queue-depth payments.refunds`
+2. Stop the worker: `./stop/order-worker`
+3. Start it again: `./start/order-worker`
+4. Tail the log: `docker logs -f order-worker`
+
+If the depth is still rising after ten minutes, page #payments-oncall.
+
+@expected RUNBOOK.md
+# Runbook: order-worker (owner: payments-team)
+
+When the refund queue backs up, restart the worker and watch the depth
+fall. It should be empty within two minutes.
+
+1. Check the depth: `./scripts/queue-depth payments.refunds`
+2. Stop the worker: `./stop/order-worker`
+3. Start it again: `./start/order-worker`
+4. Tail the log: `docker logs -f order-worker`
+
+If the depth is still rising after ten minutes, page #payments-oncall.

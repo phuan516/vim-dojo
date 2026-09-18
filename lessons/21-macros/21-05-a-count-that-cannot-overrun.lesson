@@ -1,0 +1,96 @@
+@meta
+id: 21-05
+title: A count that cannot overrun
+chapter: 21
+type: lesson
+skills: macro-count, macro-play
+par: 65
+minutes: 7
+vscode: count the rows, select them, and pray the replace stops where you meant
+open: order-rows.ts
+
+@brief
+The test table is an array of tuples and nobody can remember which
+position is which. Each row becomes an object:
+
+    ['ord_101', 'cus_7', 1200],    →    { id: 'ord_101', customerId: 'cus_7', total: 1200 },
+
+Twelve rows, then the closing bracket, a blank line and a line of real
+code that must not be touched.
+
+Do not count the rows. Play the macro with a count far too large, `99`
+or so, and watch it stop by itself at the end of the data. This lesson
+is about why that is safe.
+
+@keys
+| `99@a` | play `a` up to 99 times; it stops early if the macro fails |
+| `f[` `f]` | to the next bracket |
+| `s` | replace the character and start inserting |
+
+@hints
+Write the macro so that its very first move is something that can only
+succeed on a data row: find the opening square bracket.
+--
+`0f[` then `s{ id: ` and `Esc`; `f,` and `a customerId:` and `Esc`;
+`f,` and `a total:` and `Esc`; `f]` and `s }` and `Esc`; `j`.
+--
+`j` onto the first row, record it, then `99@a`. When the macro reaches
+the `];` line, `f[` finds nothing and the whole count is cancelled.
+
+@solution
+    j  qa 0f[ s{ id:  <Esc> f, a customerId: <Esc> f, a total: <Esc> f] s } <Esc> j q   99@a   :wq<Enter>
+
+Fifty-seven keystrokes, and no counting.
+
+The rule is simple and it is the thing that makes macros trustworthy:
+**when any command inside a macro fails, the macro stops, and so does
+the count.** A failed `f`, a failed search, `j` on the last line, `x`
+on an empty line: any of them ends the run. Vim does not skip the
+failed step and carry on. It throws the rest of the count away.
+
+That is why `99@a` is not reckless here. The twelve rows are followed
+by `];`, which has no `[` in it, so the thirteenth replay dies on its
+first keystroke, before it has changed anything. The blank line and the
+`rowCount` line below it are never reached.
+
+The design consequence: put the fragile step first. A macro that opens
+with a motion that can only succeed on the lines you mean is
+self-limiting, and you can throw any count at it. A macro that opens
+with `A` or `I`, which succeed on every line, will happily mangle
+whatever follows the data. Choose the guard, then stop counting.
+
+@start order-rows.ts
+export const rows = [
+  ['ord_101', 'cus_7', 1200],
+  ['ord_102', 'cus_7', 450],
+  ['ord_103', 'cus_12', 9900],
+  ['ord_104', 'cus_3', 1575],
+  ['ord_105', 'cus_21', 80],
+  ['ord_106', 'cus_12', 2200],
+  ['ord_107', 'cus_8', 640],
+  ['ord_108', 'cus_30', 12000],
+  ['ord_109', 'cus_3', 315],
+  ['ord_110', 'cus_17', 1999],
+  ['ord_111', 'cus_21', 4250],
+  ['ord_112', 'cus_9', 75],
+];
+
+export const rowCount = rows.length;
+
+@expected order-rows.ts
+export const rows = [
+  { id: 'ord_101', customerId: 'cus_7', total: 1200 },
+  { id: 'ord_102', customerId: 'cus_7', total: 450 },
+  { id: 'ord_103', customerId: 'cus_12', total: 9900 },
+  { id: 'ord_104', customerId: 'cus_3', total: 1575 },
+  { id: 'ord_105', customerId: 'cus_21', total: 80 },
+  { id: 'ord_106', customerId: 'cus_12', total: 2200 },
+  { id: 'ord_107', customerId: 'cus_8', total: 640 },
+  { id: 'ord_108', customerId: 'cus_30', total: 12000 },
+  { id: 'ord_109', customerId: 'cus_3', total: 315 },
+  { id: 'ord_110', customerId: 'cus_17', total: 1999 },
+  { id: 'ord_111', customerId: 'cus_21', total: 4250 },
+  { id: 'ord_112', customerId: 'cus_9', total: 75 },
+];
+
+export const rowCount = rows.length;

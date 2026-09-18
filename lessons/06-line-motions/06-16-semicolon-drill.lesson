@@ -1,0 +1,58 @@
+@meta
+id: 06-16
+title: Drill — semicolon down the fixtures
+chapter: 06
+type: drill
+skills: repeat-semicolon, find-f, line-start
+par: 72
+minutes: 5
+reps: 8
+vscode: eight clicks and eight spacebars, eight times over
+open: order.fixtures.ts
+
+@brief
+Four fixture rows, two unspaced colons in each. Every colon needs a space
+after it. Eight passes over the file.
+
+The rep is `^`, `f:` `a` space `Esc`, then `;` `a` space `Esc`, then `j`.
+First target described, second target repeated.
+
+@keys
+| `^` | first non-blank |
+| `f:` | forward to the next colon |
+| `;` | repeat that find |
+| `a` | insert after the cursor |
+
+@hints
+`a` and not `i`, or the `;` will land back on the colon you just fixed.
+--
+Four rows a pass. Count them in your head rather than reading the file, and
+check the whole file once at the end.
+
+@solution
+    j then, four times: ^ f : a  <Esc> ; a  <Esc> j
+
+Ten keys a line for two precise edits, and only one of them named a target.
+That ratio is what `;` is for: in real code the same character is usually
+the anchor for every edit on the line, and describing it once is enough.
+
+Watch what your hands do by the last pass. `^` should be firing as part of
+the `j`, and `;` should feel like the same gesture as `f:` rather than a
+different decision. When a repeat key stops being a decision you start
+making bigger jumps on purpose, knowing the correction is one keystroke.
+
+@start order.fixtures.ts
+export const orderFixtures = [
+  { id:'ord_1042', total:4999 },
+  { id:'ord_1043', total:1250 },
+  { id:'ord_1044', total:899 },
+  { id:'ord_1045', total:15750 },
+];
+
+@expected order.fixtures.ts
+export const orderFixtures = [
+  { id: 'ord_1042', total: 4999 },
+  { id: 'ord_1043', total: 1250 },
+  { id: 'ord_1044', total: 899 },
+  { id: 'ord_1045', total: 15750 },
+];

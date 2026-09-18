@@ -1,0 +1,127 @@
+@meta
+id: 22-10
+title: Back to the same lines
+chapter: 22
+type: lesson
+skills: gv-reselect, visual-line
+par: 64
+minutes: 5
+vscode: the selection survives Replace All, so you never needed this
+open: order.provider.ts
+
+@brief
+An Ex command run from a selection drops the selection when it
+finishes. `:s` on three lines leaves you in normal mode on the last of
+them, and if those same three lines now need a second thing done to
+them you are back to selecting.
+
+`gv` reselects the last visual region, in the same mode it was made.
+Same lines, same columns, ready for the next operator.
+
+Three lines were moved into the new `if` block in `cancel` from a
+helper. In the helper the variable was `order`; here it is
+`cancelled`. And they came in one level too shallow. Fix both:
+`order.` becomes `cancelled.` on those three lines, and the three lines
+move in one level.
+
+@keys
+| `gv` | reselect the last visual selection |
+| `:'<,'>s/old/new/g` | substitute on the selection |
+| `>` | shift the selection right one level |
+
+@hints
+Select the three lines with `V2j` from the first `await`, do the
+substitute from the `:'<,'>` range. Now you are in normal mode with
+nothing selected.
+--
+`gv` brings the three lines back, highlighted. `>` shifts them.
+--
+`/await this.payment` `Enter`, `V2j`, `:s/order\./cancelled\./g`
+`Enter`, then `gv` and `>`.
+
+@solution
+    /await this.payment<Enter> V 2 j :s/order\./cancelled\./g<Enter> g v > :wq<Enter>
+
+Fifty-five keystrokes, twenty-five of them the substitute. The two keys that
+matter are `gv`. Without them, `>` after the `:s` would have shifted
+one line — the one the cursor happened to end on — and `.` would have
+repeated the substitute, not the shift.
+
+`gv` is also how you check what an operator just did: `d` something,
+`u` to put it back, `gv` to see the region you had, adjust, and go
+again. And it works after `Esc`: drop a selection to look at something
+else, `gv` picks it up exactly where it was.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async cancel(id: string) {
+    const cancelled = await this.orderRepository.findOne({ where: { id } });
+
+    if (!cancelled) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    const days = (Date.now() - cancelled.placedAt.getTime()) / 86_400_000;
+
+    if (days <= 30) {
+    await this.paymentService.refund(order.id);
+    await this.emailService.send(order.customerId, 'refund-issued');
+    await this.orderRepository.update({ where: { id: order.id }, values: { refunded: true } });
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async cancel(id: string) {
+    const cancelled = await this.orderRepository.findOne({ where: { id } });
+
+    if (!cancelled) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    const days = (Date.now() - cancelled.placedAt.getTime()) / 86_400_000;
+
+    if (days <= 30) {
+      await this.paymentService.refund(cancelled.id);
+      await this.emailService.send(cancelled.customerId, 'refund-issued');
+      await this.orderRepository.update({ where: { id: cancelled.id }, values: { refunded: true } });
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}

@@ -1,0 +1,127 @@
+@meta
+id: 28-11
+title: Two mappings worth the space
+chapter: 28
+type: lesson
+skills: vimrc-mappings
+par: 215
+minutes: 7
+vscode: keybindings.json, which nobody on your team has ever opened
+open: .vimrc payment.service.ts
+
+@brief
+A mapping earns its line in your config by removing something you do
+dozens of times a day. Two that almost everyone keeps:
+
+    " leave insert mode without reaching for Esc
+    inoremap jk <Esc>
+    " clear the search highlight
+    nnoremap <leader>h :nohlsearch<CR>
+
+Add both under the existing mappings, source the file, and use the first
+one. In the service buffer, the `refund` call needs a timeout option:
+
+    { orderId, timeoutMs: 5000 }
+
+Add `timeoutMs: 5000` after `orderId`, and leave insert mode with `jk`
+rather than Esc. If the mapping is not sourced, the letters land in the
+file and the check fails.
+
+Use `inoremap`, not `imap`. The `nore` versions map to the keys
+themselves rather than to whatever those keys might be mapped to later —
+without it, one day you map something involving `<Esc>` and the two
+mappings chase each other in a loop. There is no good reason to use the
+recursive form until you know exactly why you want it.
+
+@keys
+| `inoremap jk <Esc>` | jk leaves insert mode |
+| `nnoremap` | normal mode, non-recursive |
+| `:source %` | load the file you are editing |
+| `:nmap <leader>h` | show what a key is currently mapped to |
+
+@hints
+Mapping lines first, then `:w`, then `:source %`, then `:bn`.
+--
+Comments go on their own line above a mapping, never beside it. Type the
+mapping, Esc, then `O` for the comment.
+--
+`/orderId }` finds the `orderId` inside the object rather than the one
+in the signature. `e` goes to the end of the word and `a` appends after
+it. End the insert with `jk`, then `:wqa`.
+
+@solution
+    G o inoremap jk <Esc> <Esc> O " leave insert mode without reaching for Esc <Esc>
+    G o nnoremap <leader>h :nohlsearch<CR> <Esc> O " clear the search highlight <Esc>
+    :w<Enter> :source %<Enter> :bn<Enter>
+    /orderId }<Enter> e a , timeoutMs: 5000 jk :wqa<Enter>
+
+Note the two `<Esc>` in a row on the first line: one is the five
+characters you type into the mapping, the other is the key that ends the
+insert. The mapping is not live while you are writing it.
+
+`jk` works because the two letters never occur in that order in text you
+type — in English, or in camelCase. `jj` is the other common choice and
+has the same property. Both cost you a fraction of a second of delay
+after typing a `j`, while vim waits to see whether a `k` is coming; that
+is `timeoutlen`, and if it bothers you, that is the next line of config
+you add.
+
+`<leader>h` is there for a different reason. `hlsearch` is worth having
+and leaves the whole screen yellow after every search, so you need a way
+to clear it that does not involve searching for nonsense. `:nohlsearch`
+clears the highlight without forgetting the pattern, so `n` still works.
+
+Two habits to keep from here: `nore` unless you can say why not, and one
+comment line per mapping. In a year you will not remember what
+`<leader>t` did, and the comment is the only thing standing between you
+and deleting a line you use every day.
+
+@start .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Mappings ---
+" space: big, central, and means nothing on its own
+let mapleader = " "
+nnoremap Y y$
+nnoremap <leader>w :w<CR>
+
+@expected .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Mappings ---
+" space: big, central, and means nothing on its own
+let mapleader = " "
+nnoremap Y y$
+nnoremap <leader>w :w<CR>
+" leave insert mode without reaching for Esc
+inoremap jk <Esc>
+" clear the search highlight
+nnoremap <leader>h :nohlsearch<CR>
+
+@start payment.service.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string) {
+    return this.gateway.post('/refunds', { orderId });
+  }
+}
+
+@expected payment.service.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string) {
+    return this.gateway.post('/refunds', { orderId, timeoutMs: 5000 });
+  }
+}

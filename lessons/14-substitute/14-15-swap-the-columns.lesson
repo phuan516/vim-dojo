@@ -1,0 +1,106 @@
+@meta
+id: 14-15
+title: Swap the columns with backreferences
+chapter: 14
+type: lesson
+skills: sub-backref
+par: 58
+minutes: 7
+vscode: a regex replace with $1 and $2, if you remember the syntax
+open: seed.sql
+
+@brief
+The customers insert declares its columns as `(email, id)`, and every
+one of the ten rows was written the other way round, id first. The
+seed loads without an error and then every customer's email address
+is `cus_1001`. Swap the two values on each row.
+
+Chapter 13 gave you groups: `\(…\)` in magic mode, `(…)` in very
+magic. What it did not show you is that the replacement side can refer
+back to them. `\1` is whatever the first group matched, `\2` the
+second. Put them in the replacement in the other order and the swap is
+one command.
+
+There is a second insert below, for countries, whose rows have the
+same shape and are correct. Make sure your pattern or your range keeps
+it out.
+
+@keys
+| `\(…\)` or `\v(…)` | a group in the pattern |
+| `\1` `\2` | in the replacement: what group 1, group 2 matched |
+| `[^']*` | anything but a quote — the contents of a quoted value |
+| `:%s/\v'(a)', '(b)'/'\2', '\1'/` | the shape of a swap |
+
+@hints
+Capture each quoted value in its own group. The replacement writes
+them back in the other order, quotes and all.
+--
+`\v\('([^']*)', '([^']*)'\)` captures both values of a row. But the
+countries rows match that too. Either narrow the range to lines 4 to
+13 or make the first group only match a customer id: `(cus_\d+)`.
+--
+`:%s/\v\('(cus_\d+)', '([^']*)'\)/('\2', '\1')/` and Enter. In very
+magic the literal parentheses are `\(` and `\)`, and the bare ones are
+the groups.
+
+@solution
+    :%s/\v\('(cus_\d+)', '([^']*)'\)/('\2', '\1')/<Enter>  :wq<Enter>
+
+Fifty-one keystrokes to restructure ten lines, and the countries block was
+never in danger because the pattern insists on `cus_`.
+
+Backreferences are what make a substitute a restructuring tool rather
+than a find-and-replace. The pattern pulls the line apart into named
+pieces, the replacement puts the pieces back in a new arrangement, and
+anything you write between the references is new text. Swapping two
+fields is the classic case; the same shape turns `key=value` into
+`key: 'value'`, or `expect(a).toEqual(b)` into `assert.equal(a, b)`.
+
+Two things to notice about the pattern. `[^']*` is the honest way to
+say "the contents of a quoted string" — `.*` would be greedy and run
+to the last quote on the line. And the choice between narrowing the
+range and narrowing the pattern is a real choice: `:4,13s` would have
+been shorter to type here, and `cus_\d+` is safer if the file grows a
+row. When both are available, prefer the one that says what you mean.
+
+@start seed.sql
+-- Customer and country seed data for the integration tests.
+
+INSERT INTO customers (email, id) VALUES
+  ('cus_1001', 'lena@example.com'),
+  ('cus_1002', 'marc@example.com'),
+  ('cus_1003', 'priya@example.com'),
+  ('cus_1004', 'tomas@example.com'),
+  ('cus_1005', 'aisha@example.com'),
+  ('cus_1006', 'jonas@example.com'),
+  ('cus_1007', 'mei@example.com'),
+  ('cus_1008', 'diego@example.com'),
+  ('cus_1009', 'hanna@example.com'),
+  ('cus_1010', 'sofia@example.com');
+
+INSERT INTO countries (code, name) VALUES
+  ('GB', 'United Kingdom'),
+  ('DE', 'Germany'),
+  ('FR', 'France'),
+  ('NL', 'Netherlands');
+
+@expected seed.sql
+-- Customer and country seed data for the integration tests.
+
+INSERT INTO customers (email, id) VALUES
+  ('lena@example.com', 'cus_1001'),
+  ('marc@example.com', 'cus_1002'),
+  ('priya@example.com', 'cus_1003'),
+  ('tomas@example.com', 'cus_1004'),
+  ('aisha@example.com', 'cus_1005'),
+  ('jonas@example.com', 'cus_1006'),
+  ('mei@example.com', 'cus_1007'),
+  ('diego@example.com', 'cus_1008'),
+  ('hanna@example.com', 'cus_1009'),
+  ('sofia@example.com', 'cus_1010');
+
+INSERT INTO countries (code, name) VALUES
+  ('GB', 'United Kingdom'),
+  ('DE', 'Germany'),
+  ('FR', 'France'),
+  ('NL', 'Netherlands');

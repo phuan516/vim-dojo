@@ -1,0 +1,99 @@
+@meta
+id: 13-15
+title: Either, or
+chapter: 13
+type: lesson
+skills: regex-groups, regex-verymagic
+par: 68
+minutes: 6
+vscode: two searches, and remember which lines you already tagged
+open: worker.log
+
+@brief
+Two failure reasons in this worker log are the infrastructure team's
+problem rather than ours: `SFTP_UNREACHABLE` and `SCHEMA_INVALID`.
+Every line carrying either of them gets ` escalated=true` on the end.
+There are four such lines. The other errors — declines, missing orders,
+a bad signature — are ours and stay untagged.
+
+One pass, one pattern. A pattern can offer alternatives.
+
+@keys
+| `\|` | alternation in the default dialect: this or that |
+| `\v` then `\|` | under very magic the bar is bare: `\vthis\|that` |
+| `A` then `n.` | append, next match, repeat |
+
+@hints
+Do not do two searches. A single pattern can name both reasons and
+match whichever one it finds first.
+--
+The bar means "or". In very magic it is just `|`; in the default
+dialect it is `\|`. Either side can be as long as you like.
+--
+`/\vSFTP_UNREACHABLE|SCHEMA_INVALID` `Enter`, then `A escalated=true`,
+`Esc`, then `n.` three times.
+
+@solution
+/\vSFTP_UNREACHABLE|SCHEMA_INVALID<Enter>  A escalated=true<Esc>  n.  n.  n.  :wq<Enter>
+
+Sixty-two keystrokes, and most of them are the two reason codes, which you
+would have had to type anyway.
+
+Alternation is the lowest-precedence thing in a pattern. The bar splits
+the *entire* pattern into branches, so `payout\.export|settle` is not
+"payout dot, then export or settle" — it is `payout\.export` or, quite
+separately, `settle`, anywhere it appears. If you want the alternation
+to cover only part of the pattern you need to fence it in, and that is
+what the next lesson's brackets are for.
+
+Branches are tried left to right at each position, and the first one
+that matches wins, so `/\vord|order` will stop at the `ord` inside
+`order`. Put the longer alternative first, or add `>` on the end.
+
+The bar is one of the characters where the two dialects disagree most
+visibly. `\|` is how vim's own help writes it and how you will see it
+in every vimrc; under `\v` it is the bare `|` that the rest of the
+world uses. Same operator, two spellings, and knowing that is most of
+what "magic levels" comes to.
+
+@start worker.log
+2026-05-14T22:04:40Z ERROR order.submit order=ord_9101 reason=PAYMENT_DECLINED
+2026-05-14T22:04:41Z INFO  email.sent template=payment_failed to=lena@example.com
+2026-05-14T22:06:02Z ERROR order.submit order=ord_9104 reason=PAYMENT_DECLINED
+2026-05-14T22:08:14Z ERROR payout.export batch=pyt_402 reason=SFTP_UNREACHABLE
+2026-05-14T22:08:14Z INFO  alert.raised channel=payments-oncall severity=high
+2026-05-14T22:09:55Z ERROR order.submit order=ord_9112 reason=PAYMENT_DECLINED
+2026-05-14T22:12:07Z ERROR webhook.verify provider=stripe reason=SIGNATURE_MISMATCH
+2026-05-14T22:12:08Z INFO  webhook.rejected provider=stripe status=400
+2026-05-14T22:14:44Z ERROR order.cancel order=ord_9118 reason=ORDER_NOT_FOUND
+2026-05-14T22:17:19Z ERROR refund.create order=ord_9120 reason=REFUND_EXCEEDS_TOTAL
+2026-05-14T22:19:36Z ERROR payout.export batch=pyt_403 reason=SFTP_UNREACHABLE
+2026-05-14T22:19:36Z INFO  alert.suppressed channel=payments-oncall window=15m
+2026-05-14T22:23:10Z ERROR order.submit order=ord_9127 reason=PAYMENT_DECLINED
+2026-05-14T22:26:31Z ERROR queue.consume queue=payments.refunds.v2 reason=SCHEMA_INVALID
+2026-05-14T22:26:32Z INFO  message.deadlettered queue=payments.refunds.v2.dead
+2026-05-14T22:28:04Z ERROR order.submit order=ord_9131 reason=PAYMENT_DECLINED
+2026-05-14T22:29:40Z INFO  worker.heartbeat pool=orders inflight=1
+2026-05-14T22:31:12Z ERROR payout.export batch=pyt_404 reason=SFTP_UNREACHABLE
+2026-05-14T22:32:58Z INFO  reconcile.batch size=64 unmatched=0
+
+@expected worker.log
+2026-05-14T22:04:40Z ERROR order.submit order=ord_9101 reason=PAYMENT_DECLINED
+2026-05-14T22:04:41Z INFO  email.sent template=payment_failed to=lena@example.com
+2026-05-14T22:06:02Z ERROR order.submit order=ord_9104 reason=PAYMENT_DECLINED
+2026-05-14T22:08:14Z ERROR payout.export batch=pyt_402 reason=SFTP_UNREACHABLE escalated=true
+2026-05-14T22:08:14Z INFO  alert.raised channel=payments-oncall severity=high
+2026-05-14T22:09:55Z ERROR order.submit order=ord_9112 reason=PAYMENT_DECLINED
+2026-05-14T22:12:07Z ERROR webhook.verify provider=stripe reason=SIGNATURE_MISMATCH
+2026-05-14T22:12:08Z INFO  webhook.rejected provider=stripe status=400
+2026-05-14T22:14:44Z ERROR order.cancel order=ord_9118 reason=ORDER_NOT_FOUND
+2026-05-14T22:17:19Z ERROR refund.create order=ord_9120 reason=REFUND_EXCEEDS_TOTAL
+2026-05-14T22:19:36Z ERROR payout.export batch=pyt_403 reason=SFTP_UNREACHABLE escalated=true
+2026-05-14T22:19:36Z INFO  alert.suppressed channel=payments-oncall window=15m
+2026-05-14T22:23:10Z ERROR order.submit order=ord_9127 reason=PAYMENT_DECLINED
+2026-05-14T22:26:31Z ERROR queue.consume queue=payments.refunds.v2 reason=SCHEMA_INVALID escalated=true
+2026-05-14T22:26:32Z INFO  message.deadlettered queue=payments.refunds.v2.dead
+2026-05-14T22:28:04Z ERROR order.submit order=ord_9131 reason=PAYMENT_DECLINED
+2026-05-14T22:29:40Z INFO  worker.heartbeat pool=orders inflight=1
+2026-05-14T22:31:12Z ERROR payout.export batch=pyt_404 reason=SFTP_UNREACHABLE escalated=true
+2026-05-14T22:32:58Z INFO  reconcile.batch size=64 unmatched=0

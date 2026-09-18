@@ -1,0 +1,83 @@
+@meta
+id: 01-12
+title: Nothing here is unrecoverable
+chapter: 01
+type: lesson
+skills: cmdline, esc, insert-i, insert-a, survival-motion
+par: 32
+minutes: 5
+vscode: closing the tab and answering "Don't Save"
+open: CHANGELOG.md
+
+@brief
+The thing that keeps people tentative in vim for far too long is a
+suspicion that they might do something they cannot take back. You cannot.
+Everything in this chapter is recoverable with a command line and one or
+two keys.
+
+Two of them, today:
+
+  `:q!` quits and throws away every change since the last write. The file
+  on disk is untouched. This is the answer when you have made a mess and
+  the mess is not worth sorting out.
+
+  `:e!` reloads the file from disk into the window you are already in.
+  Same effect on the changes, except you stay where you are and carry on.
+
+Prove it to yourself. This lesson asks you to break the file on purpose
+first.
+
+  1. On the top line, type some nonsense into the middle of the heading.
+  2. Run `:e!`. The heading comes back.
+  3. Now do the real job: the last bullet should end `capped at three`.
+
+Then save and quit.
+
+@keys
+| `:e!` | reload the file from disk, discarding changes |
+| `:q!` | quit, discarding changes |
+| `ZQ` | the same as `:q!`, without the colon |
+| `:w` | write — the point after which `:e!` cannot help you |
+
+@hints
+Any nonsense will do for step one. `i` then a few letters then `Esc`. You
+want to see it land in the file before you undo the damage.
+--
+`:e!` and Enter. Vim reloads the buffer from disk. The `[+]` flag goes
+away with it, because the window and the file now match again.
+--
+The bullet is the last line. `$a` then ` three`, `Esc`, `:wq`.
+
+@solution
+    i xxx <Esc> :e!<Enter>
+    j j j j $ a <space> three <Esc> :wq<Enter>
+
+The exclamation mark is worth reading as a word. In vim command lines it
+means "yes, I know, do it anyway" — `:q!` is quit-anyway, `:e!`
+reload-anyway, and that reading holds for commands you have not met yet.
+Vim refuses first and offers you the `!` second, which is a reasonable
+way for an editor to behave.
+
+Both of these commands stop at the last `:w`. They take you back to what
+is on disk, not further. Chapter 2 hands you `u`, which walks back through
+your changes one at a time and does not care when you last saved, and
+that is the tool you will actually use fifty times a day. This pair is for
+the bigger decision: this session was a mistake, start again.
+
+Worth saying plainly, because it is the whole point of the chapter: there
+is no state you can type yourself into here that `Esc` `Esc` `:e!` does
+not get you out of.
+
+@start CHANGELOG.md
+# Changelog
+
+## 2.4.0
+- Refund window enforced at 30 days
+- Payment retries capped at
+
+@expected CHANGELOG.md
+# Changelog
+
+## 2.4.0
+- Refund window enforced at 30 days
+- Payment retries capped at three

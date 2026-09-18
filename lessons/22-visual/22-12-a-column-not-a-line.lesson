@@ -1,0 +1,121 @@
+@meta
+id: 22-12
+title: A column, not a line
+chapter: 22
+type: lesson
+skills: visual-block
+par: 19
+minutes: 4
+vscode: Alt+click on each line, Shift+Right twice, Delete
+open: order.provider.ts
+
+@brief
+The third visual mode is the one VS Code has no real equivalent for.
+`Ctrl-V` starts a block: a rectangle, so many columns wide and so many
+lines tall, with the cursor at one corner. `j` makes it taller, `l`
+makes it wider, and an operator acts on the rectangle — every line, but
+only between those two columns.
+
+The six lines in `cancel` were commented out for a deploy that is now
+done. Uncomment them. The `// ` is three characters wide and sits in
+the same column on every line, which is exactly the shape a block is
+for.
+
+@keys
+| `Ctrl-V` | start a block selection |
+| `j` `l` | grow the block down and right |
+| `d` | delete the block on every line |
+
+@hints
+Get the cursor onto the first `/` of the first commented line. That is
+the top-left corner.
+--
+`Ctrl-V`, then five `j` to reach the sixth line and two `l` to make it
+three wide. The highlight is a rectangle, not a run of lines.
+--
+`/\/\/` `Enter`, `Ctrl-V`, `5j`, `2l`, `d`.
+
+@solution
+    /\/\/<Enter> Ctrl-V 5 j 2 l d :wq<Enter>
+
+Sixteen keystrokes. Chapter 15 would do this with `:g/\/\//normal 3x`
+or a substitute, and both are fine. The block is worth learning
+anyway, because it is the only one of the three that carries into the
+next lessons: insert on every line, append to every line, change a
+column. `:g` cannot see columns. A block is nothing but columns.
+
+Note that `2l` made the block three wide, not two: the cursor column
+counts. If you overshoot, `h` shrinks it back; if you started at the
+wrong corner, `O` swaps you to the other side.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async cancel(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    // if (order.status === 'SHIPPED') {
+    //   throw exception('ORDER_ALREADY_SHIPPED');
+    // }
+    // if (order.status === 'CANCELLED') {
+    //   return order;
+    // }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async cancel(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+    if (order.status === 'CANCELLED') {
+      return order;
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}

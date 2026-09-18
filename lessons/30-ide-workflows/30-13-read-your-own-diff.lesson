@@ -1,0 +1,137 @@
+@meta
+id: 30-13
+title: Read your own diff before anyone else does
+chapter: 30
+type: lesson
+skills: git-in-vim
+par: 64
+minutes: 7
+vscode: the source control view, clicking the file to see the gutter diff
+open: order.provider.ts
+
+@brief
+You have been in this file for an hour and you are about to stage it.
+One of the changes is the ticket. Two are debris from working it out.
+
+`order.provider.ts.orig` is the committed version of the file, provided
+with this lesson — in a repo you would produce it with
+`git show HEAD:order.provider.ts > order.provider.ts.orig`, which is all
+that vim's own `:DiffOrig` example command does.
+
+Put the two side by side, walk the changes, and take back the two that
+should not be in the commit:
+
+  · the `console.log(order)` line
+  · the endpoint, which you pointed at `/refunds-test` while checking
+    something and never put back
+
+The widened status guard — `'SHIPPED'` and `'DELIVERED'` — is the
+ticket. It stays. The `.orig` file is a copy and must not change.
+
+@keys
+| `:vert diffsplit file` | open `file` beside this one, both in diff mode |
+| `]c` `[c` | next change, previous change |
+| `do` | diff obtain — take the other side's version of this hunk |
+| `dp` | diff put — push this side's version across |
+| `Ctrl-W l` `Ctrl-W h` | to the window on the right, on the left |
+| `:diffoff!` | leave diff mode |
+| `:!git diff %` | the plain diff of this file, without leaving vim |
+| `:r !git log --oneline -5` | read command output straight into the buffer |
+| `:!git add %` | stage the file you are editing; `%` is its name |
+@hints
+`:vert diffsplit order.provider.ts.orig` splits vertically. The new
+window opens on the left with the cursor in it, so your first move is
+back to the right-hand window.
+--
+`]c` jumps to the next differing hunk. The first one is the guard —
+leave it and press `]c` again.
+--
+`do` on a hunk that only exists on your side deletes it; on a hunk that
+differs, it replaces yours with theirs. Two `do` presses finish this.
+
+@solution
+    :vert diffsplit order.provider.ts.orig<Enter>  Ctrl-W l
+    ]c  ]c do  ]c do  :wqa<Enter>
+
+`do` and `dp` are the two keys that make this more than a viewer. Both
+act on the hunk under the cursor: `do` pulls the other buffer's version
+into yours, `dp` pushes yours into the other. One of them is always the
+one you want, and which one depends only on which window you are
+standing in.
+
+This is the same machinery vim uses as a merge tool, which is the next
+lesson but one. It is also the fastest way to answer "what did I
+actually change here", because unlike a scrolling diff you can edit
+while you read.
+
+The shell is the other half of this. `:!cmd` runs anything without
+leaving vim, and `%` expands to the current file name, so `:!git add %`
+stages what you are looking at and `:!git diff %` prints the plain diff
+to the screen. `:r !git log --oneline -5` goes further and reads the
+output *into* the buffer, which is how a commit message ends up
+containing the list of commits it covers. None of those run here — the
+dojo has no repository of its own to run them against — but they are
+three of the four git commands most people ever need from inside vim.
+
+Two habits from this lesson, both of which survive whatever tooling you
+end up with. Read your diff before you stage, every time — debug lines
+and test endpoints are the two things that most often reach production
+in a commit whose message says something else entirely. And when you
+find one, fix it where you are rather than making a note to fix it
+later.
+
+@start order.provider.ts
+export class OrderProvider {
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED' || order.status === 'DELIVERED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    console.log(order);
+
+    await this.http.post('/refunds-test', { orderId: order.id });
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+export class OrderProvider {
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED' || order.status === 'DELIVERED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.http.post('/refunds', { orderId: order.id });
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start order.provider.ts.orig
+export class OrderProvider {
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.http.post('/refunds', { orderId: order.id });
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}

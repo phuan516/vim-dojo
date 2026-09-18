@@ -1,0 +1,97 @@
+@meta
+id: 15-03
+title: Drill — delete every matching line
+chapter: 15
+type: drill
+skills: global-delete
+par: 19
+minutes: 4
+reps: 8
+vscode: Ctrl+F, Enter, select the line, Delete, F3, again
+open: payment.service.ts
+
+@brief
+Eight times: every `console.log` line in the service goes. Six of them,
+scattered through the file, one command.
+
+Say the pattern, say `d`, save. By rep eight the colon should be pressed
+before you have consciously decided to use `:g`.
+
+@keys
+| `:g/pattern/d` | delete every line matching `pattern` |
+
+@hints
+Do not search first. Go straight to the colon.
+--
+`:g/console/d` is enough; the word appears nowhere else in the file.
+
+@solution
+    :g/console/d<Enter>  :wq<Enter>
+
+Sixteen keystrokes for six deletions. The pattern only needs to be as
+precise as the file demands; here `console` is unambiguous, so the
+`\.log` would be decoration. Check with your eyes before you shorten a
+pattern, but do shorten it.
+
+The habit this drill is building: when the job is "every line that
+looks like X", the first key is `:`, not `/`.
+
+@start payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async capture(orderId: string, amount: number) {
+    console.log('capture', orderId, amount);
+    const response = await this.http.post(`/captures`, { orderId, amount });
+    console.log('capture response', response.status);
+
+    if (response.status !== 200) {
+      console.log('capture failed', response.data);
+      throw exception('CAPTURE_FAILED');
+    }
+
+    return response.data;
+  }
+
+  public async refund(orderId: string) {
+    console.log('refund', orderId);
+    const response = await this.http.post(`/refunds`, { orderId });
+    console.log('refund response', response.status);
+
+    if (response.status !== 200) {
+      console.log('refund failed', response.data);
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@expected payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async capture(orderId: string, amount: number) {
+    const response = await this.http.post(`/captures`, { orderId, amount });
+
+    if (response.status !== 200) {
+      throw exception('CAPTURE_FAILED');
+    }
+
+    return response.data;
+  }
+
+  public async refund(orderId: string) {
+    const response = await this.http.post(`/refunds`, { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}

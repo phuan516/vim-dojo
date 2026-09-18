@@ -1,0 +1,84 @@
+@meta
+id: 10-03
+title: The whole chunk, punctuation and all
+chapter: 10
+type: lesson
+skills: obj-word, inner-vs-around
+par: 20
+minutes: 4
+vscode: double-click gets you half of it, so you drag instead
+open: package.json
+
+@brief
+`iw` stops at punctuation. That is deliberate and usually helpful, but it
+makes a mess of anything built out of punctuation — a command line flag,
+a kebab-case class name, a dotted path.
+
+Capital `W` is the same pair of objects measured differently: `iW` and
+`aW` run from whitespace to whitespace. Whatever is stuck to the thing
+comes with it.
+
+`--detectOpenHandles` went into the test scripts while somebody was
+chasing a hanging socket in a pull request last month. It makes CI about
+forty seconds slower and the leak is fixed. Take it out of both scripts.
+
+Leave the other flags, and leave the JSON valid — no stray double spaces,
+no orphaned dashes.
+
+@keys
+| `iW` `aW` | inner and around WORD — whitespace to whitespace |
+| `daW` | delete the whole chunk and its trailing space |
+| `iw` `aw` | the small kind, which stops at punctuation |
+
+@hints
+The flag is one thing to you, but `aw` sees `--` and `detectOpenHandles`
+as two different words.
+--
+Capital letters make the big version: `aW` is everything from one space
+to the next.
+--
+Land anywhere in the flag — `fO` will do it — and `daW` removes the
+leading dashes, the name and the space after it in one go.
+
+@solution
+    5j fO daW
+    j fO daW
+    :wq<Enter>
+
+Seventeen keystrokes to make two edits that VS Code cannot do with a
+double-click at all: double-clicking `detectOpenHandles` leaves the `--`
+behind, so you end up dragging, and dragging is where the off-by-one
+character comes from.
+
+The distinction is worth saying out loud once: `w` is a programmer's word
+and `W` is a typist's word. `order.customerId` is three `w` words and one
+`W` word. `'order-shipped'` is five `w` words and one `W` word. When the
+punctuation is part of the meaning, use the capital.
+
+Watch out for the greedy edge of `aW`: it takes everything up to the next
+space, including a trailing comma, quote or semicolon. That is why the
+flag you removed sat in the middle of each script and not at the end.
+
+@start package.json
+{
+  "name": "@thrive/orders",
+  "version": "2.4.0",
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "test": "jest --runInBand --detectOpenHandles --coverage",
+    "test:watch": "jest --runInBand --detectOpenHandles --watch",
+    "lint": "eslint src --ext .ts --max-warnings 0"
+  }
+}
+
+@expected package.json
+{
+  "name": "@thrive/orders",
+  "version": "2.4.0",
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "test": "jest --runInBand --coverage",
+    "test:watch": "jest --runInBand --watch",
+    "lint": "eslint src --ext .ts --max-warnings 0"
+  }
+}

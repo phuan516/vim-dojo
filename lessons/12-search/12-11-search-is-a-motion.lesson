@@ -1,0 +1,150 @@
+@meta
+id: 12-11
+title: Search is a motion
+chapter: 12
+type: lesson
+skills: search-motion
+par: 34
+minutes: 6
+vscode: click at the start, shift-click at the end, Delete
+open: order.resolver.ts
+
+@brief
+Somebody debugged the `orders` query in production and left the evidence
+behind. Five lines of timing and logging sit between the top of the
+method and the `return`. All five go.
+
+Everything up to now in this chapter has treated search as a way to get
+somewhere. This is the lesson where that changes. Anywhere vim accepts a
+motion — and `d`, `c`, `y`, `>` all do — it accepts a search. You are not
+limited to `w`, `}` and `G`; you can say "to the next place the word
+`return` appears" and mean it as an edit.
+
+That is the whole difference between a find box and a search command.
+Ctrl+F finds. This edits.
+
+@keys
+| `d/text` `Enter` | delete from the cursor up to the next match of `text` |
+| `c/text` `Enter` | change that same range |
+| `y/text` `Enter` | yank it |
+| `/text` `Enter` | plain search, as before, to get to the start |
+
+@hints
+Do not count the lines and do not delete them one at a time. Get the
+cursor to the first junk line and then describe where the deletion
+should stop.
+--
+An operator takes a motion, and a search is a motion. `d` followed by
+`/something` `Enter` deletes everything between here and that match.
+--
+`/const started` `Enter` puts you at the start of the junk. `d/return`
+`Enter` then deletes from there up to — but not including — the `return`,
+which is exactly the five lines. The indentation works out because both
+lines are indented the same way.
+
+@solution
+/const started<Enter>  d/return<Enter>  :wq<Enter>
+
+Twenty-eight keystrokes to delete a five-line block without counting
+anything, and it would be the same twenty-eight if the block were fifty
+lines.
+
+The mental model to take away: `d` needs to know where to stop, and a
+search is a perfectly good way of saying where. `d}` stops at the end of
+the paragraph, `dG` stops at the end of the file, `d/return` stops at the
+next `return`. Same grammar, one more noun.
+
+Two details that matter in practice. A `/` search motion is *exclusive* —
+the match itself is not included, the deletion stops just before the `r`
+of `return`. That is usually what you want, because the thing you
+searched for is usually the landmark you want to keep. When it is not,
+the next lessons show you how to include it.
+
+And because the deletion started at the `c` of `const`, mid-line, the
+indentation in front of it survived and the `return` slid up into it.
+Starting an operator at the first non-blank character and ending it at
+the first non-blank character of another line is a small habit that keeps
+indentation intact for free.
+
+@start order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+import { RefundProvider } from '../refund/refund.provider';
+import { CustomerProvider } from '../customer/customer.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(
+    @inject(OrderProvider) protected orderProvider: OrderProvider,
+    @inject(RefundProvider) protected refundProvider: RefundProvider,
+    @inject(CustomerProvider) protected customerProvider: CustomerProvider,
+  ) {}
+
+  public async orders(args: { customerId: string }) {
+    const started = Date.now();
+    console.log('[orders] called for', args.customerId);
+    console.log('[orders] pid', process.pid);
+    console.table({ customerId: args.customerId, at: new Date().toISOString() });
+    console.log('[orders] elapsed ms', Date.now() - started);
+    return this.orderProvider.findByCustomer({ customerId: args.customerId });
+  }
+
+  public async order(args: { id: string }) {
+    return this.orderProvider.findOne({ id: args.id });
+  }
+
+  public async createOrder(args: { customerId: string; total: number }) {
+    return this.orderProvider.create(args);
+  }
+
+  public async cancelOrder(args: { id: string }) {
+    return this.orderProvider.cancel({ id: args.id });
+  }
+
+  public async refundOrder(args: { id: string; amount: number }) {
+    return this.refundProvider.partial({ id: args.id, amount: args.amount });
+  }
+
+  public async orderCustomer(args: { customerId: string }) {
+    return this.customerProvider.findOne(args.customerId);
+  }
+}
+
+@expected order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+import { RefundProvider } from '../refund/refund.provider';
+import { CustomerProvider } from '../customer/customer.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(
+    @inject(OrderProvider) protected orderProvider: OrderProvider,
+    @inject(RefundProvider) protected refundProvider: RefundProvider,
+    @inject(CustomerProvider) protected customerProvider: CustomerProvider,
+  ) {}
+
+  public async orders(args: { customerId: string }) {
+    return this.orderProvider.findByCustomer({ customerId: args.customerId });
+  }
+
+  public async order(args: { id: string }) {
+    return this.orderProvider.findOne({ id: args.id });
+  }
+
+  public async createOrder(args: { customerId: string; total: number }) {
+    return this.orderProvider.create(args);
+  }
+
+  public async cancelOrder(args: { id: string }) {
+    return this.orderProvider.cancel({ id: args.id });
+  }
+
+  public async refundOrder(args: { id: string; amount: number }) {
+    return this.refundProvider.partial({ id: args.id, amount: args.amount });
+  }
+
+  public async orderCustomer(args: { customerId: string }) {
+    return this.customerProvider.findOne(args.customerId);
+  }
+}

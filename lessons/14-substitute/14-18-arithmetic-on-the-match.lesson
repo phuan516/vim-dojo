@@ -1,0 +1,85 @@
+@meta
+id: 14-18
+title: Arithmetic on the match
+chapter: 14
+type: lesson
+skills: sub-expression
+par: 50
+minutes: 6
+vscode: six lines, a calculator, six edits
+open: retry.policy.ts
+
+@brief
+Load testing showed the retry delays are too aggressive. Every
+`delayMs` in this policy doubles. The `attempts` and `timeoutMs`
+values on the same lines do not change.
+
+Six values, all different, each one a function of what is there
+already. No literal replacement can express "twice this", and `&`
+only gives you the match unchanged. There is a third kind of
+replacement: one that begins with `\=` and is evaluated as an
+expression, with the match available inside it.
+
+Aim the pattern so that only the number is the match. Chapter 13's
+`\zs` is the tool for that.
+
+@keys
+| `\=expr` | the replacement is an expression, not text |
+| `submatch(0)` | inside the expression: the whole match, as a string |
+| `submatch(1)` | group one — the expression form of `\1` |
+| `\zs` | start the match here; what came before is context only |
+
+@hints
+Match `delayMs: ` for context, but start the actual match at the
+digits. Then the replacement can treat the match as a number.
+--
+`\=submatch(0)*2`. Vim converts the matched digits to a number,
+doubles it, and writes the result back where the digits were.
+--
+`:%s/\vdelayMs: \zs\d+/\=submatch(0)*2/` and Enter.
+
+@solution
+    :%s/\vdelayMs: \zs\d+/\=submatch(0)*2/<Enter>  :wq<Enter>
+
+Forty-three keystrokes for six calculations you did not do.
+
+`\=` at the start of the replacement changes what the rest of it is.
+Instead of text with a few special characters, it is a vim expression,
+evaluated once per match, and its result is what gets written.
+`submatch(0)` is the whole match and `submatch(1)` onwards are the
+groups; they are strings, and vim's arithmetic coerces `"250"` to
+`250` when you multiply it. String concatenation is `.`, so
+`\=submatch(0) . 'ms'` would append a unit instead.
+
+The pattern is doing as much work as the expression. `delayMs: ` is
+there to choose the right number on each line; `\zs` then says the
+match proper begins after it, so the expression sees only `250` and
+the replacement overwrites only `250`. Without `\zs`, you would be
+writing `\='delayMs: ' . submatch(1)*2` and capturing the digits as a
+group — legal, and twice as long.
+
+This is the lesson where the substitute stops being a text tool.
+Anything you can compute in an expression, you can write into a file
+at every match: a doubled value, a padded number, a lower-cased key.
+The next lesson uses the one piece of context an expression has that
+the pattern does not: where in the file the match is.
+
+@start retry.policy.ts
+export const RETRY_POLICY = {
+  paymentCapture: { attempts: 3, delayMs: 250, timeoutMs: 30000 },
+  paymentRefund: { attempts: 5, delayMs: 500, timeoutMs: 30000 },
+  emailSend: { attempts: 3, delayMs: 1000, timeoutMs: 10000 },
+  webhookDeliver: { attempts: 8, delayMs: 2000, timeoutMs: 15000 },
+  ledgerPost: { attempts: 3, delayMs: 100, timeoutMs: 5000 },
+  payoutExport: { attempts: 2, delayMs: 1500, timeoutMs: 60000 },
+};
+
+@expected retry.policy.ts
+export const RETRY_POLICY = {
+  paymentCapture: { attempts: 3, delayMs: 500, timeoutMs: 30000 },
+  paymentRefund: { attempts: 5, delayMs: 1000, timeoutMs: 30000 },
+  emailSend: { attempts: 3, delayMs: 2000, timeoutMs: 10000 },
+  webhookDeliver: { attempts: 8, delayMs: 4000, timeoutMs: 15000 },
+  ledgerPost: { attempts: 3, delayMs: 200, timeoutMs: 5000 },
+  payoutExport: { attempts: 2, delayMs: 3000, timeoutMs: 60000 },
+};

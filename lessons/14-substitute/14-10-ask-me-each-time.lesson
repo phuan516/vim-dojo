@@ -1,0 +1,159 @@
+@meta
+id: 14-10
+title: Ask me each time
+chapter: 14
+type: lesson
+skills: sub-confirm
+par: 46
+minutes: 7
+vscode: Ctrl-H, then Replace (not Replace All) eleven times, reading each one
+open: order.provider.ts
+
+@brief
+The `status` field on orders is becoming `state`. In this provider
+that means the parameter, the comparisons, the update values and the
+event payload. Whole-word anchors get you most of the way.
+
+They do not get you all of the way. Four hits of the whole word
+`status` in this file are not the field: a module path in an import,
+the subject line of an email a customer receives, the URL that email
+links to, and the name of an event other services subscribe to. Change
+any of those and something outside this file breaks, and the type
+checker will not tell you.
+
+You could write a pattern clever enough to skip them. Or you could add
+one flag that shows you each match and waits for a yes or a no. Use
+the flag. This is the habit the chapter is named after: whenever you
+cannot see every hit on the screen, ask.
+
+@keys
+| `:%s/\<status\>/state/gc` `Enter` | the `c` flag: confirm each match |
+| `y` | replace this one |
+| `n` | skip this one |
+| `a` | replace this and all the rest without asking |
+| `q` or `Esc` | stop here |
+| `l` | replace this one, then stop ("last") |
+
+@hints
+The pattern is the whole-word one from the last lesson. The new part is
+a second flag after the `g`.
+--
+`c` makes the substitute stop at each match, highlight it, and wait.
+`y` takes it, `n` leaves it. Read each line before you answer.
+--
+`:%s/\<status\>/state/gc` and Enter, then answer eleven times. The
+import path, the email subject, the URL and the event name get `n`;
+everything else gets `y`.
+
+@solution
+    :%s/\<status\>/state/gc<Enter>  n y y y y y n n n y y  :wq<Enter>
+
+Thirty-nine keystrokes, eleven of them decisions.
+
+The `c` flag turns a substitute into a conversation. Each match is
+highlighted in place, with the line around it, and vim waits. That is
+the whole feature, and it is worth more than any of the pattern tricks
+in this chapter, because it is the only one that works on meaning
+rather than on text. No pattern knows that `'Your order status has
+changed'` is read by a person and `order.status` is read by a
+compiler. You know.
+
+The discipline: use `c` whenever the file is longer than your screen,
+whenever the word is short, whenever a string or a comment or a URL
+might contain it, and whenever the replacement would be expensive to
+get wrong. That is most renames. Once you have answered a few and
+every remaining one looks the same, `a` takes the rest without asking.
+And if you realise halfway through that the pattern is wrong, `q`
+stops, `u` undoes what was done so far, and you write a better one.
+
+Answering `n` eleven times in a row is a sign that the pattern should
+have been tighter. Answering `y` to everything is a sign you could have
+left the flag off. Somewhere between is where `c` earns its keep.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderStatus } from './order.status';
+import { OrderRepository } from './order.repository';
+import { EmailService } from '../../infrastructure/services/email.service';
+import { EventBus } from '../../infrastructure/events/event.bus';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(EmailService) protected emailService: EmailService,
+    @inject(EventBus) protected eventBus: EventBus,
+  ) {}
+
+  public async setStatus(args: { id: string; status: OrderStatus }) {
+    const order = await this.orderRepository.findOne({ where: { id: args.id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    if (order.status === args.status) {
+      return order;
+    }
+
+    const updated = await this.orderRepository.update({
+      where: { id: args.id },
+      values: { status: args.status },
+    });
+
+    await this.emailService.send({
+      to: order.customerEmail,
+      subject: 'Your order status has changed',
+      link: `https://shop.example.com/orders/${order.id}/status`,
+    });
+
+    this.eventBus.publish('order.status.changed', { id: order.id, status: args.status });
+
+    return updated;
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderStatus } from './order.status';
+import { OrderRepository } from './order.repository';
+import { EmailService } from '../../infrastructure/services/email.service';
+import { EventBus } from '../../infrastructure/events/event.bus';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(EmailService) protected emailService: EmailService,
+    @inject(EventBus) protected eventBus: EventBus,
+  ) {}
+
+  public async setStatus(args: { id: string; state: OrderStatus }) {
+    const order = await this.orderRepository.findOne({ where: { id: args.id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    if (order.state === args.state) {
+      return order;
+    }
+
+    const updated = await this.orderRepository.update({
+      where: { id: args.id },
+      values: { state: args.state },
+    });
+
+    await this.emailService.send({
+      to: order.customerEmail,
+      subject: 'Your order status has changed',
+      link: `https://shop.example.com/orders/${order.id}/status`,
+    });
+
+    this.eventBus.publish('order.status.changed', { id: order.id, state: args.state });
+
+    return updated;
+  }
+}

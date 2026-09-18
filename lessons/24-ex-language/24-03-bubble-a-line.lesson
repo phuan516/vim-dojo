@@ -1,0 +1,78 @@
+@meta
+id: 24-03
+title: Bubble a line up or down
+chapter: 24
+type: lesson
+skills: ex-move
+par: 21
+minutes: 4
+vscode: Alt-Up, Alt-Down
+open: RELEASE.md
+
+@brief
+Two steps in the release checklist are swapped with their neighbours.
+"Tag the release" on line 5 has to happen before "Push the tag" on
+line 4. And "Deploy production" on line 7 has to wait until after the
+staging smoke test on line 8.
+
+Last lesson the destination was an absolute line. It can also be
+relative to where you are. `:m-2` moves the current line to below the
+line two above it, which is to say one line up. `:m+1` moves it to
+below the next line, which is one line down. With the cursor on the
+line, that is the whole command.
+
+Put the cursor on each misplaced line and nudge it. Do not count line
+numbers for the destination this time.
+
+@keys
+| `:m-2` | move the current line up one |
+| `:m+1` | move the current line down one |
+| `5G` | go to line 5 |
+
+@hints
+Move to the line first, then the command has no range and no absolute
+target. Just `m` and an offset.
+--
+Up by one is `-2`, not `-1`, because the destination is the line the
+text lands *after*. Landing after the line above you leaves you where
+you were. Landing after the line two above you moves you up by one.
+--
+`5G` then `:m-2`. `7G` then `:m+1`. `:wq`.
+
+@solution
+    5G :m-2<Enter>  7G :m+1<Enter>  :wq<Enter>
+
+Eighteen keystrokes for two nudges.
+
+`:m-2` is the one worth keeping. It reads oddly for about a day and
+then it is the move you reach for whenever a line is one slot too low:
+an import, a case in a switch, a bullet in a list. It does not need a
+line number, so it works the same on line 5 and line 500, and a command
+that does not need a number is a command you can repeat without
+thinking. Lesson 16 makes that repeatable with one key.
+
+VS Code has this as Alt-Up and Alt-Down, and honestly that is fine for
+one line. What it does not have is `:5,9m-2`, which bubbles a whole
+block up by one, or `:m$`, or `:m'a`. Same command, wider reach.
+
+@start RELEASE.md
+# Release checklist
+
+- Bump the version in package.json
+- Push the tag
+- Tag the release
+- Deploy staging
+- Deploy production
+- Smoke test the checkout flow on staging
+- Announce in #releases
+
+@expected RELEASE.md
+# Release checklist
+
+- Bump the version in package.json
+- Tag the release
+- Push the tag
+- Deploy staging
+- Smoke test the checkout flow on staging
+- Deploy production
+- Announce in #releases

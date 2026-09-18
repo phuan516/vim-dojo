@@ -1,0 +1,68 @@
+@meta
+id: 09-10
+title: Stop just short with dt
+chapter: 09
+type: lesson
+skills: op-motion
+par: 16
+minutes: 4
+vscode: select from the plus to just before the semicolon, Delete
+open: totals.ts
+
+@brief
+The surcharge has been folded into shipping upstream, so adding it here
+charges the customer twice.
+
+    const total = order.subtotal + order.shipping + order.surcharge;
+
+Drop the surcharge from the sum. The semicolon stays, the rest of the
+line stays, and there should be no stray space left before the
+semicolon.
+
+@keys
+| `t;` | forward to just before the next semicolon |
+| `dt;` | delete from the cursor up to, not including, the semicolon |
+| `2f+` | forward to the second plus |
+
+@hints
+`d$` would take the semicolon with it. You want to stop one character
+short of something, which is exactly what `t` is for.
+--
+`dt;` deletes up to but not including the semicolon. Start it from the
+space before the second `+` and the spacing comes out right.
+--
+`j`, `2f+` to land on the second plus, `h` to step back onto the space,
+then `dt;`.
+
+@solution
+    j 2f+ h dt; :wq<Enter>
+
+`dt;` is the single most useful operator-motion pair in day-to-day code,
+because a statement almost always ends in a semicolon or a brace and
+almost never ends exactly where you want to stop deleting. `d$` takes the
+terminator with it and you have to type it back. `dt;` leaves it.
+
+The same shape covers most of a working day:
+
+    dt)     kill the rest of an argument list, keep the bracket
+    dt,     kill one argument, keep the separator
+    ct)     retype the rest of the call
+    dt'     clear a string, keep its quote
+
+`f` and `t` differ only in whether the target comes along. Deleting: `t`
+nearly always. Jumping: `f` nearly always, because `t` leaves you one
+short of where you were looking.
+
+@start totals.ts
+export function orderTotal(order: Order) {
+  const total = order.subtotal + order.shipping + order.surcharge;
+
+  return Math.round(total * 100) / 100;
+}
+
+@expected totals.ts
+export function orderTotal(order: Order) {
+  const total = order.subtotal + order.shipping;
+
+  return Math.round(total * 100) / 100;
+}

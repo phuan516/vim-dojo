@@ -1,0 +1,94 @@
+@meta
+id: 24-15
+title: Paste the word under the cursor
+chapter: 24
+type: lesson
+skills: cmdline-edit
+par: 32
+minutes: 5
+vscode: double-click the identifier, Ctrl-C, Ctrl-H, Ctrl-V into the replace box
+open: payment.service.ts
+
+@brief
+`refundLegacy` is gone from the gateway package. Its replacement is
+already imported on line 1, and every call in this file has to use it
+instead. Three calls, same name each time.
+
+The replacement is twenty characters long and you are going to type it
+zero times. The command line can read from the file. `Ctrl-R` followed
+by a register name pastes that register into the command you are
+typing; `Ctrl-R` followed by `Ctrl-W` pastes the word under the cursor.
+Put the cursor on the imported name and write the substitute with the
+new name pasted in.
+
+@keys
+| `Ctrl-R` `Ctrl-W` | on the command line: insert the word under the cursor |
+| `Ctrl-R` `a` | on the command line: insert register `a` |
+| `Ctrl-R` `/` | on the command line: insert the last search pattern |
+| `2w` | from `import` onto the identifier |
+
+@hints
+Get the cursor onto `refundThroughGateway` in the import first. The
+word under the cursor is whatever the cursor is on when you press `:`.
+--
+The pattern side is typed; it is short. The replacement side is
+`Ctrl-R` then `Ctrl-W`, and the word appears as if you had typed it.
+--
+`2w` then `:%s/refundLegacy/` `Ctrl-R` `Ctrl-W` `/g` and Enter.
+
+@solution
+    2w  :%s/refundLegacy/<C-r><C-w>/g<Enter>  :wq<Enter>
+
+Twenty-eight keystrokes, two of which stand in for twenty.
+
+`Ctrl-R` on the command line is the same `Ctrl-R` as in insert mode from
+chapter 3: it pastes a register. The command line has a few extra
+registers that only make sense there. `Ctrl-W` is the word under the
+cursor, `Ctrl-A` the WORD, `Ctrl-L` the whole line. `/` is the last
+search, `:` is the last command line, `"` is the unnamed register.
+`Ctrl-R` `/` is how you get the search you just did into a substitute
+when you want to edit it rather than reuse it blind.
+
+Chapter 14's `*` then `:%s//new/` covers the case where the word under
+the cursor is the *pattern*. This covers the case where it is the
+*replacement*, or where it is going into a command that has no pattern
+at all: `:vimgrep`, `:e`, `:b`, `:h`. `:h` `Ctrl-R` `Ctrl-W` is how you
+look up whatever you are staring at.
+
+@start payment.service.ts
+import { refundThroughGateway } from '../gateway/refund';
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string, amount: number) {
+    return refundLegacy(orderId, amount);
+  }
+
+  public async refundPartial(orderId: string, amount: number) {
+    return refundLegacy(orderId, amount);
+  }
+
+  public async refundAll(orderIds: string[], amount: number) {
+    return Promise.all(orderIds.map((orderId) => refundLegacy(orderId, amount)));
+  }
+}
+
+@expected payment.service.ts
+import { refundThroughGateway } from '../gateway/refund';
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string, amount: number) {
+    return refundThroughGateway(orderId, amount);
+  }
+
+  public async refundPartial(orderId: string, amount: number) {
+    return refundThroughGateway(orderId, amount);
+  }
+
+  public async refundAll(orderIds: string[], amount: number) {
+    return Promise.all(orderIds.map((orderId) => refundThroughGateway(orderId, amount)));
+  }
+}

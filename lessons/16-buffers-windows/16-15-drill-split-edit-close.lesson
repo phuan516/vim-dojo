@@ -1,0 +1,104 @@
+@meta
+id: 16-15
+title: Drill — split, edit, close
+chapter: 16
+type: drill
+skills: split-window, window-nav
+par: 75
+minutes: 5
+reps: 8
+vscode: open the file, edit, close the tab, back to the first one
+open: customer.provider.ts
+
+@brief
+Eight times: `errors.json` says `CUSTOMER_NOT_FOUND` is a `400`; make
+it `404`. The provider throws `CUSTOMER_MISSING`; make it
+`CUSTOMER_NOT_FOUND`. The errors file is not open.
+
+The shape to drill: split it open above, fix it, `:wq` to write it and
+close its window in one go, and you are back in the provider with a
+single window. Fix that, `:wq` again, and that one ends vim.
+
+@keys
+| `:sp errors.json` | open it above |
+| `:wq` | write this buffer and close this window |
+| `Ctrl-W c` | close the window without writing, if there was nothing to write |
+
+@hints
+`:sp errors.json`, `/CUSTOMER`, `f4`, `cw404`, `Esc`, `:wq`. Then
+`/MISSING`, `cw`, `NOT_FOUND`, `Esc`, `:wq`.
+--
+Two `:wq` with different meanings: the first closes a window, the
+second closes vim. Feel the difference; it is the one that catches
+people out in 16-13.
+
+@solution
+    :sp errors.json<Enter>  /CUSTOMER<Enter>  f4  cw 404 <Esc>  :wq<Enter>
+    /MISSING<Enter>  cw NOT_FOUND <Esc>  :wq<Enter>
+
+Sixty-odd keystrokes. The split costs the filename and nothing else;
+closing it costs nothing at all because you were writing anyway.
+
+This is the reference-file pattern in its smallest form: open beside,
+take what you need, close, carry on. It generalises to `:vs` when the
+lines are long and to `Ctrl-W o` when you opened more than one.
+
+@start customer.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { CustomerRepository } from './customer.repository';
+
+@injectable()
+export class CustomerProvider {
+  constructor(
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_MISSING');
+    }
+
+    return customer;
+  }
+}
+
+@expected customer.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { CustomerRepository } from './customer.repository';
+
+@injectable()
+export class CustomerProvider {
+  constructor(
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return customer;
+  }
+}
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 400, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@expected errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}

@@ -1,0 +1,62 @@
+@meta
+id: 06-15
+title: Comma takes you back
+chapter: 06
+type: lesson
+skills: repeat-semicolon, find-f, line-start
+par: 37
+minutes: 5
+vscode: four clicks and a lot of squinting
+open: customers.csv
+
+@brief
+Two rows of a customer export. The company name field contains spaces, so
+whatever reads this file next needs it quoted:
+
+    ord_1042,cus_88,"Watford Retail Ltd",4999,GBP,CANCELLED
+
+A quote goes on each side of the third field. The closing quote sits just
+before the third comma; the opening quote sits just after the second. Those
+are the same target, found in two different directions, and you already know
+how to repeat a find — you just need to repeat it backwards.
+
+@keys
+| `3f,` | forward to the third comma |
+| `;` | repeat the last find, same direction |
+| `,` | repeat the last find, opposite direction |
+| `i` `a` | insert before, insert after |
+
+@hints
+Place the closing quote first, working left to right with a counted `f`.
+Then the opening quote is one comma back from where you are standing.
+--
+`,` repeats your last find in reverse. After a forward `f,` it searches
+backwards for a comma, which is exactly one field's worth of travel.
+--
+`3f,` `i` `"` `Esc`, then `,` `a` `"` `Esc`. Then `j` `0` and the same again
+on the second row.
+
+@solution
+    3f, i " <Esc> , a " <Esc> j 0 3f, i " <Esc> , a " <Esc> :wq<Enter>
+
+The key to read is the key you already type a hundred times a day as
+punctuation, and out of insert mode it means back one. `;` and `,` are a
+pair: forward again, back again. Nothing else about the find changes, so you
+can overshoot deliberately, notice, and step back for one keystroke rather
+than restarting the whole motion.
+
+That is the honest workflow, by the way. Nobody counts commas perfectly
+first time. What fluent vim looks like is a slightly wrong jump followed by
+a `;` or a `,` — two keys, no thought, no mouse — rather than a perfect jump
+every time.
+
+Careful with the direction: `,` reverses the direction of the original find,
+so after `F,` it searches forwards. It reverses; it is not a fixed compass.
+
+@start customers.csv
+ord_1042,cus_88,Watford Retail Ltd,4999,GBP,CANCELLED
+ord_1043,cus_91,Brent Cross Cafe,1250,GBP,PENDING
+
+@expected customers.csv
+ord_1042,cus_88,"Watford Retail Ltd",4999,GBP,CANCELLED
+ord_1043,cus_91,"Brent Cross Cafe",1250,GBP,PENDING

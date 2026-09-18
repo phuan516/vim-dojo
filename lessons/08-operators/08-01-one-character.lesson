@@ -1,0 +1,69 @@
+@meta
+id: 08-01
+title: Delete one character where you stand
+chapter: 08
+type: lesson
+skills: delete-d
+par: 12
+minutes: 3
+vscode: click to the right of the character, press Backspace
+open: invoice.ts
+
+@brief
+Everything so far has been movement. From here on you get verbs, and the
+first one is the smallest: remove the character under the cursor, without
+entering insert mode, without a selection, without the mouse.
+
+A merge went badly and two lines ended up with a doubled semicolon.
+TypeScript compiles it, the linter does not. Take out the extra one on
+each line.
+
+You already know how to get to the end of a line. That is the only motion
+you need here.
+
+@keys
+| `x` | delete the character under the cursor |
+| `$` | last character of the line |
+| `j` | down a line |
+
+@hints
+The character you want gone is the last one on the line, so land on it
+first and then deal with it.
+--
+`x` deletes the character the cursor is sitting on. The cursor stays
+where it is; the rest of the line shuffles left.
+--
+`$` puts you on the second semicolon. `x` removes it. `j` then `$` does
+the same on the next line.
+
+@solution
+    j $ x  j $ x  :wq<Enter>
+
+Ten keystrokes and no mode changes at all. That is the shape of every
+verb in this chapter: you are in normal mode before the edit and in
+normal mode after it, which means the next command is ready immediately.
+
+`x` is the one people reach for out of habit long after they should have
+stopped. It is right for one stray character. It is wrong for a word, a
+line or a block, and pressing it eleven times to clear an argument is a
+sign you needed one of the keys later in this chapter.
+
+There is a backwards twin, `X`, which deletes the character *before* the
+cursor — the Backspace you never have to leave normal mode for. The next
+lesson uses it.
+
+@start invoice.ts
+export function formatTotal(cents: number) {
+  const pounds = cents / 100;;
+  const label = `£${pounds.toFixed(2)}`;;
+
+  return label;
+}
+
+@expected invoice.ts
+export function formatTotal(cents: number) {
+  const pounds = cents / 100;
+  const label = `£${pounds.toFixed(2)}`;
+
+  return label;
+}

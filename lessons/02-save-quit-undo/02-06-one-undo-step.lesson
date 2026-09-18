@@ -1,0 +1,82 @@
+@meta
+id: 02-06
+title: What counts as one undo
+chapter: 02
+type: lesson
+skills: undo
+par: 104
+minutes: 5
+vscode: Ctrl+Z, which walks back a word or so at a time
+open: standup.md
+
+@brief
+This is the one that catches everybody coming from VS Code. There,
+Ctrl+Z walks backwards through your typing in small bites — a word, a
+line, whatever the editor decided was a chunk. Press it five times and
+you go back five little steps.
+
+Vim draws the line somewhere else. One trip into insert mode is one
+change. Everything you type between pressing `i` or `a` and pressing
+`Esc` — one character or four paragraphs — is undone by a single `u`.
+
+Prove it to yourself. In order:
+
+  1. On the Today line, append ` and the 2.14 release notes`. `Esc`.
+
+  2. On the Blocked line, append ` really, unless the payments review
+     drags on again`. `Esc`.
+
+  3. Press `u` exactly once.
+
+The Blocked line must come back to `Blocked: nothing` — all of it, in one
+key. The Today line must keep its addition. Then save.
+
+If you find yourself pressing `u` a second time, you have already lost:
+that would take the Today line with it.
+
+@keys
+| `u` | undo one change — one whole insert session counts as one |
+| `Esc` | ends the change, which is what makes it undoable as a unit |
+
+@hints
+Two separate trips into insert mode means two changes on the undo stack.
+One `u` removes the most recent one.
+--
+Pressing `Esc` is what closes a change. If you had typed both additions
+without leaving insert mode in between, they would be one change and one
+`u` would remove both.
+--
+Sequence: `jjj` `$a` text `Esc`, then `j` `$a` text `Esc`, then `u`, then
+`ZZ`.
+
+@solution
+    jjj $ a  and the 2.14 release notes <Esc>
+    j $ a  really, unless the payments review drags on again <Esc>
+    u
+    ZZ
+
+Once you know where the boundary is, you can put it where you want it.
+Press `Esc` between two edits and you can undo them separately; stay in
+insert mode and they undo together. Typing a long block of new code in
+one sitting means `u` wipes all of it, which is usually what you want
+when you decide the block was wrong.
+
+The flip side is the failure people hit in week one: they hold `i`, edit
+for ten minutes using arrow keys, then press `u` and watch ten minutes
+vanish. That is not vim being hostile. It is vim taking you at your word
+that the ten minutes were one change. Short trips into insert mode, `Esc`
+often, and the undo history stays shaped like your thinking.
+
+@start standup.md
+# Standup, Thursday
+
+Yesterday: finished the refund window ticket
+Today: code review
+Blocked: nothing
+
+@expected standup.md
+# Standup, Thursday
+
+Yesterday: finished the refund window ticket
+Today: code review and the 2.14 release notes
+Blocked: nothing

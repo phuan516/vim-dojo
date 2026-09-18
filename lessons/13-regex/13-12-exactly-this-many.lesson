@@ -1,0 +1,92 @@
+@meta
+id: 13-12
+title: Exactly this many
+chapter: 13
+type: lesson
+skills: regex-quantifiers
+par: 26
+minutes: 5
+vscode: sort by the id column in a spreadsheet and hope the widths line up
+open: orders.csv
+
+@brief
+Two systems are writing into this export. The old one issues four-digit
+order ids, `ord_9101`. The new one issues five, `ord_10231`, and
+finance's importer chokes on them. Delete every row with a five-digit
+id — there are three — and leave the four-digit rows alone.
+
+`/ord_1` is the tempting search and it is wrong: `ord_1024` and
+`ord_1832` are old-style ids that happen to start with a one. The
+difference is not what the digits are. It is how many there are.
+
+`*`, `\+` and `\?` say "any number", "at least one" and "at most one".
+The last quantifier says a number.
+
+@keys
+| `\{5}` | exactly five of the atom before it |
+| `\{2,4}` | between two and four |
+| `\{3,}` | three or more |
+| `\{,2}` | up to two |
+| `\{-}` | zero or more, but as few as possible — the non-greedy `*` |
+| `dd` then `n.` | delete the line, next match, delete that one |
+
+@hints
+Say how many digits, not which digits.
+--
+`\{5}` after an atom means exactly five of it. `ord_\d\{5}` is an
+underscore-prefixed id with five digits. Only the opening brace needs
+the backslash.
+--
+`/ord_\d\{5}` `Enter`, `dd`, then `n.` twice.
+
+@solution
+/ord_\d\{5}<Enter>  dd  n.  n.  :wq<Enter>
+
+Twenty-two keystrokes. The ids were `10231`, `10244` and `10250`, and
+you did not need to know any of them.
+
+`\{n,m}` is the counted quantifier, and it is the only one that lets a
+pattern say "this long" rather than "this shape". Fixed-width things
+are everywhere in code — `\d\{4}-\d\{2}-\d\{2}` is an ISO date,
+`[0-9a-f]\{8}` is a short hash, `\d\{3}` is an HTTP status. Either
+bound can be left out: `\{3,}` is three or more, `\{,3}` is up to
+three. `\{}` on its own is `*`.
+
+One caveat that catches everyone: `ord_\d\{5}` is a four-digit id
+followed by a *fifth* digit, so it matches `ord_10231` but would also
+match the first five digits of `ord_102310` if one existed. A count is
+a minimum unless you close it off — `ord_\d\{5}\>` says the id stops
+there. This file had no six-digit ids, so the short form was enough,
+but on data you do not control, add the boundary.
+
+`\{-}` is the odd one out and worth a look. It is `*` with the
+opposite appetite: where `.*` takes as much as it can, `.\{-}` takes as
+little as it can. `/order=.\{-}request=` stops at the *first* `request=`
+after `order=`, not the last. You will not need it often, but when you
+do, nothing else works. Other tools spell it `*?`; vim spells it
+`\{-}`.
+
+@start orders.csv
+order_id,customer_id,currency,amount,status
+ord_9101,cus_4471,GBP,1499,PAID
+ord_1024,cus_1180,GBP,2599,PAID
+ord_9112,cus_4471,GBP,1499,PAID
+ord_10231,cus_3302,GBP,4200,PAID
+ord_1832,cus_2210,EUR,2599,PAID
+ord_9125,cus_7754,GBP,15990,PENDING
+ord_10244,cus_1180,GBP,2199,PAID
+ord_9131,cus_9021,EUR,1499,PAID
+ord_9134,cus_4471,GBP,899,PAID
+ord_10250,cus_9021,GBP,1299,PAID
+ord_9140,cus_3302,GBP,4200,REFUNDED
+
+@expected orders.csv
+order_id,customer_id,currency,amount,status
+ord_9101,cus_4471,GBP,1499,PAID
+ord_1024,cus_1180,GBP,2599,PAID
+ord_9112,cus_4471,GBP,1499,PAID
+ord_1832,cus_2210,EUR,2599,PAID
+ord_9125,cus_7754,GBP,15990,PENDING
+ord_9131,cus_9021,EUR,1499,PAID
+ord_9134,cus_4471,GBP,899,PAID
+ord_9140,cus_3302,GBP,4200,REFUNDED

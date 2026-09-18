@@ -1,0 +1,92 @@
+@meta
+id: 10-17
+title: Inside the tag
+chapter: 10
+type: lesson
+skills: obj-tag
+par: 64
+minutes: 6
+vscode: select between > and < without catching either
+open: OrderSummary.tsx
+
+@brief
+`it` is the object that has no delimiter key of its own, because its
+delimiters are words: it means everything between a matching pair of
+tags. Vim reads the opening tag, finds its partner — skipping any nested
+pairs of the same name on the way — and gives you what is between them.
+
+In JSX that is the visible text of an element, which is exactly the thing
+designers keep changing.
+
+Two copy changes came back from the review of the order page:
+
+  - the heading should show the reference, not the word "summary":
+    `Order {order.reference}`
+  - the button should say `Cancel order`, because on a page full of
+    buttons "Cancel" is ambiguous
+
+The markup itself does not change. Same tags, same attributes, same
+class names.
+
+@keys
+| `it` | everything between the opening and closing tag |
+| `cit` | change the contents of the element |
+| `at` | the tags themselves as well |
+| `dit` | empty an element out |
+
+@hints
+The element is the object. You want what is between the tags, not the
+tags.
+--
+`cit` — change inner tag. It works from anywhere between the two tags,
+including on the tags themselves.
+--
+`fO` puts you on the heading text and `fC` on the button label. Then
+`cit` and type the new copy.
+
+@solution
+    5j fO cit Order {order.reference} <Esc>
+    2j 0 fC cit Cancel order <Esc>
+    :wq<Enter>
+
+Fifty-six keystrokes, thirty-four of them the new copy.
+
+`cit` is the reason people who write a lot of JSX get attached to vim. The
+markup and the content are tangled together on one line, the content is
+the part that changes, and `cit` separates them without you having to aim
+at the `>` and the `<`.
+
+It handles nesting properly, which a naive selection does not. With the
+cursor on the text inside a `<span>` that sits inside a `<div>`, `cit`
+gets the span. Put the cursor on the div's own text and you get the div,
+nested span and all. And like the bracket objects, it takes a count:
+`c2it` is the enclosing element, one level out.
+
+One caveat worth knowing: it is a text object, not a parser. A self-closing
+`<Badge />` has no pair, so `it` has nothing to find and will beep at you.
+
+@start OrderSummary.tsx
+import { formatDate } from '../format';
+
+export function OrderSummary({ order }: Props) {
+  return (
+    <section className="order-summary">
+      <h2>Order summary</h2>
+      <p>Placed on {formatDate(order.placedAt)}</p>
+      <button type="button">Cancel</button>
+    </section>
+  );
+}
+
+@expected OrderSummary.tsx
+import { formatDate } from '../format';
+
+export function OrderSummary({ order }: Props) {
+  return (
+    <section className="order-summary">
+      <h2>Order {order.reference}</h2>
+      <p>Placed on {formatDate(order.placedAt)}</p>
+      <button type="button">Cancel order</button>
+    </section>
+  );
+}

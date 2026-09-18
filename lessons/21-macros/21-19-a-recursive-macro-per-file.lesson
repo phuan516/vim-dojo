@@ -1,0 +1,251 @@
+@meta
+id: 21-19
+title: A recursive macro, per file
+chapter: 21
+type: lesson
+skills: macro-across-files, macro-recursive
+par: 125
+minutes: 10
+vscode: search across files, open each, find next, edit, find next
+open: order.provider.ts
+vimrc: set hidden
+
+@brief
+The structured logger is going in everywhere. Every `console.log`
+call in the domain becomes a `this.logger.info` call with its payload
+wrapped:
+
+    console.log('cancel', id);    →    this.logger.info('cancel', { id });
+
+Nine calls across `order.provider.ts`, `customer.provider.ts` and
+`payment.service.ts`. `registry.ts` is in the directory and has
+nothing to change.
+
+Lesson 12 built the recursive, search-driven macro for exactly this
+edit, and it finishes a whole file from one `@a`. The new step is
+running that one `@a` in each file that has a hit, without opening
+them by hand.
+
+@keys
+| `:vimgrep /pattern/ *.ts` | find every hit, in every file |
+| `:cfdo normal @a` | play `a` once in each file that has a hit |
+| `:cdo` | once per hit, by contrast |
+
+@hints
+Record the recursive macro from lesson 12 in the open file and run it
+there. Then grep for the remaining calls and use the per-file form of
+the quickfix command, not the per-hit form, since the macro does all
+the hits in a file by itself.
+--
+`qaq`, `qa/console\.log(<Enter>cf(this.logger.info(<Esc>f,wi{ <Esc>ea }<Esc>@aq`,
+`@a`. Then `:vimgrep /console\.log(/ *.ts`.
+--
+`:cfdo normal @a` and Enter, then `:wqa`.
+
+@solution
+    qaq   qa /console\.log( <Enter> cf( this.logger.info( <Esc> f,w i{  <Esc> e a } <Esc> @a q   @a
+    :vimgrep /console\.log(/ *.ts<Enter>   :cfdo normal @a<Enter>   :wqa<Enter>
+
+A hundred and nine keystrokes for nine calls in three files.
+
+`:cdo` and `:cfdo` are two shapes of the same tool. `:cdo` visits
+every hit; `:cfdo` visits every file that has one and stops at the
+first hit in it. With a plain macro you want `:cdo`, one replay per
+target. With a recursive macro that hunts down every target in the
+file on its own, `:cdo` would be wasteful and `:cfdo` is the right
+size: one replay per file, and the recursion does the rest.
+
+Both were safe here for the same reason as before: the edit consumes
+the match. The open file was finished before the grep, so it has no
+hits and is not on the list. In each other file the macro's own search
+finds every call, wrapping round to any above the first hit, and fails
+when there are none, which is where `:cfdo` moves to the next file.
+
+The pattern of the three lessons so far: a list of places (quickfix,
+argument list, buffers), the word `normal`, and a macro that either
+handles one target or handles a whole file. Choose the list that
+already has what you need, and choose the macro shape to match it.
+
+@start order.provider.ts
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+export class OrderProvider {
+  constructor(
+    protected orderRepository: OrderRepository,
+    protected logger: Logger,
+  ) {}
+
+  public async findOne(id: string) {
+    console.log('findOne', id);
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    console.log('cancel', id);
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      console.log('refused', order);
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+export class OrderProvider {
+  constructor(
+    protected orderRepository: OrderRepository,
+    protected logger: Logger,
+  ) {}
+
+  public async findOne(id: string) {
+    this.logger.info('findOne', { id });
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    this.logger.info('cancel', { id });
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      this.logger.info('refused', { order });
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start customer.provider.ts
+import { exception } from '../../configuration/errors';
+import { CustomerRepository } from './customer.repository';
+
+export class CustomerProvider {
+  constructor(
+    protected customerRepository: CustomerRepository,
+    protected logger: Logger,
+  ) {}
+
+  public async findOne(id: string) {
+    console.log('findOne', id);
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      console.log('missing', id);
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return customer;
+  }
+
+  public async create(values: CreateCustomerArgs) {
+    console.log('create', values);
+
+    return this.customerRepository.create({ values });
+  }
+}
+
+@expected customer.provider.ts
+import { exception } from '../../configuration/errors';
+import { CustomerRepository } from './customer.repository';
+
+export class CustomerProvider {
+  constructor(
+    protected customerRepository: CustomerRepository,
+    protected logger: Logger,
+  ) {}
+
+  public async findOne(id: string) {
+    this.logger.info('findOne', { id });
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      this.logger.info('missing', { id });
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return customer;
+  }
+
+  public async create(values: CreateCustomerArgs) {
+    this.logger.info('create', { values });
+
+    return this.customerRepository.create({ values });
+  }
+}
+
+@start payment.service.ts
+import { exception } from '../../configuration/errors';
+
+export class PaymentService {
+  constructor(protected logger: Logger) {}
+
+  public async refund(orderId: string) {
+    console.log('refund', orderId);
+    const response = await this.http.post('/refunds', { orderId });
+
+    if (response.status !== 200) {
+      console.log('refundFailed', response);
+      throw exception('REFUND_FAILED');
+    }
+
+    console.log('refunded', orderId);
+
+    return response.data;
+  }
+}
+
+@expected payment.service.ts
+import { exception } from '../../configuration/errors';
+
+export class PaymentService {
+  constructor(protected logger: Logger) {}
+
+  public async refund(orderId: string) {
+    this.logger.info('refund', { orderId });
+    const response = await this.http.post('/refunds', { orderId });
+
+    if (response.status !== 200) {
+      this.logger.info('refundFailed', { response });
+      throw exception('REFUND_FAILED');
+    }
+
+    this.logger.info('refunded', { orderId });
+
+    return response.data;
+  }
+}
+
+@start registry.ts
+import { container } from 'tsyringe';
+import { OrderProvider } from '../domain/order/order.provider';
+import { CustomerProvider } from '../domain/customer/customer.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('PaymentService', { useClass: PaymentService });

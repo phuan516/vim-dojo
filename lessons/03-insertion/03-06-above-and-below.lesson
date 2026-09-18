@@ -1,0 +1,52 @@
+@meta
+id: 03-06
+title: Drill — above and below
+chapter: 03
+type: drill
+skills: open-o, open-O
+reps: 8
+par: 50
+minutes: 5
+vscode: click, Enter, type, click, Enter, type
+open: release.md
+
+@brief
+Eight times: add `- [ ] merge main` above the line that is there, and
+`- [ ] run the tests` below it. One line above, one line below, and the
+existing line untouched in the middle.
+
+@keys
+| `O` | open a line above |
+| `o` | open a line below |
+| `j` | down one line |
+| `Esc` | out |
+
+@hints
+`O` first while you are still on the original line, then `Esc`. You are
+now on the new top line, so you need to come back down before you open
+the one below.
+--
+Do not count lines or think about order the second time round. Aim for a
+single unbroken run: `O` … `Esc` `j` `o` … `Esc` `:wq`.
+
+@solution
+    O - [ ] merge main <Esc> j o - [ ] run the tests <Esc> :wq<Enter>
+
+Forty-four keystrokes for two new lines, thirty-five of them text.
+
+The `j` in the middle is the only thing to watch. After `O` and `Esc` you
+are standing on the line you just made, not the line you started on, so
+the "below" in `o` would be the wrong below. Vim leaves the cursor on the
+text you just typed, always. Once you expect that, you stop being
+surprised by where the next command lands.
+
+Repeat this one until you can do the whole thing without reading the
+screen in the middle.
+
+@start release.md
+- [ ] run the migrations
+
+@expected release.md
+- [ ] merge main
+- [ ] run the migrations
+- [ ] run the tests

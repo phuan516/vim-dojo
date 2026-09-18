@@ -1,0 +1,60 @@
+@meta
+id: 11-13
+title: Drill — star, cgn, dot
+chapter: 11
+type: drill
+skills: cgn
+par: 27
+minutes: 5
+reps: 8
+vscode: Ctrl+D eight times
+open: fees.ts
+
+@brief
+Rename `amt` to `amount`. Eight occurrences, all of them changing.
+
+Cursor on the word, `*`, `cgn` with the new name, then dot to the bottom.
+
+@keys
+| `*` | search for the word under the cursor |
+| `cgn` | change the next match |
+| `.` | and the next |
+
+@hints
+`*` first. If you are typing `amt` into a search you are doing more work
+than the file requires.
+--
+After the first `cgn` there is nothing left to aim. Count the remaining
+matches and press `.` that many times.
+
+@solution
+    w  *  cgn amount <Esc>   then  .  seven times
+
+Three keys of setup, the new name typed once, and the rest is one finger.
+
+Drill it until `*cgn` is a single gesture. It is the most common rename
+you will ever do — a local variable, a parameter, a property that only
+lives in this file — and reaching for it should not require deciding
+anything. The moment it becomes automatic, you will stop reaching for
+find-and-replace on jobs this size, which is a good instinct: this route
+shows you every match as it changes and that one does not.
+
+@start fees.ts
+const amt = order.total - order.discount;
+const fee = amt * FEE_RATE;
+const net = amt - fee;
+const vat = amt * VAT_RATE;
+const gross = amt + vat;
+logger.info('fee breakdown', { amt, fee, net, vat });
+ledger.debit(order.account, amt);
+ledger.credit(FEES_ACCOUNT, amt);
+
+@expected fees.ts
+const amount = order.total - order.discount;
+const fee = amount * FEE_RATE;
+const net = amount - fee;
+const vat = amount * VAT_RATE;
+const gross = amount + vat;
+logger.info('fee breakdown', { amount, fee, net, vat });
+ledger.debit(order.account, amount);
+ledger.credit(FEES_ACCOUNT, amount);

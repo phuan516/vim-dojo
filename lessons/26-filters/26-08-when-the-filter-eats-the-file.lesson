@@ -1,0 +1,87 @@
+@meta
+id: 26-08
+title: When the filter eats the file
+chapter: 26
+type: lesson
+skills: filter-bang
+par: 40
+minutes: 6
+vscode: undo, and a quiet resolve never to try that again
+open: payments.log
+
+@brief
+An hour of the payment service's log. You want only the refund lines.
+
+Do it in this order, deliberately, because the first command is the
+lesson:
+
+  1. Run `:%!grep REFUND`. Capitals. Look at what happens to the file.
+  2. Get it back.
+  3. Do it properly, and save the four refund lines.
+
+`grep` is not vim: it does not know about `ignorecase`, and a pattern
+that matches nothing is not an error, it is a successful search with no
+results.
+
+@keys
+| `:%!grep refund` | keep only the matching lines |
+| `u` | undo the filter, all of it, one step |
+| `:%!grep -i refund` | the case-insensitive version, for later |
+
+@hints
+Run the capitalised one first and read the file. Then read the message at
+the bottom of the screen, which tells you how many lines are left.
+--
+`grep` exits non-zero when it matches nothing, so vim stops to tell you
+`shell returned 1` and waits for Enter before it will take another key.
+Dismiss it, then undo: the whole filter is a single change in the undo
+tree, so one `u` is enough no matter how many lines it destroyed.
+--
+`:%!grep REFUND` Enter, Enter again to clear the `shell returned 1`
+prompt, `u`, `:%!grep refund` Enter, `:wq`.
+
+@solution
+    :%!grep REFUND<Enter> <Enter>  u  :%!grep refund<Enter>  :wq<Enter>
+
+The second Enter is the hit-enter prompt: `grep` exits 1 when it matches
+nothing, vim prints `shell returned 1`, and it will not read another key
+until you acknowledge it. Par includes that keystroke.
+
+The first command emptied the buffer. Not "failed and left things alone"
+— emptied it. `grep` found nothing, wrote nothing to standard output, and
+vim did what a filter always does: replaced the range with the output.
+Zero lines of output means zero lines of file.
+
+This is the one thing about filters that catches people, so be clear
+about it. Vim does not check whether the command succeeded before
+replacing your text. Run `:%!sort -Z` with a flag that does not exist and
+`sort` prints its complaint on *standard error*, which goes to the screen,
+prints nothing on standard output, and your file is gone. Misspell the
+command name entirely and you get the same result with a shell error on
+top.
+
+Which is exactly why `u` matters here more than anywhere else. One
+filter, one undo step, the whole range back. Type it the moment the
+buffer looks wrong, before you try to work out what went wrong — the
+diagnosis is easier with your text in front of you.
+
+Two habits that make the whole business safe. Run risky filters on a
+small range first and widen once it looks right. And keep `u` under your
+finger: a filter is the only edit in vim where a typo can take the entire
+file, and it is also, because of `u`, one of the cheapest to get wrong.
+
+@start payments.log
+2026-03-01T09:14:22Z level=info  msg="order placed" order=ord_1001
+2026-03-01T09:15:02Z level=info  msg="payment captured" order=ord_1001
+2026-03-01T09:41:19Z level=info  msg="refund requested" order=ord_1001
+2026-03-01T09:41:20Z level=error msg="refund failed" order=ord_1001 code=502
+2026-03-01T10:02:55Z level=info  msg="order placed" order=ord_1002
+2026-03-01T10:03:11Z level=info  msg="payment captured" order=ord_1002
+2026-03-01T11:20:04Z level=info  msg="refund requested" order=ord_1002
+2026-03-01T11:20:05Z level=info  msg="refund completed" order=ord_1002
+
+@expected payments.log
+2026-03-01T09:41:19Z level=info  msg="refund requested" order=ord_1001
+2026-03-01T09:41:20Z level=error msg="refund failed" order=ord_1001 code=502
+2026-03-01T11:20:04Z level=info  msg="refund requested" order=ord_1002
+2026-03-01T11:20:05Z level=info  msg="refund completed" order=ord_1002

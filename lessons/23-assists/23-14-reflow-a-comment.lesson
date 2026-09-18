@@ -1,0 +1,137 @@
+@meta
+id: 23-14
+title: Reflow a comment without eating the code
+chapter: 23
+type: lesson
+skills: format-gq
+par: 26
+minutes: 5
+vscode: Rewrap handles comment leaders too; Alt-Q
+open: refund.provider.ts
+vimrc: set textwidth=72
+
+@brief
+Two comments in this file need rewrapping to 72 columns. The header
+comment is one very long line with a blank line after it. The comment
+above `isInsideWindow` is three ragged lines, and there is no blank
+line between it and the method.
+
+Reflow both. Every reflowed line must start with `//`, and the code
+must not move by a character.
+
+@keys
+| `gqip` | reflow the paragraph — safe when a blank line follows |
+| `gq2j` | reflow this line and the two below — safe when it does not |
+| `gqj` | reflow this line and the next |
+| `V` … `gq` | reflow exactly the selected lines |
+
+@hints
+The header is a paragraph on its own: `gqip` from line 1.
+--
+The second block is not on its own. `ip` from a comment that touches
+the code below it includes the code, and `gq` will happily wrap a
+method into a comment. Give `gq` a motion that covers only the three
+comment lines.
+--
+`/Work out` then `gq2j`. Or `Vjj` then `gq` if you want to see what
+you are about to format.
+
+@solution
+    gqip /Work out<Enter> gq2j :wq<Enter>
+
+Twenty-two keystrokes.
+
+Vim's TypeScript filetype sets `comments` so that formatting knows
+`//` is a leader: it strips the leader from every line, reflows the
+text, and puts the leader back at the start of every new line. That
+is the `q` flag in `formatoptions`, and it is on for you. The same
+works for `#` in YAML and shell, `--` in SQL, and `*` in a block
+comment, though the block comment sometimes loses a space of
+alignment; `//` lines are the safe bet.
+
+What `gq` does not know is the difference between prose and code. It
+formats whatever lines you hand it, and a paragraph — in the text
+object sense — is simply lines with no blank line between them. A
+comment sitting directly on top of a method is in the same paragraph
+as the method. So the rule is: `gqip` when there is a blank line
+under the comment, a counted motion or a visual selection when there
+is not. Try `gqip` on the second block and `u` it back if you want to
+see how much damage one keystroke can do.
+
+Notice the first line of the header comment: 72 columns exactly.
+`textwidth` is a limit, not a target, and `gq` fills each line as far
+as it can.
+
+@start refund.provider.ts
+// Refund window rules. Orders can be refunded for thirty days after they are placed. Past that point cancelling still works, but no money moves and the reason is recorded on the order for finance to reconcile at month end.
+
+import { injectable, inject } from 'tsyringe';
+import { OrderRepository } from '../order/order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class RefundProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  // Work out whether an order is still inside the refund window. The window is measured from placedAt,
+  // not from the last status change,
+  // because finance reconcile against the original order date and nothing else.
+  public isInsideWindow(placedAt: Date) {
+    return Date.now() - placedAt.getTime() <= 30 * 86_400_000;
+  }
+
+  public async refund(orderId: string) {
+    const order = await this.orderRepository.findOne({ where: { id: orderId } });
+
+    if (!order || !this.isInsideWindow(order.placedAt)) {
+      return this.orderRepository.update({
+        where: { id: orderId },
+        values: { cancellationReason: 'REFUND_WINDOW_EXPIRED' },
+      });
+    }
+
+    return this.paymentService.refund(order.id);
+  }
+}
+
+@expected refund.provider.ts
+// Refund window rules. Orders can be refunded for thirty days after
+// they are placed. Past that point cancelling still works, but no money
+// moves and the reason is recorded on the order for finance to
+// reconcile at month end.
+
+import { injectable, inject } from 'tsyringe';
+import { OrderRepository } from '../order/order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class RefundProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  // Work out whether an order is still inside the refund window. The
+  // window is measured from placedAt, not from the last status change,
+  // because finance reconcile against the original order date and
+  // nothing else.
+  public isInsideWindow(placedAt: Date) {
+    return Date.now() - placedAt.getTime() <= 30 * 86_400_000;
+  }
+
+  public async refund(orderId: string) {
+    const order = await this.orderRepository.findOne({ where: { id: orderId } });
+
+    if (!order || !this.isInsideWindow(order.placedAt)) {
+      return this.orderRepository.update({
+        where: { id: orderId },
+        values: { cancellationReason: 'REFUND_WINDOW_EXPIRED' },
+      });
+    }
+
+    return this.paymentService.refund(order.id);
+  }
+}

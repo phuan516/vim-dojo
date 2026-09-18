@@ -1,0 +1,111 @@
+@meta
+id: 14-17
+title: The match itself, and the last replacement
+chapter: 14
+type: lesson
+skills: sub-backref, sub-basic
+par: 50
+minutes: 6
+vscode: regex replace with `$0`, then retype the whole replacement for the second run
+open: incident.md
+
+@brief
+Incident reports are rendered onto the status page, and the renderer
+turns anything in backticks into a link to the admin console. Every
+order id and every batch id in this report needs backticks around it.
+There are fourteen of them and they are all different, so the
+replacement cannot be a literal.
+
+The replacement side has a character that stands for "whatever the
+pattern matched". Use it for the order ids. Then, for the batch ids,
+find out what `~` means in a replacement and save yourself retyping.
+
+Nothing else in the file is wrapped. The incident number in the title
+is not an id the console knows about.
+
+@keys
+| `&` | in the replacement: the whole match |
+| `~` | in the replacement: the previous replacement string |
+| `\&` | a literal ampersand, when you want one |
+| `\vord_\d+` | an order id, in very magic |
+
+@hints
+You cannot write the replacement as text because every id is
+different. Write it as "backtick, the match, backtick".
+--
+`&` on the replacement side is the whole of what the pattern matched.
+`:%s/\vord_\d+/`&`/g` wraps every order id. The batch ids want exactly
+the same replacement.
+--
+`:%s/\vpyt_\d+/~/g` — `~` is the replacement you used last time,
+backticks and `&` included, and `&` still means "this match".
+
+@solution
+    :%s/\vord_\d+/`&`/g<Enter>  :%s/\vpyt_\d+/~/g<Enter>  :wq<Enter>
+
+Forty-two keystrokes, fourteen ids, none of them typed.
+
+`&` is the backreference to the whole match — group zero, if you like.
+It is what makes "wrap every X in Y" a one-liner: quote all the
+numbers, put brackets round every date, turn every bare URL into a
+markdown link. Whenever the replacement is "the same thing, decorated",
+reach for `&`. If you ever need a literal ampersand in a replacement,
+escape it: `\&`.
+
+`~` is stranger and less known. It is the previous replacement string,
+re-expanded, so an `&` inside it still refers to the current match.
+The habit it supports is the one in this lesson: get the replacement
+right once on one kind of thing, then apply it to another pattern
+without retyping it. The next lesson keeps the pattern and changes
+nothing; this one keeps the replacement and changes the pattern. Vim
+remembers both halves separately, and both are reusable.
+
+@start incident.md
+# INC-2041: refunds double-settled
+
+## Summary
+
+Between 09:12 and 09:40 the settlement worker ran twice against the
+same batch. Orders ord_9101, ord_9104 and ord_9112 were refunded twice.
+Batch pyt_402 was marked settled before the second run finished and
+pyt_403 never started.
+
+## Timeline
+
+- 09:12 pyt_402 picked up by worker-1
+- 09:14 worker-2 starts and picks up pyt_402 again
+- 09:18 ord_9101 settled by worker-1
+- 09:19 ord_9101 settled by worker-2
+- 09:25 ord_9104 settled twice
+- 09:33 ord_9112 settled twice
+- 09:40 pyt_402 marked settled, pyt_403 skipped
+
+## Actions
+
+- Reverse the duplicate settlements on ord_9101, ord_9104 and ord_9112
+- Re-run pyt_403 by hand once the reversals are confirmed
+
+@expected incident.md
+# INC-2041: refunds double-settled
+
+## Summary
+
+Between 09:12 and 09:40 the settlement worker ran twice against the
+same batch. Orders `ord_9101`, `ord_9104` and `ord_9112` were refunded twice.
+Batch `pyt_402` was marked settled before the second run finished and
+`pyt_403` never started.
+
+## Timeline
+
+- 09:12 `pyt_402` picked up by worker-1
+- 09:14 worker-2 starts and picks up `pyt_402` again
+- 09:18 `ord_9101` settled by worker-1
+- 09:19 `ord_9101` settled by worker-2
+- 09:25 `ord_9104` settled twice
+- 09:33 `ord_9112` settled twice
+- 09:40 `pyt_402` marked settled, `pyt_403` skipped
+
+## Actions
+
+- Reverse the duplicate settlements on `ord_9101`, `ord_9104` and `ord_9112`
+- Re-run `pyt_403` by hand once the reversals are confirmed

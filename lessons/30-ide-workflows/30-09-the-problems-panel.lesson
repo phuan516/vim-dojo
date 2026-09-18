@@ -1,0 +1,172 @@
+@meta
+id: 30-09
+title: The problems panel, read properly
+chapter: 30
+type: lesson
+skills: diagnostics
+par: 107
+minutes: 8
+vscode: the Problems panel, and fixing things top to bottom
+vimrc: set errorformat=%-G\ %.%#,%f(%l\\,%c):\ error\ %m suffixesadd=.ts hidden
+open: src/domain/order/order.provider.ts
+
+@brief
+`tsc.log` is the output of a type-check, provided with this lesson. Five
+errors. Three of them are the same sentence about `placedAt` not
+existing on `Order`, and the indented line under each one tells you
+where the type is declared.
+
+Chapter 19 taught you to load a list like this and walk it. The habit
+this lesson is after is the one before that: read the whole list first,
+then decide. Three of those five errors are one mistake — the entity
+field is called `placed` and every caller was written against
+`placedAt`. Rename the field on the type and all three go.
+
+Then the two that are real:
+
+  · the resolver reads `args.orderId` when the argument is `args.id`
+  · the payment service compares a status number to the string `'200'`
+
+`order.provider.ts` is correct as it stands, even though three errors
+point into it. Leave it, and leave `tsc.log`.
+
+@keys
+| `:cgetfile file` | load a list of errors without jumping anywhere |
+| `:copen` `:cclose` | show and hide the list |
+| `:cc N` | jump to entry number N |
+| `%-G` | an `errorformat` pattern for lines to throw away |
+
+@hints
+`:cgetfile tsc.log` then `:copen`. Read all five before you touch
+anything, and notice how many of them name the same property.
+--
+The entity is not in the error list at all — the type is fine
+TypeScript, it is just the wrong name. Get to it by following the
+import at the top of the provider with `gf`.
+--
+`e` puts you on the last character of `placed`, so `a` then `At` fixes
+the field. Then `:cc 4` and `:cc 5` take you to the two real errors.
+
+@solution
+    :cgetfile tsc.log<Enter>  :copen<Enter>  :cclose<Enter>
+    /order\.entity<Enter> gf  /placed:<Enter> e a At <Esc>
+    :cc 4<Enter>  ciw id <Esc>
+    :cc 5<Enter>  f' x f' x
+    :wqa<Enter>
+
+Five entries, three causes, one of which is not in any of them. That
+ratio is normal for a type checker: one broken declaration produces an
+error at every use site and none at the declaration. Fixing them top to
+bottom means editing three call sites to agree with a field name that
+was wrong in the first place.
+
+The `errorformat` for this lesson has two patterns:
+
+    %-G\ %.%#            throw away any line starting with a space
+    %f(%l\,%c):\ error\ %m   file, line, column, message
+
+`%-G` is "match this and ignore it". It is how you drop banners,
+summaries and, here, the related-information lines that modern
+compilers indent under each error. Without it the list has eight
+entries, three of which jump you to a declaration you did not ask for.
+
+This is exactly the diagnostics half of a language server. The server
+would have told you about `placedAt` as you typed, and it would do it
+without a build. What it would not have done is tell you that three of
+its own squiggles share one cause. That part is still you.
+
+@start tsc.log
+src/domain/order/order.provider.ts(12,31): error TS2551: Property 'placedAt' does not exist on type 'Order'. Did you mean 'placed'?
+  src/domain/order/order.entity.ts(6,3): 'placed' is declared here.
+src/domain/order/order.provider.ts(16,18): error TS2551: Property 'placedAt' does not exist on type 'Order'. Did you mean 'placed'?
+  src/domain/order/order.entity.ts(6,3): 'placed' is declared here.
+src/domain/order/order.repository.ts(14,9): error TS2551: Property 'placedAt' does not exist on type 'Order'. Did you mean 'placed'?
+  src/domain/order/order.entity.ts(6,3): 'placed' is declared here.
+src/domain/order/order.resolver.ts(7,44): error TS2339: Property 'orderId' does not exist on type '{ id: string; }'.
+src/infrastructure/services/payment.service.ts(5,9): error TS2367: This comparison appears to be unintentional because the types 'number' and 'string' have no overlap.
+
+@start src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  placed: Date;
+};
+
+@expected src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  placedAt: Date;
+};
+
+@start src/domain/order/order.provider.ts
+import { Order } from './order.entity';
+import { OrderRepository } from './order.repository';
+
+export class OrderProvider {
+  constructor(protected orderRepository: OrderRepository) {}
+
+  public async findOne(id: string) {
+    return this.orderRepository.findOne({ where: { id } });
+  }
+
+  public async age(order: Order) {
+    return Date.now() - order.placedAt.getTime();
+  }
+
+  public async isStale(order: Order) {
+    return order.placedAt.getTime() < Date.now() - 86_400_000;
+  }
+}
+
+@start src/domain/order/order.resolver.ts
+import { OrderProvider } from './order.provider';
+
+export class OrderResolver {
+  constructor(protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.orderId);
+  }
+}
+
+@expected src/domain/order/order.resolver.ts
+import { OrderProvider } from './order.provider';
+
+export class OrderResolver {
+  constructor(protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+}
+
+@start src/infrastructure/services/payment.service.ts
+export class PaymentService {
+  public async refund(orderId: string) {
+    const response = await this.http.post('/refunds', { orderId });
+
+    if (response.status !== '200') {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data.receiptId;
+  }
+}
+
+@expected src/infrastructure/services/payment.service.ts
+export class PaymentService {
+  public async refund(orderId: string) {
+    const response = await this.http.post('/refunds', { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data.receiptId;
+  }
+}

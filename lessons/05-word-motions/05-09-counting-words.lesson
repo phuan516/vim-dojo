@@ -1,0 +1,69 @@
+@meta
+id: 05-09
+title: Counting words instead of pressing
+chapter: 05
+type: lesson
+skills: word-counts, word-w
+par: 18
+minutes: 4
+vscode: Ctrl-Right nine times, or give up and click
+open: refunds.md
+
+@brief
+Chapter four taught you that `5j` beats holding `j`. The same count goes
+in front of every word motion, and for the same reason: one considered
+number instead of a burst of presses you have to watch.
+
+`3w` is three words forward. `2b` is two back. `4e` is four word-ends
+forward.
+
+The nightly job is specifically the payment reconciliation job. Make the
+first line read:
+
+    Refund requests are queued and processed by the nightly payment reconciliation job.
+
+Par is tight enough that pressing `w` nine times will not fit.
+
+@keys
+| `3w` | three words forward |
+| `2b` | two words back |
+| `4e` | four word-ends forward |
+| `i` | insert before the cursor |
+
+@hints
+Count the words between where you are and where `payment` needs to go.
+Your finger does not need to count them one press at a time.
+--
+A number typed before a motion repeats it. The digits go first: type the
+count, then the motion key, and nothing happens until the key lands.
+--
+It is nine words from the start of the line to `reconciliation`. `9w`,
+then `i`, type `payment` and a space, `Esc`, `:wq`.
+
+@solution
+    9w  i payment <Esc>  :wq<Enter>
+
+Sixteen keystrokes against twenty-three for the same edit done by
+hammering `w`, and the count version is the one you can trust. Counting
+nine words feels slow the first few times and then it does not, in
+exactly the way counting lines stopped feeling slow last chapter.
+
+Two things make the count worth the thought. The first is that it is one
+decision instead of nine — you look, you count, you go, and you are not
+monitoring the cursor while it travels. The second matters more later:
+when a count is attached to a motion and the motion is attached to an
+operator, the whole thing becomes one undoable action. Chapter eight
+turns that into `d3w` and it only works because the count lives on the
+motion.
+
+If nine is more than you can count at a glance, that is a signal the
+motion is wrong, not that the count is. A target that far away usually
+wants `W`, a search, or a different line entirely.
+
+@start refunds.md
+Refund requests are queued and processed by the nightly reconciliation job.
+Anything queued after 23:00 waits for the following night.
+
+@expected refunds.md
+Refund requests are queued and processed by the nightly payment reconciliation job.
+Anything queued after 23:00 waits for the following night.

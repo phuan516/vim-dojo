@@ -1,0 +1,100 @@
+@meta
+id: 27-16
+title: Teach it a key
+chapter: 27
+type: lesson
+skills: mapping
+par: 80
+minutes: 8
+vscode: a snippet, a keybindings.json entry, and a restart
+open: standup.md
+
+@brief
+Ten carry-over items from the sprint. Every one of them has to become a
+task line: a `- [ ] ` checkbox in front, and ` (unassigned)` on the end.
+
+    refund window comparison uses local time
+    - [ ] refund window comparison uses local time (unassigned)
+
+Two edits per line, at opposite ends of it. `.` will not help you — it
+repeats the last change, and there are two.
+
+So make it one change. A mapping binds a key to a sequence of keys; press
+the key and vim behaves as if you had typed the sequence. Bind one, then
+walk down the file pressing it.
+
+Ten lines is roughly the point where this pays for itself. Fifty lines and
+it is not close.
+
+@keys
+| `:nnoremap - I- [ ] <Esc>A (unassigned)<Esc>` | bind `-` in normal mode |
+| `:nnoremap` | list every normal-mode mapping |
+| `:nunmap -` | remove that one |
+| `<Esc>` `<CR>` `<Tab>` `<C-a>` | how special keys are spelled inside a mapping |
+
+@hints
+The edit is two changes, so `.` cannot repeat it. Make vim treat the pair
+as one keystroke.
+--
+`:nnoremap <key> <the keys you would have typed>`. Pick a normal-mode key
+you are not using — `-` is a good throwaway.
+--
+`:nnoremap - I- [ ] <Esc>A (unassigned)<Esc>` `Enter`, then `3G` and
+`-j` down the ten lines.
+
+@solution
+    :nnoremap - I- [ ] <Esc>A (unassigned)<Esc><Enter>
+    3G  -j-j-j-j-j-j-j-j-j-  :wq<Enter>
+
+Sixty-nine keystrokes. By hand it is closer to two hundred and forty, and
+every one of those is a chance to typo a bracket.
+
+Read the command name: `n` `nore` `map`. Normal mode, non-recursive, map.
+There is one for each mode — `nnoremap`, `inoremap`, `vnoremap`,
+`xnoremap`, `onoremap`, `cnoremap` — and a bare `noremap` that covers
+several at once, which is nearly always a mistake because a key that is
+convenient in normal mode is usually a letter you need in insert mode.
+
+Inside the right-hand side, special keys are written in angle brackets:
+`<Esc>`, `<CR>`, `<Tab>`, `<Space>`, `<C-a>` for Ctrl-A, `<A-x>` for
+Alt-X, `<F5>`. You cannot press Escape while typing the command — that
+would cancel the command line — so you spell it.
+
+Choosing the key is the other half. Vim has few genuinely free keys, and
+the ones people usually take are `-`, `<Space>`, `<CR>` and `<BS>` in
+normal mode, the function keys, and anything at all behind a leader, which
+is the lesson after next. Before you take a key, find out what you are
+giving up: `:help -` will tell you it moves to the first non-blank of the
+line above, and you will decide you do not care.
+
+Mappings you make with `:nnoremap` at the command line last until you quit.
+A mapping you like goes in your `.vimrc`, where it is the same line without
+the colon.
+
+@start standup.md
+# Sprint 41 carry-over
+
+refund window comparison uses local time
+gateway schema cache not cleared on deploy
+payment webhook retries are not idempotent
+export job times out above 50k rows
+customer search ignores archived records
+refund reason missing from the audit log
+order status transitions are not validated
+stale sessions survive a password change
+invoice totals round in the wrong direction
+webhook signing secret is read at boot only
+
+@expected standup.md
+# Sprint 41 carry-over
+
+- [ ] refund window comparison uses local time (unassigned)
+- [ ] gateway schema cache not cleared on deploy (unassigned)
+- [ ] payment webhook retries are not idempotent (unassigned)
+- [ ] export job times out above 50k rows (unassigned)
+- [ ] customer search ignores archived records (unassigned)
+- [ ] refund reason missing from the audit log (unassigned)
+- [ ] order status transitions are not validated (unassigned)
+- [ ] stale sessions survive a password change (unassigned)
+- [ ] invoice totals round in the wrong direction (unassigned)
+- [ ] webhook signing secret is read at boot only (unassigned)

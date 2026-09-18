@@ -1,0 +1,97 @@
+@meta
+id: 21-09
+title: A macro on every line of a range
+chapter: 21
+type: lesson
+skills: macro-play, macro-record
+par: 76
+minutes: 7
+vscode: select lines 3 to 17 and hope multi-cursor lands on all of them
+open: errors.ts
+
+@brief
+The error table for the new payments module was pasted in from the
+incident sheet: a code and a status per line. Each becomes an entry:
+
+    ORDER_NOT_FOUND 404    →    'ORDER_NOT_FOUND': { statusCode: 404, sentry: false },
+
+Sixteen lines, from line 2 to line 17. Record on the first and let an
+Ex range play the macro on the others.
+
+`:normal` from chapter 15 is not tied to `:g`. It takes any range, and
+`@a` is an ordinary normal-mode command. So `:3,17normal @a` plays the
+macro on every line from 3 to 17, one line at a time, with the cursor
+put at the start of each line for you.
+
+@keys
+| `:3,17normal @a` | play `a` once on each of lines 3 to 17 |
+| `ea` | append after the end of the word |
+
+@hints
+The macro does not need a `j`. `:normal` visits each line of the range
+for you and puts the cursor at the start of it.
+--
+On line 2: `^i'` `Esc`, `ea': { statusCode:` `Esc`, `A, sentry: false },`
+`Esc`. Stop recording there.
+--
+`j`, record, then `:3,17normal @a` and Enter.
+
+@solution
+    j  qa ^i' <Esc> ea': { statusCode: <Esc> A, sentry: false }, <Esc> q   :3,17normal @a<Enter>   :wq<Enter>
+
+Sixty-six keystrokes.
+
+Compare this with `15@a`. The count version needs the macro to end
+with `j`, and it needs the lines to be consecutive. The range version
+needs neither: `:normal` does the stepping, so the macro is purely the
+edit, and the range can be anything an Ex command accepts, including
+marks, `.` for the current line and `$` for the last. Line numbers are
+on the screen; reading two of them is faster than counting sixteen.
+
+There is a second difference. If the macro fails on one line under a
+count, everything after it is cancelled. Under `:normal`, a failure on
+one line is contained to that line; the next line in the range still
+gets its turn. Which of those you want depends on the job. For a
+contiguous block of data, either works. For a range that you know
+contains lines the macro should skip, `:normal` is the forgiving one,
+and the next lesson makes the skipping precise.
+
+@start errors.ts
+export const paymentErrors = {
+  ORDER_NOT_FOUND 404
+  ORDER_ALREADY_SHIPPED 409
+  ORDER_ALREADY_CANCELLED 409
+  CUSTOMER_NOT_FOUND 404
+  CUSTOMER_SUSPENDED 403
+  PAYMENT_DECLINED 402
+  PAYMENT_METHOD_EXPIRED 402
+  PAYMENT_GATEWAY_TIMEOUT 504
+  REFUND_FAILED 502
+  REFUND_WINDOW_EXPIRED 409
+  REFUND_ALREADY_ISSUED 409
+  SHIPMENT_NOT_FOUND 404
+  SHIPMENT_ADDRESS_INVALID 422
+  INVOICE_NOT_FOUND 404
+  INVOICE_ALREADY_PAID 409
+  RATE_LIMITED 429
+};
+
+@expected errors.ts
+export const paymentErrors = {
+  'ORDER_NOT_FOUND': { statusCode: 404, sentry: false },
+  'ORDER_ALREADY_SHIPPED': { statusCode: 409, sentry: false },
+  'ORDER_ALREADY_CANCELLED': { statusCode: 409, sentry: false },
+  'CUSTOMER_NOT_FOUND': { statusCode: 404, sentry: false },
+  'CUSTOMER_SUSPENDED': { statusCode: 403, sentry: false },
+  'PAYMENT_DECLINED': { statusCode: 402, sentry: false },
+  'PAYMENT_METHOD_EXPIRED': { statusCode: 402, sentry: false },
+  'PAYMENT_GATEWAY_TIMEOUT': { statusCode: 504, sentry: false },
+  'REFUND_FAILED': { statusCode: 502, sentry: false },
+  'REFUND_WINDOW_EXPIRED': { statusCode: 409, sentry: false },
+  'REFUND_ALREADY_ISSUED': { statusCode: 409, sentry: false },
+  'SHIPMENT_NOT_FOUND': { statusCode: 404, sentry: false },
+  'SHIPMENT_ADDRESS_INVALID': { statusCode: 422, sentry: false },
+  'INVOICE_NOT_FOUND': { statusCode: 404, sentry: false },
+  'INVOICE_ALREADY_PAID': { statusCode: 409, sentry: false },
+  'RATE_LIMITED': { statusCode: 429, sentry: false },
+};

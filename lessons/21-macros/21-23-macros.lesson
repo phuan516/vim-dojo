@@ -1,0 +1,109 @@
+@meta
+id: 21-23
+title: Capstone — record once, replay forever
+chapter: 21
+type: scenario
+skills: macro-record, macro-play, macro-count
+par: 48
+minutes: 6
+vscode: no equivalent
+open: status.labels.ts
+
+@brief
+This is the thing vim has that your editor does not.
+
+A macro is a recording of your keystrokes, saved into a register,
+replayable any number of times. Not a script - literally the keys
+you pressed, played back.
+
+Turn the eight bare words in status.labels.ts into object entries:
+
+    pending        ->      PENDING: 'pending',
+
+Record the transformation on the FIRST line, ending with j so the
+cursor lands ready on the next one. Then replay it seven times with
+7@a .  (or @a to test one line first, then 6@a)
+
+If your recording goes wrong, do not repair it - press q, undo, and
+record it again. Re-recording is cheap. That is the whole skill.
+
+@keys
+qa        start recording into register a  ( "recording @a" appears )
+q         stop recording
+@a        play the macro back once
+7@a       play it seven times
+@@        play the LAST macro again
+
+Making a macro repeatable:
+  - start from a predictable place on the line  ( ^ or 0 )
+  - finish by moving to the next line  ( j )
+  - never use arrow keys or counts that depend on where you are
+
+Useful in this level:
+  yiw       yank the word under the cursor
+  gUiw      upper case the word under the cursor
+  A  I      append at end of line / insert at start of line
+  p         put the yanked word back
+
+See what you recorded:   :reg a
+Fix a bad macro by hand: put the cursor on a blank line, "ap to
+paste it as text, edit it, then "ay$ to yank it back into a.
+
+@hints
+Get to line 2, column 0, before you press qa. Where you start
+recording is where every replay assumes it starts.
+--
+One recipe that works:
+  ^  yiw            go to the word, copy it
+  A: '  Esc         append  : '  at the end of the line
+  p                 paste the word inside the quotes
+  A',  Esc          close the quote and add the comma
+  ^ gUiw            upper case the key at the front
+  I<space><space> Esc   indent by two
+  j                 land on the next line - this is what makes it repeat
+--
+Now press q to stop, then @a once and watch a single line transform.
+If it worked, 6@a does the six after it.
+--
+Went wrong? u until the file is back, then qa and record again. Do
+not try to patch a broken macro on your first day.
+
+@solution
+2G 0
+qa                          start recording into a
+^yiwA: '<Esc>pA',<Esc>^gUiwI  <Esc>j
+q                           stop
+
+@a                          test it on one line
+6@a                         the remaining six
+
+:wq
+
+Where this pays off in real work: eight lines of JSON into eight
+TypeScript fields, a log paste into test fixtures, adding the same
+import to twelve files with :argdo normal @a . Anything repetitive
+and shaped the same. You will find yourself reaching for it weekly.
+
+@start status.labels.ts
+export const STATUS_LABELS = {
+pending
+shipped
+cancelled
+refunded
+on_hold
+awaiting_stock
+partially_shipped
+returned
+};
+
+@expected status.labels.ts
+export const STATUS_LABELS = {
+  PENDING: 'pending',
+  SHIPPED: 'shipped',
+  CANCELLED: 'cancelled',
+  REFUNDED: 'refunded',
+  ON_HOLD: 'on_hold',
+  AWAITING_STOCK: 'awaiting_stock',
+  PARTIALLY_SHIPPED: 'partially_shipped',
+  RETURNED: 'returned',
+};

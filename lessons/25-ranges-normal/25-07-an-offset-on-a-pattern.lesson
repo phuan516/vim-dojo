@@ -1,0 +1,98 @@
+@meta
+id: 25-07
+title: An offset on a pattern
+chapter: 25
+type: lesson
+skills: range-pattern, range-syntax
+par: 21
+minutes: 4
+vscode: find the heading, click the line under it, select, delete
+open: API.md
+
+@brief
+The refunds section of the API doc still carries the draft warning it was
+written with. The endpoint shipped last sprint. Delete the warning line —
+the one directly under the `## Refunds` heading. Every other section keeps
+its own lines exactly as they are.
+
+You cannot name that line by its text alone, because the same warning
+appears under `## Disputes` and that one is still true. You can name it by
+where it sits: one line below the heading.
+
+Offsets attach to pattern addresses exactly as they do to `.` and `$`.
+
+@keys
+| `:/Refunds/+1d` | the line one below the next `Refunds` match |
+| `/pat/+1` | one below the match |
+| `/pat/-1` | one above it |
+| `/pat/+` | `+` on its own means `+1` |
+
+@hints
+Find the line you can name — the heading — and then describe the target
+relative to it.
+--
+The offset goes after the closing slash of the pattern.
+--
+`:/Refunds/+1d` Enter, then `:wq`.
+
+@solution
+    :/Refunds/+1d<Enter>  :wq<Enter>
+
+Eighteen keystrokes and you never moved the cursor off line 1.
+
+This is the address grammar paying off. An address is a *place*, and a
+place can be found by searching, then adjusted by counting. Almost every
+structured file has landmarks you can search for and targets you cannot:
+the line under a heading, the line before a closing brace, the second
+line of a fixture. `/landmark/±n` names all of them.
+
+Both ends of a range can carry one:
+
+    :/describe/+1,/});/-1>     indent the body of a test, not its edges
+    :/BEGIN/+1,/END/-1d        the contents of a block, leaving the markers
+    :?import?+1pu              put the register below the import above you
+
+A pattern address with an offset still searches first and counts second,
+so if the search fails, nothing happens and vim tells you `E486` rather
+than guessing.
+
+@start API.md
+# Orders API
+
+## Create order
+
+POST `/orders`. Returns the created order with its generated id.
+
+## Cancel order
+
+POST `/orders/:id/cancel`. Issues a refund inside the thirty day window.
+
+## Refunds
+> Draft — this section describes an endpoint that does not exist yet.
+
+GET `/refunds?orderId=`. Lists refunds for an order, newest first.
+
+## Disputes
+> Draft — this section describes an endpoint that does not exist yet.
+
+POST `/disputes`. Opens a dispute against a settled payment.
+
+@expected API.md
+# Orders API
+
+## Create order
+
+POST `/orders`. Returns the created order with its generated id.
+
+## Cancel order
+
+POST `/orders/:id/cancel`. Issues a refund inside the thirty day window.
+
+## Refunds
+
+GET `/refunds?orderId=`. Lists refunds for an order, newest first.
+
+## Disputes
+> Draft — this section describes an endpoint that does not exist yet.
+
+POST `/disputes`. Opens a dispute against a settled payment.

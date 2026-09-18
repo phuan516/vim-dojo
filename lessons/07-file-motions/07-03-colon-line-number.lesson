@@ -1,0 +1,297 @@
+@meta
+id: 07-03
+title: The same jump from the command line
+chapter: 07
+type: lesson
+skills: goto-line, find-f
+par: 86
+minutes: 6
+vscode: Ctrl-G, or clicking the line number in a stack trace
+open: order.resolver.ts
+
+@brief
+Three notes from a code review on this 110 line resolver.
+
+  1. Line 27 — `take: args.take,` should fall back when the client sends
+     nothing: `take: args.take ?? 50,`.
+
+  2. Line 71 — the cancel call is not awaited. `const order = this.` should
+     read `const order = await this.`.
+
+  3. The file uses the `Order` type and never imports it. Add, as a new
+     first line of the file:
+
+         import { Order } from '../../types';
+
+Do them in that order and think about why the order matters.
+
+There is a second way to say "go to line 27", and it is the one you will
+reach for when the number is sitting in your other hand — pasted from a
+build log, read off a review comment, dictated over a call.
+
+@keys
+| `:27` `Enter` | go to line 27 |
+| `:1` `Enter` | the first line |
+| `:$` `Enter` | the last line |
+| `f=` `w` | to the equals sign, then to the start of the next word |
+| `O` | open a line above |
+
+@hints
+A line number typed on the command line is a command in its own right. You
+do not need a verb in front of it.
+--
+`:27` `Enter` goes to line 27, exactly as `27G` does. `:1` and `:$` are the
+two ends. Once the colon is down, the numbers are just digits, so this is
+the form that survives being read aloud or pasted.
+--
+On line 27 the comma is the anchor: `f,` then `i` to write in front of it.
+On line 71 you need to get in front of `this`, and `f=` then `w` lands you
+exactly there. Leave the import until last.
+
+@solution
+    :27<Enter> f , i  ?? 50 <Esc>
+    :71<Enter> f = w i await  <Esc>
+    :1<Enter> O import { Order } from '../../types'; <Esc>
+    :wq<Enter>
+
+About seventy-five keystrokes, fifty of them the import line.
+
+`:27` and `27G` land in the same place, and which you use is mostly about
+where the number came from. `27G` is quicker under the fingers. `:27` wins
+when you are copying a number from somewhere else, because the colon puts
+you in a mode where digits are digits and a typo is fixable with Backspace
+rather than being executed as a command the moment you press it. `:$` is
+also the only one of the two ends that reads as plainly as it behaves.
+
+Now the ordering. The import goes in first in the finished file but you
+typed it last, because inserting a line at the top pushes every line below
+it down by one and the review's numbers would all have been wrong by one.
+Line numbers are a snapshot, not an address. When you have a list of them
+to work through, go from the bottom of the file upwards, or make the
+insertions that shift things last. This is the single most common way
+people mangle a file while fixing it from a list of compiler errors.
+
+@start order.resolver.ts
+import { Resolver, Query, Mutation, Args } from 'type-graphql';
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+import { CustomerProvider } from '../customer/customer.provider';
+import { RefundProvider } from '../refund/refund.provider';
+
+@injectable()
+@Resolver()
+export class OrderResolver {
+  constructor(
+    @inject(OrderProvider) protected orderProvider: OrderProvider,
+    @inject(CustomerProvider) protected customerProvider: CustomerProvider,
+    @inject(RefundProvider) protected refundProvider: RefundProvider,
+  ) {}
+
+  @Query(() => Order)
+  public async order(@Args() args: OrderArgs): Promise<Order> {
+    const order = await this.orderProvider.findOne(args.id);
+
+    return order;
+  }
+
+  @Query(() => [Order])
+  public async orders(@Args() args: OrdersArgs): Promise<Order[]> {
+    const orders = await this.orderProvider.findMany({
+      where: { customerId: args.customerId },
+      take: args.take,
+    });
+
+    return orders;
+  }
+
+  @Query(() => [Order])
+  public async pendingOrders(@Args() args: PendingOrdersArgs): Promise<Order[]> {
+    const orders = await this.orderProvider.findPending(args.take ?? 25);
+
+    return orders;
+  }
+
+  @Query(() => Customer)
+  public async orderCustomer(@Args() args: OrderArgs): Promise<Customer> {
+    const order = await this.orderProvider.findOne(args.id);
+    const customer = await this.customerProvider.findOne(order.customerId);
+
+    return customer;
+  }
+
+  @Mutation(() => Order)
+  public async createOrder(@Args() args: CreateOrderArgs): Promise<Order> {
+    const order = await this.orderProvider.create({
+      customerId: args.customerId,
+      amount: args.amount,
+      currency: args.currency ?? 'GBP',
+    });
+
+    return order;
+  }
+
+  @Mutation(() => Order)
+  public async updateOrder(@Args() args: UpdateOrderInput): Promise<Order> {
+    const order = await this.orderProvider.update({
+      where: { id: args.id },
+      values: { amount: args.amount },
+    });
+
+    return order;
+  }
+
+  @Mutation(() => Order)
+  public async cancelOrder(@Args() args: CancelOrderArgs): Promise<Order> {
+    const order = this.orderProvider.cancel(args.id);
+
+    return order;
+  }
+
+  @Mutation(() => Refund)
+  public async refundOrder(@Args() args: RefundOrderArgs): Promise<Refund> {
+    const refund = await this.refundProvider.refund({
+      orderId: args.orderId,
+      amount: args.amount,
+      reason: args.reason,
+    });
+
+    return refund;
+  }
+
+  @Query(() => [Order])
+  public async cancelledOrders(@Args() args: OrdersArgs): Promise<Order[]> {
+    const orders = await this.orderProvider.findMany({
+      where: { customerId: args.customerId, status: 'CANCELLED' },
+      take: args.take ?? 25,
+    });
+
+    return orders;
+  }
+
+  @Query(() => Number)
+  public async orderCount(@Args() args: OrderCountArgs): Promise<number> {
+    const count = await this.orderProvider.countByStatus(args.status);
+
+    return count;
+  }
+
+  @Mutation(() => Order)
+  public async reinstateOrder(@Args() args: OrderArgs): Promise<Order> {
+    const order = await this.orderProvider.reinstate(args.id);
+
+    return order;
+  }
+}
+
+@expected order.resolver.ts
+import { Order } from '../../types';
+import { Resolver, Query, Mutation, Args } from 'type-graphql';
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+import { CustomerProvider } from '../customer/customer.provider';
+import { RefundProvider } from '../refund/refund.provider';
+
+@injectable()
+@Resolver()
+export class OrderResolver {
+  constructor(
+    @inject(OrderProvider) protected orderProvider: OrderProvider,
+    @inject(CustomerProvider) protected customerProvider: CustomerProvider,
+    @inject(RefundProvider) protected refundProvider: RefundProvider,
+  ) {}
+
+  @Query(() => Order)
+  public async order(@Args() args: OrderArgs): Promise<Order> {
+    const order = await this.orderProvider.findOne(args.id);
+
+    return order;
+  }
+
+  @Query(() => [Order])
+  public async orders(@Args() args: OrdersArgs): Promise<Order[]> {
+    const orders = await this.orderProvider.findMany({
+      where: { customerId: args.customerId },
+      take: args.take ?? 50,
+    });
+
+    return orders;
+  }
+
+  @Query(() => [Order])
+  public async pendingOrders(@Args() args: PendingOrdersArgs): Promise<Order[]> {
+    const orders = await this.orderProvider.findPending(args.take ?? 25);
+
+    return orders;
+  }
+
+  @Query(() => Customer)
+  public async orderCustomer(@Args() args: OrderArgs): Promise<Customer> {
+    const order = await this.orderProvider.findOne(args.id);
+    const customer = await this.customerProvider.findOne(order.customerId);
+
+    return customer;
+  }
+
+  @Mutation(() => Order)
+  public async createOrder(@Args() args: CreateOrderArgs): Promise<Order> {
+    const order = await this.orderProvider.create({
+      customerId: args.customerId,
+      amount: args.amount,
+      currency: args.currency ?? 'GBP',
+    });
+
+    return order;
+  }
+
+  @Mutation(() => Order)
+  public async updateOrder(@Args() args: UpdateOrderInput): Promise<Order> {
+    const order = await this.orderProvider.update({
+      where: { id: args.id },
+      values: { amount: args.amount },
+    });
+
+    return order;
+  }
+
+  @Mutation(() => Order)
+  public async cancelOrder(@Args() args: CancelOrderArgs): Promise<Order> {
+    const order = await this.orderProvider.cancel(args.id);
+
+    return order;
+  }
+
+  @Mutation(() => Refund)
+  public async refundOrder(@Args() args: RefundOrderArgs): Promise<Refund> {
+    const refund = await this.refundProvider.refund({
+      orderId: args.orderId,
+      amount: args.amount,
+      reason: args.reason,
+    });
+
+    return refund;
+  }
+
+  @Query(() => [Order])
+  public async cancelledOrders(@Args() args: OrdersArgs): Promise<Order[]> {
+    const orders = await this.orderProvider.findMany({
+      where: { customerId: args.customerId, status: 'CANCELLED' },
+      take: args.take ?? 25,
+    });
+
+    return orders;
+  }
+
+  @Query(() => Number)
+  public async orderCount(@Args() args: OrderCountArgs): Promise<number> {
+    const count = await this.orderProvider.countByStatus(args.status);
+
+    return count;
+  }
+
+  @Mutation(() => Order)
+  public async reinstateOrder(@Args() args: OrderArgs): Promise<Order> {
+    const order = await this.orderProvider.reinstate(args.id);
+
+    return order;
+  }
+}

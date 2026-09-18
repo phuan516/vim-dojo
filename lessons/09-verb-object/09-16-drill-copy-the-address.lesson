@@ -1,0 +1,46 @@
+@meta
+id: 09-16
+title: Drill — copy the address across
+chapter: 09
+type: drill
+skills: op-motion
+par: 20
+minutes: 4
+reps: 8
+vscode: select the string, Ctrl-C, click between the quotes, Ctrl-V
+open: mail.ts
+
+@brief
+Eight times: give `replyTo` the same address as `from`, by copying it.
+Save, quit. Never type the address.
+
+@keys
+| `yt'` | yank up to, not including, the next quote |
+| `p` | put it after the cursor |
+
+@hints
+Land on the first letter of the address and yank as far as the closing
+quote.
+--
+`f'`, `l`, `yt'`. Then down to the empty pair, land on the opening quote
+and `p`.
+
+@solution
+    f' l yt' j $ 2h p :wq<Enter>
+
+Fifteen keystrokes, and the address is guaranteed to be identical to the
+one above it. That guarantee is the reason to do it this way rather than
+typing eighteen characters you think you remember.
+
+`yt'` reads as a sentence: yank, till, quote. Change the operator and the
+same sentence deletes it or changes it. Change the target character and
+it works on a bracket, a comma or a colon instead. You are not learning
+edits any more, you are learning to spell them.
+
+@start mail.ts
+const from = 'billing@thrive.example';
+const replyTo = '';
+
+@expected mail.ts
+const from = 'billing@thrive.example';
+const replyTo = 'billing@thrive.example';

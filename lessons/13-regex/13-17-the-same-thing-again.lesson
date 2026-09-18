@@ -1,0 +1,118 @@
+@meta
+id: 13-17
+title: The same thing again
+chapter: 13
+type: lesson
+skills: regex-groups, regex-verymagic
+par: 28
+minutes: 6
+vscode: read it aloud and hope you notice
+open: RUNBOOK.md
+
+@brief
+This runbook has been edited by four people and proofread by none. Three
+times, a word is written twice in a row — "the the", that kind of thing.
+Delete the second copy in each case. Everything else stays, including
+"the theory", which is not a doubled word, and the code samples.
+
+You cannot search for the doubled word because you do not know which
+word it is. What you know is the *relationship*: some word, a space,
+and then that same word again. A group captures what it matched, and a
+pattern can refer back to its own capture.
+
+@keys
+| `\1` | whatever the first group matched, again |
+| `\v<(\w+) \1>` | a word, a space, the same word — a doubled word |
+| `\2` … `\9` | the second group onward |
+| `dw` | delete a word and the space after it |
+
+@hints
+Describe it as "a word, then that word". The second half of the
+pattern has to be the first half's *result*, not its shape.
+--
+Round brackets capture. `\1` inside the pattern means "the text the
+first group captured". Word anchors on both ends stop `the theory`
+from qualifying.
+--
+`/\v<(\w+) \1>` `Enter` lands on the first copy. `dw` removes it and
+the space. `n.` twice for the other two.
+
+@solution
+/\v<(\w+) \1><Enter>  dw  n.  n.  :wq<Enter>
+
+Twenty-four keystrokes for a proofreading pass that would take a person
+two full readings to do reliably.
+
+Groups capture as well as fence. Every `(...)` in a pattern remembers
+what it matched, numbered from the left, and `\1` to `\9` inside the
+same pattern mean "that text, again, exactly". This is a
+*backreference*, and it is the one thing a pattern can do that a
+description of shape cannot: relate two parts of the match to each
+other. A doubled word. A quote that has to close with the kind of quote
+it opened with — `\v(['"]).{-}\1`. A closing tag that has to match its
+opening tag.
+
+Read the anchors carefully because the pattern is nothing without them.
+`<(\w+) \1>` requires a word boundary before the first copy and after
+the second. Without them, `the theory` matches — `the` then space then
+`the` — and so does `in inside`. With them, the second copy has to be a
+complete word.
+
+Chapter 14 uses the same captures on the other side of a substitute,
+where `\1` in the replacement means "put the captured text here". It is
+the same numbering and the same brackets, so the idea will already be
+in your hands.
+
+@start RUNBOOK.md
+# Payments runbook
+
+## When a payout batch fails
+
+Check the the SFTP host first. Nine times out of ten it is unreachable
+because the certificate on the finance side has expired, and the theory
+that our exporter is at fault has never once been right.
+
+    ./scripts/payout-status --batch pyt_402
+
+If the batch is stuck in `EXPORTING`, requeue it. Do not delete it: the
+ledger has already recorded the debit and and the reconciliation job
+will flag the gap.
+
+## When refunds are declined
+
+A decline from the gateway is final. Retry only on `GATEWAY_TIMEOUT`,
+never on `PAYMENT_DECLINED` — a retried decline is is a chargeback
+waiting to happen.
+
+    ./scripts/refund-retry --order ord_9125 --reason GATEWAY_TIMEOUT
+
+## Escalation
+
+Infra own the SFTP host and the queue broker. Everything else is ours.
+
+@expected RUNBOOK.md
+# Payments runbook
+
+## When a payout batch fails
+
+Check the SFTP host first. Nine times out of ten it is unreachable
+because the certificate on the finance side has expired, and the theory
+that our exporter is at fault has never once been right.
+
+    ./scripts/payout-status --batch pyt_402
+
+If the batch is stuck in `EXPORTING`, requeue it. Do not delete it: the
+ledger has already recorded the debit and the reconciliation job
+will flag the gap.
+
+## When refunds are declined
+
+A decline from the gateway is final. Retry only on `GATEWAY_TIMEOUT`,
+never on `PAYMENT_DECLINED` — a retried decline is a chargeback
+waiting to happen.
+
+    ./scripts/refund-retry --order ord_9125 --reason GATEWAY_TIMEOUT
+
+## Escalation
+
+Infra own the SFTP host and the queue broker. Everything else is ours.

@@ -1,0 +1,73 @@
+@meta
+id: 11-04
+title: Giving the repeat a new count
+chapter: 11
+type: lesson
+skills: dot-repeat
+par: 26
+minutes: 5
+vscode: a regex find-and-replace, or eight manual selections
+open: worker.log
+
+@brief
+Eight lines of worker log. Every line is prefixed with noise you do not
+want: a date, a time, a level. Halfway down the file the worker started
+tagging its output as well, so the last four lines carry a fourth token.
+
+Strip the prefix off all eight lines so that each one begins with the
+subsystem word — `order`, `payment`, `email`.
+
+Three tokens on the first four lines, four on the last four. You do not
+need a second command for that, and you do not need to press the same one
+twice.
+
+@keys
+| `d3W` | delete three space-separated WORDs |
+| `.` | repeat the last change, with the same count |
+| `4.` | repeat it with a new count of four |
+
+@hints
+`W` counts space-separated chunks, so `2024-03-11` is one of them, not
+five. Delete three of them at once on line one.
+--
+A bare `.` repeats the count you originally gave. Give `.` a count of its
+own and that count replaces the old one for good.
+--
+`d3W`, then `j.` three times, then `j4.` — and from there a bare `.` is
+deleting four WORDs, so the rest of the file is `j.` again.
+
+@solution
+    d3W   j.  j.  j.   j4.   j.  j.  j.
+
+The count is part of what `.` remembers, which is why `j.` keeps taking
+exactly three WORDs. When you type `4.` you are not saying "do it four
+times" — you are saying "do that change again, but with four". The new
+count then sticks, so every `.` after it also takes four.
+
+That distinction catches people out. `3.` after a `dd` does not delete
+three lines three times; it deletes three lines, once. The count in front
+of `.` replaces the count you used originally rather than multiplying it.
+
+Being able to re-aim the repeat like this is what keeps `.` useful on
+files that are nearly, but not exactly, uniform. You do not have to
+abandon the repeat the moment one line is different.
+
+@start worker.log
+2024-03-11 08:14:02 INFO order ORD-1182 created
+2024-03-11 08:14:03 INFO payment authorised 4800 for ORD-1182
+2024-03-11 08:14:03 WARN payment retry 1 of 3
+2024-03-11 08:14:04 INFO email receipt queued for CUS-4410
+2024-03-11 08:15:01 INFO [worker-3] order ORD-1183 created
+2024-03-11 08:15:02 WARN [worker-3] payment retry 1 of 3
+2024-03-11 08:15:09 INFO [worker-3] refund issued for ORD-1180
+2024-03-11 08:15:12 INFO [worker-3] email receipt queued for CUS-4411
+
+@expected worker.log
+order ORD-1182 created
+payment authorised 4800 for ORD-1182
+payment retry 1 of 3
+email receipt queued for CUS-4410
+order ORD-1183 created
+payment retry 1 of 3
+refund issued for ORD-1180
+email receipt queued for CUS-4411

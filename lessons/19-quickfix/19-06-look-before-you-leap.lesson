@@ -1,0 +1,272 @@
+@meta
+id: 19-06
+title: Look before you leap
+chapter: 19
+type: lesson
+skills: vimgrep, quickfix-nav
+par: 128
+minutes: 7
+vscode: Replace All, then git checkout the file it broke
+vimrc: set nohidden
+open: README.md
+
+@brief
+`OrderProvider.cancel` is being renamed `cancelOrder`. The definition,
+the resolver's call and the two calls in the test change. But the
+provider also writes an audit entry under the event name
+`'order.cancel'`, and that string is what the audit dashboard filters
+on. It must survive.
+
+A blind Replace All in Files would change it. `:vimgrep /cancel/`
+followed by `:cdo s/cancel/cancelOrder/g` is exactly as blind. The list
+is what saves you, if you read it: `:copen` shows every hit with its
+text, and the audit line is visibly not a method call. Once you can see
+the difference, write a pattern that expresses it. A method call is the
+name followed by an open paren. The audit string is not.
+
+Rename the method and its callers. Leave the audit event alone. The
+README describes the audit event and is not in the glob anyway.
+
+@keys
+| `:copen` | read what a `:cdo` would touch before running it |
+| `:vimgrep /name(/ **/*.ts` | a call, not a string: the paren is part of the pattern |
+| `\<` | word boundary, from chapter 13 |
+
+@hints
+Search broadly first. `:vimgrep /\<cancel\>/ **/*.ts` and `:copen`. Five
+hits. One of them is a string.
+--
+The four real hits all have `(` right after the name.
+`:vimgrep /\<cancel(/ **/*.ts` finds exactly those and drops the audit
+line from the list.
+--
+Now the `:cdo` is safe: `:cdo s/\<cancel(/cancelOrder(/g | update`,
+then `:qa`.
+
+@solution
+    :vimgrep /\<cancel\>/ **/*.ts<Enter>  :copen<Enter>  (read it)
+    :vimgrep /\<cancel(/ **/*.ts<Enter>  :cdo s/\<cancel(/cancelOrder(/g | update<Enter>  :qa<Enter>
+
+The pattern does two jobs. In `:vimgrep` it decides what is in the
+list; in `:cdo s` it decides what changes on each listed line. They do
+not have to be the same, but making them the same means the list and
+the edit agree exactly.
+
+`\<cancel(` is more precise than `cancel` in two ways. The word boundary
+stops it matching inside `cancelOrder`, which already exists in the
+resolver as the GraphQL field name and must stay. The paren stops it
+matching the audit string. Both exclusions were visible in the first
+`:copen`, which is the point: the list is a preview, and a preview you
+do not read is a blind replace with extra steps.
+
+Running `:vimgrep` a second time replaced the list. Vim keeps the old
+one; lesson 18 shows how to get it back.
+
+@start README.md
+# Orders service
+
+Cancelling an order refunds it through `PaymentService.sendRefund`, which
+is named after the gateway's `/sendRefund` endpoint. A refund the gateway
+rejects raises `REFUND_FAILED`. Refund events go out on the
+`payment.sendRefund` routing key, which the ledger service consumes.
+Cancellations are audited under the event name `order.cancel`.
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.auditLog.record('order.cancel', { orderId: id });
+    await this.paymentService.sendRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancelOrder(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.auditLog.record('order.cancel', { orderId: id });
+    await this.paymentService.sendRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@expected src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancelOrder(args.id);
+  }
+}
+
+@start src/domain/order/order.provider.test.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { orderFactory } from '../../../test/factories/order.factory';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const provider = new OrderProvider(orderRepository, paymentService);
+
+  afterEach(() => jest.resetAllMocks());
+
+  it('refunds a pending order when it is cancelled', async () => {
+    const order = orderFactory({ status: 'PENDING' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    reveal(paymentService).sendRefund.mockResolvedValue(undefined);
+
+    await provider.cancel(order.id);
+
+    expect(paymentService.sendRefund).toHaveBeenCalledWith(order.id);
+  });
+
+  it('refuses to cancel a shipped order', async () => {
+    const order = orderFactory({ status: 'SHIPPED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+
+    await expect(provider.cancel(order.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+    expect(paymentService.sendRefund).not.toHaveBeenCalled();
+  });
+});
+
+@expected src/domain/order/order.provider.test.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { orderFactory } from '../../../test/factories/order.factory';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const provider = new OrderProvider(orderRepository, paymentService);
+
+  afterEach(() => jest.resetAllMocks());
+
+  it('refunds a pending order when it is cancelled', async () => {
+    const order = orderFactory({ status: 'PENDING' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    reveal(paymentService).sendRefund.mockResolvedValue(undefined);
+
+    await provider.cancelOrder(order.id);
+
+    expect(paymentService.sendRefund).toHaveBeenCalledWith(order.id);
+  });
+
+  it('refuses to cancel a shipped order', async () => {
+    const order = orderFactory({ status: 'SHIPPED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+
+    await expect(provider.cancelOrder(order.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+    expect(paymentService.sendRefund).not.toHaveBeenCalled();
+  });
+});
+
+@start src/infrastructure/services/payment.service.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { HttpClient } from '../http/http.client';
+
+@injectable()
+export class PaymentService {
+  constructor(@inject(HttpClient) protected http: HttpClient) {}
+
+  public async sendRefund(orderId: string) {
+    const response = await this.http.post('/sendRefund', { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}

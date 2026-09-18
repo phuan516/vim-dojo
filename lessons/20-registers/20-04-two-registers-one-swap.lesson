@@ -1,0 +1,129 @@
+@meta
+id: 20-04
+title: Two registers, one swap
+chapter: 20
+type: lesson
+skills: register-named
+par: 50
+minutes: 5
+vscode: select one, cut, select the other, paste, find the first again, paste
+open: order.provider.ts
+
+@brief
+Named registers earn their keep when you need to hold two things at
+once. Swapping is the obvious case: with a single register you have to
+put one thing down before you can pick the other up, and the dance of
+doing that in the right order is where mistakes creep in. With two
+registers there is no dance. Pick both up, then put each where the other
+was.
+
+`settle` calls `this.paymentService.capture(total, orderId)`. The
+service's signature is `capture(orderId, amount)`. The arguments are
+the wrong way round. Swap them.
+
+@keys
+| `"ayiw` | yank the word under the cursor into `a` |
+| `"byiw` | and the next one into `b` |
+| `diw` then `"aP` | delete a word, put `a` where it was |
+| `F(` | back to the previous `(` on the line |
+
+@hints
+Yank `total` into one register and `orderId` into another. Then each
+word is replaced with `diw` followed by a put from the *other* register.
+--
+`diw` leaves the cursor on the character after the gap; `"aP` puts
+before it, which is exactly where the word was.
+--
+`/capture(` Enter, `f(` `l`, `"ayiw`, `2w`, `"byiw`, `diw` `"aP`,
+`F(` `l`, `diw` `"bP`.
+
+@solution
+    /capture(<Enter> f(l "ayiw 2w "byiw diw"aP F(l diw"bP :wq<Enter>
+
+Both words are in hand before anything is deleted, so the two `diw`
+calls can trample the unnamed register as much as they like. That is
+the whole reason named registers exist: you decide what is precious,
+give it a letter, and stop worrying about the order of everything else.
+
+There is a one-register version of this swap, and it works by knowing
+that `diw` itself fills the unnamed register. It is shorter and it is
+fragile. Learn the two-register version first. When you can see the
+shortcut yourself, take it.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async settle(orderId: string, total: number) {
+    const order = await this.findOne(orderId);
+
+    if (order.status !== 'SHIPPED') {
+      throw exception('ORDER_NOT_SHIPPED');
+    }
+
+    await this.paymentService.capture(total, orderId);
+
+    return this.orderRepository.update({
+      where: { id: orderId },
+      values: { status: 'SETTLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async settle(orderId: string, total: number) {
+    const order = await this.findOne(orderId);
+
+    if (order.status !== 'SHIPPED') {
+      throw exception('ORDER_NOT_SHIPPED');
+    }
+
+    await this.paymentService.capture(orderId, total);
+
+    return this.orderRepository.update({
+      where: { id: orderId },
+      values: { status: 'SETTLED' },
+    });
+  }
+}

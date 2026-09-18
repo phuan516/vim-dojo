@@ -1,0 +1,70 @@
+@meta
+id: 13-20
+title: Drill — land on the value
+chapter: 13
+type: drill
+skills: regex-zs-ze, regex-verymagic
+par: 35
+minutes: 5
+reps: 8
+vscode: find the 5xx line, then click on the word at the far end of it
+open: errors.json
+
+@brief
+Eight times: one error in this registry has a `5xx` status code and
+`sentry` set to `false`. Server errors go to Sentry. Set that one to
+`true`.
+
+The status code is what identifies the line. The flag is at the other
+end of the line, and that is where the cursor needs to arrive.
+
+@keys
+| `\zs` | context before, match after |
+| `.*` | the gap between them |
+| `cw` | change the word under the cursor |
+
+@hints
+Put the code and the gap before `\zs`, and `false` after it.
+--
+`/\v5\d\d.*\zsfalse` `Enter`, then `cwtrue` and `Esc`.
+
+@solution
+/\v5\d\d.*\zsfalse<Enter>  cwtrue<Esc>  :wq<Enter>
+
+Thirty keystrokes, and no travel along the line.
+
+The pattern says: three digits starting with a five, then anything,
+then `false` — and start the match at `false`. Everything before the
+`\zs` is a condition on the line; the cursor never visits it.
+
+By rep eight, putting the context first and `\zs` before the target
+should feel like the natural order to write a pattern in: *where*,
+then *what*.
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "ORDER_NOT_CANCELLABLE": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_EXCEEDS_TOTAL": { "statusCode": 422, "sentry": false },
+  "REFUND_DECLINED": { "statusCode": 402, "sentry": false },
+  "PAYMENT_GATEWAY_TIMEOUT": { "statusCode": 504, "sentry": true },
+  "PAYOUT_EXPORT_FAILED": { "statusCode": 502, "sentry": false },
+  "WEBHOOK_SIGNATURE_MISMATCH": { "statusCode": 401, "sentry": false },
+  "LEDGER_UNAVAILABLE": { "statusCode": 503, "sentry": true }
+}
+
+@expected errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "ORDER_NOT_CANCELLABLE": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_EXCEEDS_TOTAL": { "statusCode": 422, "sentry": false },
+  "REFUND_DECLINED": { "statusCode": 402, "sentry": false },
+  "PAYMENT_GATEWAY_TIMEOUT": { "statusCode": 504, "sentry": true },
+  "PAYOUT_EXPORT_FAILED": { "statusCode": 502, "sentry": true },
+  "WEBHOOK_SIGNATURE_MISMATCH": { "statusCode": 401, "sentry": false },
+  "LEDGER_UNAVAILABLE": { "statusCode": 503, "sentry": true }
+}

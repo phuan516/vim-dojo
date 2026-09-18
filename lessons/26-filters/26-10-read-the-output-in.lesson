@@ -1,0 +1,122 @@
+@meta
+id: 26-10
+title: Read a command's output into the file
+chapter: 26
+type: lesson
+skills: read-shell
+par: 27
+minutes: 5
+vscode: run it in the terminal panel, select the output, copy, paste
+open: inventory.md
+
+@brief
+This inventory document has a heading with nothing under it. Under
+`## Domain files` belongs the list of files in `src/domain`, one per
+line, as `ls` prints it.
+
+A filter replaces lines. This is the other half: `:r !cmd` runs a command
+and *inserts* its output, changing nothing that was already there. The
+output lands after the line you address, exactly like `:r file` reads a
+file in.
+
+Leave everything under `## Notes` alone, and do not open the source files.
+
+@keys
+| `:r !cmd` | insert the command's output after the current line |
+| `:6r !cmd` | insert it after line 6 |
+| `:0r !cmd` | insert it above the first line |
+| `:$r !cmd` | insert it at the end of the file |
+| `:r file` | the same command without the `!` — reads a file, not a command |
+
+@hints
+You want the output to land directly under the heading, so address the
+heading's line and read after it.
+--
+`:r` takes an address in front of it like every other ex command, and a
+`!` after it turns the argument from a file name into a shell command.
+--
+`:6r !ls src/domain` and Enter, then `:wq`.
+
+@solution
+    :6r !ls src/domain<Enter>  :wq<Enter>
+
+`:r !` is the one people go looking for when they have got used to
+copying out of a terminal. Anything a command can print can be poured
+straight into the buffer: `:r !git log --oneline -10` to draft a release
+note, `:r !ls -1 migrations | tail -5` when you need the last few
+migration names spelled right, `:r !date -u +%Y-%m-%dT%H:%M:%SZ` to stamp
+a changelog entry, `:r !python3 -c 'print(2**32)'` when you want a number
+you cannot be bothered to work out.
+
+The address is the whole trick. `:r !` on its own reads after the cursor
+line. `:0r !cmd` is the special one: line 0 means "before line 1", so it
+is how a generated header, a licence block or a table of contents gets to
+the top of a file without you moving there first. `:$r !cmd` appends at
+the bottom.
+
+One gotcha that will bite you exactly once: in any `:!` command, an
+unescaped `%` is replaced by the name of the current file and `#` by the
+alternate file. Usually that is a gift — `:r !wc -l %` counts this very
+file. When you actually want a literal percent sign, as in a `date +%d`
+format or an `awk` modulo, escape it: `\%`.
+
+@start inventory.md
+# Order service inventory
+
+Kept by hand, which is why it is always out of date. The list under the
+heading below should be whatever is in src/domain today.
+
+## Domain files
+
+## Notes
+
+The payment gateway client lives in another repo.
+
+@expected inventory.md
+# Order service inventory
+
+Kept by hand, which is why it is always out of date. The list under the
+heading below should be whatever is in src/domain today.
+
+## Domain files
+customer.entity.ts
+customer.provider.ts
+order.entity.ts
+order.provider.ts
+order.repository.ts
+
+## Notes
+
+The payment gateway client lives in another repo.
+
+@start src/domain/customer.entity.ts
+export type Customer = {
+  id: string;
+  email: string;
+};
+
+@start src/domain/customer.provider.ts
+export class CustomerProvider {
+  public async findOne(id: string) {
+    return this.customerRepository.findOne({ where: { id } });
+  }
+}
+
+@start src/domain/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  total: number;
+};
+
+@start src/domain/order.provider.ts
+export class OrderProvider {
+  public async cancel(id: string) {
+    return this.orderRepository.update({ where: { id }, values: { status: 'CANCELLED' } });
+  }
+}
+
+@start src/domain/order.repository.ts
+export class OrderRepository extends BaseRepository<Order> {
+  protected model = 'order';
+}

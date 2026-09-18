@@ -1,0 +1,81 @@
+@meta
+id: 23-15
+title: Join lines, with and without the space
+chapter: 23
+type: lesson
+skills: format-gq
+par: 20
+minutes: 4
+vscode: End, Delete, Delete, Delete
+open: RELEASE-NOTES.md
+
+@brief
+The release notes were pasted from an email client that wrapped
+everything hard. The changelog tool needs one line per bullet.
+
+Three things to fix. The first bullet is split over three lines; make
+it one, with single spaces where the breaks were. The second bullet is
+split over two; same treatment. The dashboard link is broken across
+two lines at `&to=` and `now`, and a space there would break the URL;
+join those two with nothing in between.
+
+@keys
+| `J` | join the next line onto this one with one space |
+| `3J` | join three lines into one |
+| `gJ` | join with no space and no cleanup |
+
+@hints
+`J` on the first line of a bullet joins the next line onto it. It
+removes the indentation of the joined line and puts exactly one space
+in.
+--
+A count on `J` is the number of lines that end up joined, including
+the one you are on. `3J` for the three-line bullet, `2J` — or just `J` —
+for the two-line one.
+--
+`gJ` is the one for the URL: no space added, nothing removed.
+
+@solution
+    3G 3J  jJ  }j gJ  :wq<Enter>
+
+Fourteen keystrokes. The file is short enough that `j` and `}` beat
+searching for each line; par assumes you move, not search.
+
+`J` is the opposite of `gq`: where `gq` breaks lines to fit a width,
+`J` puts them back together. It is smarter than it looks. Leading
+whitespace on the joined line is removed, one space is inserted, no
+space is added before a closing bracket, and — with the `j` flag in
+`formatoptions` — a comment leader on the joined line is dropped too.
+The count includes the current line, so `3J` joins three lines and
+`2J` is the same as `J`.
+
+`gJ` does none of that. It takes the next line exactly as it is and
+sticks it on the end of this one. That is what you want for a URL, a
+long token, a base64 blob, or any string that a mail client or a
+terminal has broken without your permission. If the joined line had
+leading spaces, `gJ` keeps them, so check the result.
+
+Both work on a visual selection, which is the easy way to join a
+whole block you have already highlighted.
+
+@start RELEASE-NOTES.md
+# 2.4.0
+
+- Refunds outside the thirty day window are now recorded with the reason
+  REFUND_WINDOW_EXPIRED instead of failing. No money moves and the order
+  still becomes CANCELLED.
+- Declined payments raise PAYMENT_DECLINED with a 402 instead of a
+  generic 500.
+- Fixed the customer lookup in the seed script.
+
+Dashboard: https://grafana.thrive.example/d/payments?orgId=1&from=now-7d&to=
+now
+
+@expected RELEASE-NOTES.md
+# 2.4.0
+
+- Refunds outside the thirty day window are now recorded with the reason REFUND_WINDOW_EXPIRED instead of failing. No money moves and the order still becomes CANCELLED.
+- Declined payments raise PAYMENT_DECLINED with a 402 instead of a generic 500.
+- Fixed the customer lookup in the seed script.
+
+Dashboard: https://grafana.thrive.example/d/payments?orgId=1&from=now-7d&to=now

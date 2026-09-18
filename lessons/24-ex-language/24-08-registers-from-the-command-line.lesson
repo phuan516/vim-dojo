@@ -1,0 +1,122 @@
+@meta
+id: 24-08
+title: Registers from the command line
+chapter: 24
+type: lesson
+skills: ex-delete, ex-copy
+par: 47
+minutes: 6
+vscode: two tabs, select, Ctrl-X, switch, Ctrl-V, switch back, select, Ctrl-C, switch, Ctrl-V
+open: order.fixture.ts refund.fixture.ts
+vimrc: set hidden
+
+@brief
+`refundedOrder` is in the wrong fixture file. It belongs in
+`refund.fixture.ts`, at the end, with a blank line before it. It leaves
+`order.fixture.ts` entirely, blank line included.
+
+`baseCustomer`, lines 1 to 6 including the blank line after it, is
+needed in both files. Copy it to the top of `refund.fixture.ts`. It
+stays where it is in `order.fixture.ts`.
+
+`m` and `t` cannot cross a file boundary. Registers can. `d` and `y`
+both take a register name as their argument: `:13,19d a` deletes the
+lines into register `a`, `:1,6y b` yanks into `b`. The other end is
+`pu`, put, which takes a register and an address: `:$pu a` puts after
+the last line, `:0pu b` puts before the first.
+
+@keys
+| `:1,6y b` | yank lines 1 to 6 into register `b` |
+| `:13,19d a` | delete lines 13 to 19 into register `a` |
+| `:bn` | next buffer |
+| `:$pu a` | put register `a` after the last line |
+| `:0pu b` | put register `b` before the first line |
+| `:pu!` | put above the current line instead of below |
+| `:wqa` | write everything, quit |
+
+@hints
+Yank before you delete, so the line numbers for the yank are the ones
+you can see now.
+--
+Both puts are linewise and take an address. `:$pu` and `:0pu` are the
+two ends of the file; `:5pu a` would put after line 5.
+--
+`:1,6y b`, `:13,19d a`, `:bn`, `:0pu b`, `:$pu a`, `:wqa`.
+
+@solution
+    :1,6y b<Enter>  :13,19d a<Enter>  :bn<Enter>  :0pu b<Enter>  :$pu a<Enter>  :wqa<Enter>
+
+Forty-one keystrokes, two files, no cursor movement in either.
+
+The register is an argument, and the space before it is required
+because `:d a` and `:da` are different things to the parser. The
+registers are the same ones chapter 20 gave you; `"ap` would have put
+`a` too. What `:pu` adds is an address. `"ap` puts wherever the cursor
+is, and wherever the cursor is after `:bn` is wherever you left it,
+which is never where you want the text. `:$pu a` does not care.
+
+`:pu` is always linewise, even for a register that was yanked
+characterwise. It is also the only put that takes an expression:
+`:pu =range(1,5)` writes five numbered lines. Filed for later.
+
+@start order.fixture.ts
+export const baseCustomer = {
+  id: 'cus_501',
+  email: 'ana@example.com',
+  name: 'Ana Ruiz',
+};
+
+export const pendingOrder = {
+  id: 'ord_1001',
+  customerId: baseCustomer.id,
+  status: 'PENDING',
+  total: 4200,
+};
+
+export const refundedOrder = {
+  id: 'ord_1002',
+  customerId: baseCustomer.id,
+  status: 'CANCELLED',
+  total: 1899,
+};
+
+@expected order.fixture.ts
+export const baseCustomer = {
+  id: 'cus_501',
+  email: 'ana@example.com',
+  name: 'Ana Ruiz',
+};
+
+export const pendingOrder = {
+  id: 'ord_1001',
+  customerId: baseCustomer.id,
+  status: 'PENDING',
+  total: 4200,
+};
+
+@start refund.fixture.ts
+export const fullRefund = {
+  id: 'ref_9001',
+  orderId: 'ord_1002',
+  amount: 1899,
+};
+
+@expected refund.fixture.ts
+export const baseCustomer = {
+  id: 'cus_501',
+  email: 'ana@example.com',
+  name: 'Ana Ruiz',
+};
+
+export const fullRefund = {
+  id: 'ref_9001',
+  orderId: 'ord_1002',
+  amount: 1899,
+};
+
+export const refundedOrder = {
+  id: 'ord_1002',
+  customerId: baseCustomer.id,
+  status: 'CANCELLED',
+  total: 1899,
+};

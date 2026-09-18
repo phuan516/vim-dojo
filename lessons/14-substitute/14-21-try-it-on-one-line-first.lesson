@@ -1,0 +1,93 @@
+@meta
+id: 14-21
+title: Try it on one line first
+chapter: 14
+type: lesson
+skills: sub-basic, sub-range
+par: 38
+minutes: 6
+vscode: Replace once, check it, then Replace All
+open: order.constants.ts
+
+@brief
+This constants file is moving into the shared package, whose lint
+config insists on double quotes. Every single-quoted string in the
+file becomes double-quoted, contents untouched. There are twenty-four
+of them across nine lines.
+
+The pattern for "a single-quoted string" is short but easy to get
+subtly wrong, and a wrong one applied to the whole file is a mess to
+undo by eye. So do what experienced vim users do with any substitute
+they are not sure of: run it on the current line only, look at the
+result, and then tell vim to do the same thing everywhere.
+
+Chapter 11 showed you `&` repeats the last substitute on the current
+line, without its flags. There is a version that keeps the flags and
+takes a range.
+
+@keys
+| `:s/…/…/g` `Enter` | on this line — the trial run |
+| `:&&` `Enter` | repeat the last substitute on this line, same flags |
+| `:%&&` `Enter` | repeat it on every line, same flags |
+| `g&` | normal-mode shortcut: `:%s//~/&` — last pattern, last replacement, last flags |
+| `u` | if the trial run was wrong, undo and rewrite it |
+
+@hints
+The cursor starts on the import line, which has a string on it. Write
+the substitute with no range and see what it does to that one line.
+--
+`'\([^']*\)'` matches a quoted string and captures its contents.
+Replace it with `"\1"`. Once the import line looks right, the same
+command with a `%` range is what you want — and you do not have to
+retype it.
+--
+`:s/\v'([^']*)'/"\1"/g` and Enter, read the line, then `:%&&` and
+Enter. `:&&` is "the last substitute with its flags"; the `%` in front
+runs it on the whole file.
+
+@solution
+    :s/\v'([^']*)'/"\1"/g<Enter>  :%&&<Enter>  :wq<Enter>
+
+Thirty-one keystrokes, and twenty-two of them were the substitute.
+The repeat cost five.
+
+Three repeats to keep straight. `&` on its own, from chapter 11, is
+the last substitute on the current line with *no* flags, which is why
+it caught people out on lines with more than one match. `:&&` is the
+same substitute *with* its flags, and like any ex command it takes a
+range, so `:%&&` is "everything I just did, everywhere". And `g&` is
+a normal-mode key that expands to `:%s//~/&`: the last search
+pattern, the last replacement, the last flags, on every line. Since a
+substitute sets the search pattern, `g&` after a trial run does what
+`:%&&` does in two keystrokes instead of five.
+
+The habit is the thing. A substitute you have watched work on one
+line is a substitute you trust, and promoting it to the whole file
+costs almost nothing. The alternative, writing `:%s` first and
+checking twenty-four results, is what the `c` flag was for; this is
+the faster route when the pattern is the part you doubt rather than
+the hits.
+
+@start order.constants.ts
+import { OrderStatus } from './order.status';
+
+export const ORDER_EVENTS = ['order.created', 'order.paid', 'order.shipped', 'order.cancelled'];
+export const REFUND_EVENTS = ['refund.created', 'refund.approved', 'refund.rejected'];
+export const DEFAULT_CURRENCY = 'GBP';
+export const SUPPORTED_CURRENCIES = ['GBP', 'EUR', 'USD'];
+export const OPEN_STATUSES: OrderStatus[] = ['PENDING', 'PAID'];
+export const CLOSED_STATUSES: OrderStatus[] = ['SHIPPED', 'CANCELLED'];
+export const PAYMENT_PROVIDERS = ['stripe', 'adyen', 'paypal'];
+export const EMAIL_TEMPLATES = { paid: 'order-paid', shipped: 'order-shipped', cancelled: 'order-cancelled' };
+
+@expected order.constants.ts
+import { OrderStatus } from "./order.status";
+
+export const ORDER_EVENTS = ["order.created", "order.paid", "order.shipped", "order.cancelled"];
+export const REFUND_EVENTS = ["refund.created", "refund.approved", "refund.rejected"];
+export const DEFAULT_CURRENCY = "GBP";
+export const SUPPORTED_CURRENCIES = ["GBP", "EUR", "USD"];
+export const OPEN_STATUSES: OrderStatus[] = ["PENDING", "PAID"];
+export const CLOSED_STATUSES: OrderStatus[] = ["SHIPPED", "CANCELLED"];
+export const PAYMENT_PROVIDERS = ["stripe", "adyen", "paypal"];
+export const EMAIL_TEMPLATES = { paid: "order-paid", shipped: "order-shipped", cancelled: "order-cancelled" };

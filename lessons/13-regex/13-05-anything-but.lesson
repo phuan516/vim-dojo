@@ -1,0 +1,106 @@
+@meta
+id: 13-05
+title: Anything but
+chapter: 13
+type: lesson
+skills: regex-classes
+par: 39
+minutes: 5
+vscode: Ctrl+F for status=, Enter through nine matches, stop at the odd ones
+open: gateway.log
+
+@brief
+Every gateway response in this log carries a `status=` code. Most are
+`2xx`. The ones that are not — whatever they are — need ` alert=true`
+appended so the alerting job picks them up on replay.
+
+You do not know the failing codes in advance. A `502` you can guess; a
+`404` and a `503` are also in there, and next week it will be something
+else. What you can describe is the shape: `status=` followed by a digit
+that is *not* a `2`.
+
+Brackets build a set. A caret as the first thing inside the brackets
+turns the set inside out.
+
+@keys
+| `[^2]` | any one character that is not a `2` |
+| `[^0-9]` | any one character that is not a digit — the same as `\D` |
+| `[^,]` | anything but a comma, which is how you match "one CSV field" |
+| `n` then `.` | next match, repeat the edit |
+
+@hints
+Say what the bad lines have in common rather than listing them. It is
+the digit straight after `status=`.
+--
+Inside brackets, a leading `^` means "not one of these". `[^2]` is any
+character except `2`, so `status=[^2]` lands on the non-2xx responses
+and skips the healthy ones.
+--
+`/status=[^2]` `Enter`, `A alert=true`, `Esc`. Then `n.` for each
+remaining match — there are three lines altogether.
+
+@solution
+/status=[^2]<Enter>  A alert=true<Esc>  n.  n.  :wq<Enter>
+
+Thirty-four keystrokes for three lines, and the pattern would have
+found thirty.
+
+`[^...]` is the negated set, and it is the most useful bracket
+expression there is, because most of the time what you know about the
+text is a boundary rather than the content. "Everything up to the next
+comma" is `[^,]*`. "Everything inside the quotes" is `'[^']*'`. "A word
+that is not followed by a bracket" starts with a negated set. You will
+see `[^,]*` again before the chapter is out, doing exactly that job on
+a CSV.
+
+Two things to watch. The caret only negates when it is the *first*
+character inside the brackets — `[a^]` is a set containing `a` and `^`.
+And a negated set still matches exactly one character, so
+`status=[^2]` needs *something* after the `=`; it would not match
+`status=` at the end of a line. When you want "not a 2, or nothing at
+all", you need a quantifier, which is a few lessons away.
+
+The `n.` pair is chapter 11's. The pattern found the right lines; `.`
+did the same append on each. A pattern that describes the *shape* of a
+problem, plus a repeatable edit, is a find-and-replace that you review
+one match at a time.
+
+@start gateway.log
+2026-05-14T10:02:11Z INFO  gateway.request  method=POST path=/v2/payments request=req_31c0aa
+2026-05-14T10:02:12Z INFO  gateway.response status=201 ms=412 request=req_31c0aa
+2026-05-14T10:02:40Z INFO  gateway.request  method=GET path=/v2/payments/pay_8812 request=req_31c0ab
+2026-05-14T10:02:40Z INFO  gateway.response status=200 ms=38 request=req_31c0ab
+2026-05-14T10:03:05Z INFO  gateway.request  method=POST path=/v2/refunds request=req_31c0ac
+2026-05-14T10:03:09Z WARN  gateway.response status=502 ms=4000 request=req_31c0ac
+2026-05-14T10:03:10Z INFO  retry.scheduled request=req_31c0ac in_seconds=60
+2026-05-14T10:03:31Z INFO  gateway.request  method=DELETE path=/v2/payments/pay_8790/hold request=req_31c0ad
+2026-05-14T10:03:31Z INFO  gateway.response status=204 ms=51 request=req_31c0ad
+2026-05-14T10:04:02Z INFO  gateway.request  method=GET path=/v2/payments/pay_0000 request=req_31c0ae
+2026-05-14T10:04:02Z WARN  gateway.response status=404 ms=22 request=req_31c0ae
+2026-05-14T10:04:10Z INFO  gateway.request  method=POST path=/v2/refunds request=req_31c0ac
+2026-05-14T10:04:11Z INFO  gateway.response status=201 ms=380 request=req_31c0ac
+2026-05-14T10:04:55Z INFO  gateway.request  method=POST path=/v2/payments request=req_31c0af
+2026-05-14T10:04:59Z WARN  gateway.response status=503 ms=4001 request=req_31c0af
+2026-05-14T10:05:00Z INFO  retry.scheduled request=req_31c0af in_seconds=60
+2026-05-14T10:05:20Z INFO  gateway.request  method=GET path=/v2/health request=req_31c0b0
+2026-05-14T10:05:20Z INFO  gateway.response status=200 ms=4 request=req_31c0b0
+
+@expected gateway.log
+2026-05-14T10:02:11Z INFO  gateway.request  method=POST path=/v2/payments request=req_31c0aa
+2026-05-14T10:02:12Z INFO  gateway.response status=201 ms=412 request=req_31c0aa
+2026-05-14T10:02:40Z INFO  gateway.request  method=GET path=/v2/payments/pay_8812 request=req_31c0ab
+2026-05-14T10:02:40Z INFO  gateway.response status=200 ms=38 request=req_31c0ab
+2026-05-14T10:03:05Z INFO  gateway.request  method=POST path=/v2/refunds request=req_31c0ac
+2026-05-14T10:03:09Z WARN  gateway.response status=502 ms=4000 request=req_31c0ac alert=true
+2026-05-14T10:03:10Z INFO  retry.scheduled request=req_31c0ac in_seconds=60
+2026-05-14T10:03:31Z INFO  gateway.request  method=DELETE path=/v2/payments/pay_8790/hold request=req_31c0ad
+2026-05-14T10:03:31Z INFO  gateway.response status=204 ms=51 request=req_31c0ad
+2026-05-14T10:04:02Z INFO  gateway.request  method=GET path=/v2/payments/pay_0000 request=req_31c0ae
+2026-05-14T10:04:02Z WARN  gateway.response status=404 ms=22 request=req_31c0ae alert=true
+2026-05-14T10:04:10Z INFO  gateway.request  method=POST path=/v2/refunds request=req_31c0ac
+2026-05-14T10:04:11Z INFO  gateway.response status=201 ms=380 request=req_31c0ac
+2026-05-14T10:04:55Z INFO  gateway.request  method=POST path=/v2/payments request=req_31c0af
+2026-05-14T10:04:59Z WARN  gateway.response status=503 ms=4001 request=req_31c0af alert=true
+2026-05-14T10:05:00Z INFO  retry.scheduled request=req_31c0af in_seconds=60
+2026-05-14T10:05:20Z INFO  gateway.request  method=GET path=/v2/health request=req_31c0b0
+2026-05-14T10:05:20Z INFO  gateway.response status=200 ms=4 request=req_31c0b0

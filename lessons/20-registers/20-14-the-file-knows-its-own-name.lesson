@@ -1,0 +1,95 @@
+@meta
+id: 20-14
+title: The file knows its own name
+chapter: 20
+type: lesson
+skills: register-named
+par: 21
+minutes: 3
+vscode: right-click the tab, Copy Relative Path, paste
+open: src/domain/order/order.provider.ts
+
+@brief
+Some registers you cannot write to. Vim fills them itself, and they are
+there to be read. The first is `"%`: the name of the current file, with
+the path you opened it by.
+
+The documentation generator wants every source file to begin with a
+comment naming its path from the repository root, in the form
+`// File: src/domain/order/order.provider.ts`. Add that line to the top
+of this file without typing the path.
+
+@keys
+| `"%p` | put the current file's path |
+| `"#` | the alternate file's path |
+| `O` | open a line above |
+
+@hints
+Open a line above the first import, type the comment prefix, leave
+insert mode, then put the register.
+--
+After `Esc` the cursor sits on the last character you typed, the space,
+and `p` puts after it.
+--
+`O// File: ` `Esc` `"%p`.
+
+@solution
+    O// File: <Esc> "%p :wq<Enter>
+
+Eighteen keystrokes including the save, and the path — the part you
+would get wrong — is the part you did not type. `%` is the same name you see in `:ls` and
+`:file`, relative to the directory vim was started in, so it is only
+the repo-root path when vim was started at the repo root. That is the
+usual habit and a good one.
+
+There are a handful of these read-only registers. `"#` is the alternate
+file, the one `Ctrl-^` would take you to. `":`, `".` and `"/` hold the
+last command, the last inserted text and the last search; they are the
+next lesson. `:reg` shows them all together, and any of them can be put
+with `p` or dropped into a command line, which is where `%` is most
+often used.
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+// File: src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+}

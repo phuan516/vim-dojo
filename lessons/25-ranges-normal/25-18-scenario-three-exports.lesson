@@ -1,0 +1,170 @@
+@meta
+id: 25-18
+title: Scenario — three exports, one macro
+chapter: 25
+type: scenario
+skills: argdo, ex-normal, range-pattern, macro-record, macro-play
+par: 132
+minutes: 14
+vscode: three files, multi-cursor each block separately, twice more
+open: orders.eu.ts orders.uk.ts orders.us.ts
+vimrc: set hidden
+
+@brief
+A ticket.
+
+    ORD-905  The regional order exports still land as raw rows. Convert
+             the rows in all three files to the fixture format. Leave the
+             BEGIN/EXPORT markers alone — the generator writes between
+             them next month.
+
+Three files, opened as the argument list. In each one, the rows between
+`// BEGIN EXPORT` and `// END EXPORT` become object literals:
+
+    ord_1001;cus_501;4200   →     { id: 'ord_1001', customerId: 'cus_501', total: 4200 },
+
+The files have different numbers of rows, and nothing outside the markers
+changes.
+
+This is the chapter's last shape, and it is three ideas stacked. Record
+the per-row edit once as a macro. Describe the rows with a pattern range,
+so it fits whatever each file contains. Run that over the argument list
+with `:argdo`, writing as it goes.
+
+Give the macro a guard — start it with `0f;`. On a row that has already
+been converted there is no semicolon left, the `f;` fails, and the rest
+of the macro never runs. That is what makes the command safe to fire at
+a file you have already half fixed by hand, which you are about to have.
+
+@keys
+| `qq` … `q` | record into register `q` |
+| `:/BEGIN/+1,/END/-1normal @q` | play `q` on the rows between the markers |
+| `:argdo execute "{cmd}" | update` | run it in every file on the argument list, writing the ones that change |
+| `:normal` swallows `|` | which is why the ranged command goes inside `:execute` |
+| `:qa` | quit once everything is written |
+
+@hints
+Record on the first row of the first file and let the recording convert
+that row. The guard means `:argdo` can visit it again without harm.
+--
+The edit for one row: `0f;` then `s` to replace the first semicolon with
+`', customerId: '`, then the second with `', total: `, then `0i` for the
+opening `  { id: '` and `A` for the ` },`. Four small edits, one Esc
+between each.
+--
+The range is the pattern pair with offsets, so the markers survive:
+`/BEGIN/+1,/END/-1`. It is resolved fresh in each file, which is why the
+files may differ in length.
+--
+`3G`, then `qq0f;s', customerId: '<Esc>f;s', total: <Esc>0i  { id: '<Esc>A },<Esc>q`,
+then `:argdo execute "/BEGIN/+1,/END/-1normal @q" | update` Enter, then `:qa`.
+The quotes are not decoration — see the solution.
+
+@solution
+    3G
+    qq 0f; s', customerId: ' <Esc> f; s', total:  <Esc> 0i  { id: ' <Esc> A }, <Esc> q
+    :argdo execute "/BEGIN/+1,/END/-1normal @q" | update<Enter>
+    :qa<Enter>
+
+A hundred and fourteen keystrokes for twelve rows in three files, and the same
+command for a hundred and twenty rows in thirty files.
+
+The `:execute` is doing something specific here. `:normal` takes
+**everything** after it literally, and that includes a `|`. Written as
+`:argdo /BEGIN/+1,/END/-1normal @q | update`, the keys handed to
+`:normal` are `@q | update` — the macro, then `|`, then `u` for undo,
+then `p` for put, and so on down the word. It does not fail cleanly; it
+quietly does something else. Wrapping the ranged command in a string ends
+it at the closing quote, so the `|` belongs to `:argdo` again and
+`update` is a command rather than four keystrokes.
+
+The rule from the last lesson generalises: when `:normal` is not the last
+thing on the line, it has to be inside `:execute`.
+
+Read the `:argdo` line from the inside out. `@q` is one row. `:normal @q`
+is one row, done to each line of a range. `/BEGIN/+1,/END/-1` is "the
+rows, wherever they are and however many". `:argdo` is "in every file on
+the list". `| update` is "and write the ones that changed". Each layer
+knows nothing about the others, which is why they compose at all.
+
+Three decisions in there are worth keeping:
+
+**The guard did the work of a condition.** `0f;` is not navigation, it is
+a test — "does this line still need converting?". A macro that fails
+harmlessly on lines that are already done can be run over anything,
+including its own output. Without it you would have had to exclude the
+first file, or undo the recording, or count rows.
+
+**The range described the block instead of pointing at it.** Line numbers
+would have needed three different commands, one per file. `:argdo` takes
+one command, so the range had to be one that means the right thing in all
+three — which is exactly what pattern addresses are for.
+
+**`| update`, not `| w`.** The files that did not change keep their
+timestamps. On three files nobody notices; on a repo-wide `:argdo` it is
+the difference between a quiet `git status` and a hundred files touched.
+
+If the rows ever stop being semicolon-separated, none of this survives —
+but you will not have written a script you now have to maintain, either.
+That is the trade the whole tool makes: a command you compose in ten
+seconds, use once, and throw away.
+
+@start orders.eu.ts
+export const euOrders = [
+// BEGIN EXPORT
+ord_1001;cus_501;4200
+ord_1002;cus_502;1899
+ord_1003;cus_501;650
+ord_1004;cus_503;12750
+// END EXPORT
+];
+
+@expected orders.eu.ts
+export const euOrders = [
+// BEGIN EXPORT
+  { id: 'ord_1001', customerId: 'cus_501', total: 4200 },
+  { id: 'ord_1002', customerId: 'cus_502', total: 1899 },
+  { id: 'ord_1003', customerId: 'cus_501', total: 650 },
+  { id: 'ord_1004', customerId: 'cus_503', total: 12750 },
+// END EXPORT
+];
+
+@start orders.uk.ts
+export const ukOrders = [
+// BEGIN EXPORT
+ord_2001;cus_701;3150
+ord_2002;cus_702;8400
+ord_2003;cus_703;1200
+ord_2004;cus_701;95
+ord_2005;cus_704;26000
+// END EXPORT
+];
+
+@expected orders.uk.ts
+export const ukOrders = [
+// BEGIN EXPORT
+  { id: 'ord_2001', customerId: 'cus_701', total: 3150 },
+  { id: 'ord_2002', customerId: 'cus_702', total: 8400 },
+  { id: 'ord_2003', customerId: 'cus_703', total: 1200 },
+  { id: 'ord_2004', customerId: 'cus_701', total: 95 },
+  { id: 'ord_2005', customerId: 'cus_704', total: 26000 },
+// END EXPORT
+];
+
+@start orders.us.ts
+export const usOrders = [
+// BEGIN EXPORT
+ord_3001;cus_901;7750
+ord_3002;cus_902;480
+ord_3003;cus_901;19900
+// END EXPORT
+];
+
+@expected orders.us.ts
+export const usOrders = [
+// BEGIN EXPORT
+  { id: 'ord_3001', customerId: 'cus_901', total: 7750 },
+  { id: 'ord_3002', customerId: 'cus_902', total: 480 },
+  { id: 'ord_3003', customerId: 'cus_901', total: 19900 },
+// END EXPORT
+];

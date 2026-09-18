@@ -1,0 +1,63 @@
+@meta
+id: 09-08
+title: A count on each side multiplies
+chapter: 09
+type: lesson
+skills: op-counts
+par: 22
+minutes: 5
+vscode: two identical drag-selects and two Deletes
+open: policy.md
+
+@brief
+Two near-identical lines, both too wordy:
+
+    Refunds are sent back to the original payment card within ten working days.
+    Chargebacks are sent back to the original payment card within ten working days.
+
+Both should read `... are sent within ten working days.` — six words come
+out of each line.
+
+Do the first line with a count on the motion. Do the second with the count
+on the operator instead. Convince yourself they land in the same place.
+
+@keys
+| `d6w` | delete six words — count on the motion |
+| `2d3w` | delete twice three words — counts on both |
+| `j0` | down a line and back to column one |
+
+@hints
+You already know the first form. For the second, the number goes before
+the `d`.
+--
+A count in front of the operator and a count in front of the motion are
+multiplied together. `2d3w` is `d6w`.
+--
+`3w d6w`, then `j0 3w 2d3w`.
+
+@solution
+    3w d6w    j 0 3w 2d3w    :wq<Enter>
+
+Both lines came out identical, which is the whole lesson: `2d3w` and
+`d6w` are the same edit. Vim multiplies the two counts and applies the
+result to the motion. `3d2j` is `d6j`. `2y4w` is `y8w`.
+
+Nobody types `2d3w` on purpose. The reason to know the rule is that it
+explains why `2dd` deletes two lines rather than doing something exotic,
+and it stops you from inventing a meaning for the first number that does
+not exist. There is only ever one number, and it belongs to the motion.
+
+The second reason is that the count in front of the operator is the one
+your hand reaches for when you are already thinking in repetitions — "do
+that three times" — and it is worth knowing that vim will quietly turn
+that into a single larger motion rather than repeating the edit three
+times. For `d` the distinction does not matter. When you get to the dot
+command and to macros in later chapters, it will.
+
+@start policy.md
+Refunds are sent back to the original payment card within ten working days.
+Chargebacks are sent back to the original payment card within ten working days.
+
+@expected policy.md
+Refunds are sent within ten working days.
+Chargebacks are sent within ten working days.

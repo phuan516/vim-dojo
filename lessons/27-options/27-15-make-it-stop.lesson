@@ -1,0 +1,107 @@
+@meta
+id: 27-15
+title: Make it stop
+chapter: 27
+type: lesson
+skills: autocmd
+par: 75
+minutes: 7
+vscode: disabling one extension without disabling the rest
+open: standup.md
+vimrc: source config.vim
+
+@brief
+Add one bullet to the end of `standup.md`:
+
+    - chased finance about the September export
+
+Save it and every bullet in the file turns into a `*`. Somebody's
+`config.vim` has an autocommand that rewrites markdown bullets on write,
+and it has been doing it to this repo for a week.
+
+You are not fixing `config.vim` today — it is not yours to change. Stop
+the autocommand firing in this session, then make the edit and save with
+the bullets intact.
+
+@keys
+| `:autocmd BufWritePre` | list every autocommand on that event, with its group |
+| `:autocmd! dojo` | delete every autocommand in the group `dojo` |
+| `:autocmd! BufWritePre *.md` | delete by event and pattern instead |
+| `:verbose autocmd BufWritePre` | list them with the file that defined each |
+| `:noautocmd w` | one write with all autocommands suppressed |
+
+@hints
+Find out what is registered before you try to remove it. `:autocmd
+BufWritePre` prints the list, and the name above the entries is its group.
+--
+`:autocmd!` with a group name after it clears that group. The group here
+is called `dojo`.
+--
+`:autocmd! dojo` `Enter`, then `G`, `o`, type the bullet, `Esc`, `:wq`.
+
+@solution
+    :autocmd! dojo<Enter>
+    Go- chased finance about the September export<Esc>
+    :wq<Enter>
+
+Sixty-five keystrokes.
+
+The listing you get from `:autocmd BufWritePre` looks like this:
+
+    --- Autocommands ---
+    dojo  BufWritePre
+        *.md      %s/^- /* /e
+
+The first word is the **group**. Every autocommand belongs to one, and the
+group is the handle you use to manage them. `config.vim` looks like this:
+
+    augroup dojo
+      autocmd!
+      autocmd BufWritePre *.md %s/^- /* /e
+    augroup END
+
+Three lines, and the middle one is the one people leave out. `:autocmd`
+*adds* — it never replaces. Source a config file twice and you have two
+identical autocommands, both firing, and a transformation that is not
+idempotent now runs twice. Everyone hits this the first time they
+`:source ~/.vimrc` to try a change: the reformat-on-save that worked
+yesterday now doubles its work, and nothing in the file looks wrong.
+
+`autocmd!` with no arguments, inside an `augroup`, clears that group
+before the block refills it. It makes the block re-runnable. Write every
+augroup this way, always, including the ones with a single autocommand in
+them:
+
+    augroup myformatting
+      autocmd!
+      autocmd BufWritePre *.ts %s/\s\+$//e
+    augroup END
+
+Outside a group, `:autocmd!` with an event and a pattern deletes matching
+autocommands wherever they came from — a blunter instrument, and the one
+to reach for when the offender has no group of its own. Everything defined
+without an `augroup` lands in a nameless group together, which is precisely
+why it is hard to remove one of them and not the rest.
+
+`:noautocmd w` is the escape hatch for a single write. Useful when you
+want the autocommand in general and not on this file, this once.
+
+@start config.vim
+" team defaults, inherited from the old tech lead
+augroup dojo
+  autocmd!
+  autocmd BufWritePre *.md %s/^- /* /e
+augroup END
+
+@start standup.md
+# Standup 17 September
+
+- shipped the refund window fix
+- reviewed the gateway cache PR
+
+@expected standup.md
+# Standup 17 September
+
+- shipped the refund window fix
+- reviewed the gateway cache PR
+- chased finance about the September export

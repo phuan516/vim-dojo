@@ -1,0 +1,160 @@
+@meta
+id: 20-08
+title: The black hole
+chapter: 20
+type: lesson
+skills: register-blackhole
+par: 34
+minutes: 5
+vscode: copy, then delete with the Delete key so the clipboard survives
+open: order.provider.ts
+
+@brief
+Sometimes a delete is just a delete. You do not want the text back, you
+do not want it in your history, and above all you do not want it to
+overwrite the thing you were about to put. For that there is a register
+that swallows whatever goes in: the black hole, `"_`. `"_dd` removes the
+line and leaves every other register exactly as it was.
+
+`settle` has a placeholder comment where its status guard should be.
+The guard is the three-line `if` block in `cancel`. Replace the comment
+line with a copy of the block, using a plain `p` or `P` for the put —
+not `"0`. Make the delete get out of the way instead.
+
+@keys
+| `"_dd` | delete the line into nothing |
+| `"_d{motion}` | any delete, into nothing |
+| `P` | put before — and it still holds the yank |
+
+@hints
+Yank the guard first. Then delete the comment in a way that does not
+touch the unnamed register, and the plain put still holds the guard.
+--
+`"_dd` on the comment line leaves you on the line after it. `P` puts the
+guard above that, which is where the comment was.
+--
+`/if (order` Enter, `3yy`, `/TODO` Enter, `"_dd`, `P`.
+
+@solution
+    /if (order<Enter> 3yy  /TODO<Enter> "_dd P  :wq<Enter>
+
+You met `"0p` in the first lesson and it would have worked here too, so
+it is fair to ask why the black hole exists. Two reasons.
+
+The first is that a black-hole delete changes nothing about what
+`p` will do next. Whatever habit you have built around `p`, `P` and `.`
+keeps working, because the thing you did not want never entered the
+register at all.
+
+The second shows up in lesson 20-10: every delete also gets shifted into
+a numbered history, `"1` through `"9`. Deleting junk pushes the thing
+you actually want one slot further down. `"_` keeps the history clean.
+
+Say it to yourself as "delete into nothing". The underscore is the
+floor of the register box; things dropped there do not come back.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async settle(id: string, total: number) {
+    const order = await this.findOne(id);
+
+    // TODO: same guard as cancel
+
+    await this.paymentService.capture(order.id, total);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SETTLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async settle(id: string, total: number) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.capture(order.id, total);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SETTLED' },
+    });
+  }
+}

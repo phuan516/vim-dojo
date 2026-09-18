@@ -1,0 +1,83 @@
+@meta
+id: 04-09
+title: A count on an insert command
+chapter: 04
+type: lesson
+skills: count-prefix
+par: 40
+minutes: 5
+vscode: type the line, copy it, paste it five times
+open: orders.fixture.csv
+
+@brief
+The count is not only for motions. Put one in front of a command that
+inserts text and the whole insertion repeats, text and all, when you press
+`Esc`.
+
+    3ohello<Esc>
+
+opens three new lines, each containing `hello`. One `o`, one count, one
+piece of typing.
+
+The load test needs padding rows in this fixture. Add six identical rows
+to the end of the file, each exactly:
+
+    ORD-0000,CUS-000,0,PENDING
+
+Type that row once. The count does the other five.
+
+@keys
+| `6o` | open six new lines below and repeat what you type on each |
+| `3O` | the same, opening above |
+| `20i-` `Esc` | insert twenty hyphens |
+| `5j` | down five lines |
+
+@hints
+Get to the last line of the file first. The new rows go below it.
+--
+The count goes in front of `o`, not after it, and the repetition happens
+at the moment you press `Esc` — so the text only appears five more times
+when you leave insert mode. That is normal; do not panic and retype it.
+--
+`5j`, then `6o`, type the row once, then `Esc`.
+
+@solution
+    5j 6o ORD-0000,CUS-000,0,PENDING <Esc> :wq<Enter>
+
+Thirty-six keystrokes, twenty-six of which are the row itself. Without
+the count it would have been the row six times: over a hundred and fifty
+keystrokes, and a real chance of a typo in one of them that you would
+find later, in a failing test, with no idea why.
+
+This is the first time in the course that a count has done something
+other than move you, and it is worth pausing on. `3o`, `5a`, `20i` and
+`4A` all work this way: the command runs, you type, and `Esc` replays the
+insertion the remaining times. It is the cheapest way to produce
+repetitive text in vim, and in chapter 11 the `.` command will generalise
+it to *any* edit, not just insertions.
+
+One caution. The repeat is of the typing, exactly as typed. If you use
+backspace or arrow keys while inserting, what gets repeated can surprise
+you. Type the line clean, or undo and start again.
+
+@start orders.fixture.csv
+order_id,customer_id,total,status
+ORD-2001,CUS-301,1999,PAID
+ORD-2002,CUS-302,4750,PAID
+ORD-2003,CUS-303,899,PENDING
+ORD-2004,CUS-304,12500,PAID
+ORD-2005,CUS-305,2399,SHIPPED
+
+@expected orders.fixture.csv
+order_id,customer_id,total,status
+ORD-2001,CUS-301,1999,PAID
+ORD-2002,CUS-302,4750,PAID
+ORD-2003,CUS-303,899,PENDING
+ORD-2004,CUS-304,12500,PAID
+ORD-2005,CUS-305,2399,SHIPPED
+ORD-0000,CUS-000,0,PENDING
+ORD-0000,CUS-000,0,PENDING
+ORD-0000,CUS-000,0,PENDING
+ORD-0000,CUS-000,0,PENDING
+ORD-0000,CUS-000,0,PENDING
+ORD-0000,CUS-000,0,PENDING

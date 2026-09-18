@@ -1,0 +1,403 @@
+@meta
+id: 29-16
+title: Scenario — the webhook topic list
+chapter: 29
+type: scenario
+skills: surround, commentary, fuzzy-finder, packadd, macro-record
+par: 135
+minutes: 14
+vscode: four tabs, Ctrl-P twice, Ctrl-/ twice, and a lot of clicking between quotes
+open: src/domain/webhook/webhook.topics.ts
+vimrc: set packpath^=. | packloadall! | set hidden
+
+@brief
+A ticket.
+
+    WHK-207  The webhook topic list does not compile: the topics are
+             bare identifiers rather than strings. While you are in
+             there, the dispatcher's topic guard was commented out
+             during last month's incident and never restored, and the
+             two debug logs that replaced it are still shipping
+             customer payloads to the log aggregator.
+
+All three of this chapter's plugins are shipped with this lesson, under
+`pack/dojo/start/`. You installed none of them. `ys` `cs` `ds`, `gc`
+`gcc` and `:Files` are all available.
+
+Four jobs. Only the first file is open; find the others.
+
+  1. `src/domain/webhook/webhook.topics.ts` — every topic in the array
+     needs to be a single-quoted string. The names do not change.
+
+  2. `src/domain/webhook/webhook.dispatcher.ts` — restore the
+     `isKnownTopic` guard, which is sitting there commented out.
+
+  3. Same file — the two `console.log` lines go out of service, but
+     comment them out rather than deleting them; the incident review
+     still wants to see what was being logged.
+
+  4. `docs/webhooks.md` — `webhookSecret` and `retryLimit` are prose in
+     that doc and should be code, like every other identifier in it.
+
+`src/domain/order/order.provider.ts` has nothing wrong with it. Change it
+and the check fails.
+
+@keys
+| `:Files {fragment}` | open the best fuzzy match |
+| `ys{motion}{char}` | add a pair |
+| `gc{motion}` `gcc` | toggle comments |
+| `^` | first non-blank — the array lines are indented |
+| `qq` … `q` then `4@q` | five near-identical lines |
+| `:w` `:wqa` | write this one, write and quit everything |
+
+@hints
+Do the topics file first, it is open already. Five lines that differ only
+in the name is a macro, and the motion inside it has to start at the
+first non-blank or the quotes land in the indentation.
+--
+For the dispatcher: the guard is three commented lines, the logs are two
+uncommented ones. `gc` is a toggle, so it is the same verb both times —
+only the motion differs. `gc2j` and `gcj`.
+--
+Fragments that pin the files down: `whdis` for the dispatcher, `docweb`
+for the doc. Neither of them is ambiguous in this tree.
+--
+The topics: `j`, then `qq` `^` `yst,'` `j` `q`, then `4@q`. The `^` has
+to be inside the macro, because `j` keeps the column.
+
+@solution
+A route that measures about 120 keystrokes.
+
+**webhook.topics.ts** — `j` onto the first topic. `qq` `^` `yst,'` `j`
+`q` records one line: go to the first non-blank, surround everything up
+to the comma with single quotes, step down. `4@q` finishes the other
+four. `:w`.
+
+**webhook.dispatcher.ts** — `:Files whdis` `Enter`. `/if (!this`
+`Enter` then `gc2j` uncomments the three guard lines. `/console` `Enter`
+then `gcj` comments the two log lines. `:w`.
+
+**docs/webhooks.md** — `:Files docweb` `Enter`. `/webhookSecret` `Enter`
+``ysiw` ``, `/retryLimit` `Enter` ``ysiw` ``. `:wqa`.
+
+Nothing here is a new key. Every one of them arrived in the last eleven
+lessons, and the job is a normal afternoon's ticket: a compile error, a
+guard to restore, some logging to silence, a doc to tidy. That is the
+test — not whether you know `ys`, but whether it is the thing your hand
+does when a string needs quotes.
+
+Three habits the route is built on, all of them older than this chapter.
+
+**Reach for a repeat before the second edit, not the sixth.** Five
+quoted topics is exactly the size where recording feels like overkill
+and is not. The recording cost two keystrokes, `qq` and `q`.
+
+**`^`, not `0`, inside a macro.** `j` preserves the column, so a macro
+that starts its work wherever the cursor happened to land will quietly
+put the quote in the indentation on line three. This is the single most
+common way a macro that worked once fails four times.
+
+**`gc` is a toggle, so stop deciding which way round it goes.** Put the
+cursor on the range and press it. Half the value of a toggle is not
+having to look first.
+
+And the thing to take out of the whole chapter: everything you just did
+was done by three files of vimscript sitting next to your code, under a
+hundred and fifty lines between them, doing nothing you could not have done by hand.
+Plugins are not a separate category of software. When one misbehaves,
+open it and read it — it is the same vim you have been learning, written
+down.
+
+@start pack/dojo/start/surround/plugin/surround.vim
+" dojo-surround.vim - a small, honest surround plugin.
+" Shipped inside this lesson. You did not install it; the dojo did.
+"
+"   ds{char}           delete the surrounding pair
+"   cs{old}{new}       change one surrounding pair into another
+"   ys{motion}{char}   surround the text the motion covers
+"   {Visual}S{char}    surround the selection
+"
+" Brackets come in pairs: ( [ { < all give you the matching closer.
+" Anything else is used on both sides, so " gives "..." and ` gives `...`.
+
+if exists('g:loaded_dojo_surround')
+  finish
+endif
+let g:loaded_dojo_surround = 1
+
+let s:pairs = {
+      \ '(': '()', ')': '()',
+      \ '[': '[]', ']': '[]',
+      \ '{': '{}', '}': '{}',
+      \ '<': '<>', '>': '<>',
+      \ }
+
+function! s:delims(char) abort
+  return get(s:pairs, a:char, a:char . a:char)
+endfunction
+
+" The text between the pair, without the pair itself.
+function! s:inner(char) abort
+  let save = @z
+  let @z = ''
+  silent execute 'normal! "zyi' . a:char
+  let text = @z
+  let @z = save
+  return text
+endfunction
+
+" A visual selection covering the pair AND what is between it. vi" selects
+" the inside; o h o l then walks each end out by one character onto the
+" delimiters. Doing it this way rather than with va" matters: va" also
+" swallows the whitespace next to the string.
+function! s:select(char) abort
+  return 'vi' . a:char . 'ohol'
+endfunction
+
+function! s:replace(char, text) abort
+  let save = @z
+  let @z = a:text
+  silent execute 'normal! ' . s:select(a:char) . '"zp'
+  let @z = save
+endfunction
+
+function! s:ds(char) abort
+  let inner = s:inner(a:char)
+  if inner ==# ''
+    return
+  endif
+  call s:replace(a:char, inner)
+endfunction
+
+function! s:cs(old, new) abort
+  let inner = s:inner(a:old)
+  if inner ==# ''
+    return
+  endif
+  let d = s:delims(a:new)
+  call s:replace(a:old, d[0] . inner . d[1])
+endfunction
+
+function! s:ys(type) abort
+  let d = s:delims(nr2char(getchar()))
+  let save = @z
+  if a:type ==# 'line'
+    silent execute "normal! '[V']\"zy"
+    call setreg('z', d[0] . "\n" . @z . d[1], 'V')
+    silent execute "normal! '[V']\"zp"
+  else
+    silent execute "normal! `[v`]\"zy"
+    let @z = d[0] . @z . d[1]
+    silent execute "normal! `[v`]\"zp"
+  endif
+  let @z = save
+endfunction
+
+function! s:vs(char) abort
+  let d = s:delims(a:char)
+  let save = @z
+  silent execute 'normal! gv"zy'
+  let @z = d[0] . @z . d[1]
+  silent execute 'normal! gv"zp'
+  let @z = save
+endfunction
+
+nnoremap <silent> ds :<C-u>call <SID>ds(nr2char(getchar()))<CR>
+nnoremap <silent> cs :<C-u>call <SID>cs(nr2char(getchar()), nr2char(getchar()))<CR>
+nnoremap <silent> ys :<C-u>set operatorfunc=<SID>ys<CR>g@
+xnoremap <silent> S :<C-u>call <SID>vs(nr2char(getchar()))<CR>
+
+@start pack/dojo/start/commentary/plugin/commentary.vim
+" dojo-commentary.vim - a small, honest commenting plugin.
+" Shipped inside this lesson. You did not install it; the dojo did.
+"
+"   gcc          toggle the comment on this line
+"   gc{motion}   toggle the comment on every line the motion covers
+"   {Visual}gc   toggle the comment on the selection
+"
+" It never guesses the comment syntax. It reads 'commentstring', which the
+" filetype plugin already set: // %s for typescript, -- %s for sql,
+" <!-- %s --> for markdown, # %s for yaml.
+
+if exists('g:loaded_dojo_commentary')
+  finish
+endif
+let g:loaded_dojo_commentary = 1
+
+function! s:parts() abort
+  let cms = &commentstring =~# '%s' ? &commentstring : '# %s'
+  let at = stridx(cms, '%s')
+  return [substitute(strpart(cms, 0, at), '\s*$', '', ''),
+        \ substitute(strpart(cms, at + 2), '^\s*', '', '')]
+endfunction
+
+function! s:rx(text) abort
+  return escape(a:text, '\.*$^~[]/')
+endfunction
+
+function! s:toggle(first, last) abort
+  let [open, close] = s:parts()
+  let head = '^\(\s*\)' . s:rx(open) . ' \?'
+  let tail = ' \?' . s:rx(close) . '\s*$'
+  let lines = getline(a:first, a:last)
+  let code = filter(copy(lines), 'v:val =~# "\\S"')
+  if empty(code)
+    return
+  endif
+  " Uncomment only when every non-blank line is already commented.
+  " Otherwise a half-commented block would flip into a mess.
+  let strip = 1
+  let indent = 999
+  for line in code
+    let strip = strip && line =~# head
+    let indent = min([indent, match(line, '\S')])
+  endfor
+  let n = a:first
+  for line in lines
+    if line =~# '\S'
+      if strip
+        let out = substitute(line, head, '\1', '')
+        let out = close ==# '' ? out : substitute(out, tail, '', '')
+      else
+        let body = open . ' ' . strpart(line, indent)
+        let out = strpart(line, 0, indent) . (close ==# '' ? body : body . ' ' . close)
+      endif
+      call setline(n, out)
+    endif
+    let n += 1
+  endfor
+endfunction
+
+function! s:opfunc(type) abort
+  call s:toggle(line("'["), line("']"))
+endfunction
+
+nnoremap <silent> gcc :<C-u>call <SID>toggle(line('.'), line('.'))<CR>
+nnoremap <silent> gc :<C-u>set operatorfunc=<SID>opfunc<CR>g@
+xnoremap <silent> gc :<C-u>call <SID>toggle(line("'<"), line("'>"))<CR>
+
+@start pack/dojo/start/files/plugin/files.vim
+" dojo-files.vim - a fuzzy file finder in thirty lines.
+" Shipped inside this lesson. You did not install it; the dojo did.
+"
+"   :Files {pattern}   open the file whose path best matches {pattern}
+"   :Files <Tab>       cycle the candidates on the command line
+"
+" The ranking is matchfuzzy(), which vim has had built in since 8.2. The
+" letters you type have to appear in the path in order, and nothing else.
+" `opr` finds order.provider.ts. That is the whole trick fzf sells.
+
+if exists('g:loaded_dojo_files')
+  finish
+endif
+let g:loaded_dojo_files = 1
+
+function! s:index() abort
+  let all = split(globpath('.', '**/*'), "\n")
+  call filter(all, 'filereadable(v:val)')
+  call map(all, 'substitute(v:val, "^\\./", "", "")')
+  " A real finder skips .git, node_modules and build output. This one skips
+  " the package directory, so the list is the project and nothing else.
+  return filter(all, 'v:val !~# "^pack/"')
+endfunction
+
+function! s:matches(pat) abort
+  let all = s:index()
+  return a:pat ==# '' ? all : matchfuzzy(all, a:pat)
+endfunction
+
+function! s:complete(lead, line, pos) abort
+  return s:matches(a:lead)
+endfunction
+
+function! s:files(pat) abort
+  let hits = s:matches(a:pat)
+  if empty(hits)
+    echohl ErrorMsg
+    echo 'Files: nothing matches ' . a:pat
+    echohl NONE
+    return
+  endif
+  execute 'edit ' . fnameescape(hits[0])
+endfunction
+
+command! -nargs=? -complete=customlist,s:complete Files call s:files(<q-args>)
+
+@start src/domain/webhook/webhook.topics.ts
+export const topics = [
+  order.created,
+  order.cancelled,
+  payment.captured,
+  payment.refunded,
+  refund.settled,
+];
+
+@expected src/domain/webhook/webhook.topics.ts
+export const topics = [
+  'order.created',
+  'order.cancelled',
+  'payment.captured',
+  'payment.refunded',
+  'refund.settled',
+];
+
+@start src/domain/webhook/webhook.dispatcher.ts
+export class WebhookDispatcher {
+  public async dispatch(event: WebhookEvent) {
+    // if (!this.isKnownTopic(event.topic)) {
+    //   throw exception('WEBHOOK_TOPIC_UNKNOWN');
+    // }
+
+    console.log('dispatch', event.topic, event.id);
+    console.log('payload', JSON.stringify(event.payload));
+
+    await this.client.post(this.url, event);
+  }
+}
+
+@expected src/domain/webhook/webhook.dispatcher.ts
+export class WebhookDispatcher {
+  public async dispatch(event: WebhookEvent) {
+    if (!this.isKnownTopic(event.topic)) {
+      throw exception('WEBHOOK_TOPIC_UNKNOWN');
+    }
+
+    // console.log('dispatch', event.topic, event.id);
+    // console.log('payload', JSON.stringify(event.payload));
+
+    await this.client.post(this.url, event);
+  }
+}
+
+@start docs/webhooks.md
+# Webhooks
+
+Every webhook we send is signed. The signature is in the
+`X-Order-Signature` header and is an HMAC of the raw body.
+
+The payload is signed with the webhookSecret from the environment. Verify
+it before you trust the body.
+
+Delivery is retried with backoff. Retries stop after retryLimit attempts
+and the event goes to `webhook_dead_letter`.
+
+@expected docs/webhooks.md
+# Webhooks
+
+Every webhook we send is signed. The signature is in the
+`X-Order-Signature` header and is an HMAC of the raw body.
+
+The payload is signed with the `webhookSecret` from the environment. Verify
+it before you trust the body.
+
+Delivery is retried with backoff. Retries stop after `retryLimit` attempts
+and the event goes to `webhook_dead_letter`.
+
+@start src/domain/order/order.provider.ts
+export class OrderProvider {
+  constructor(protected orderRepository: OrderRepository) {}
+
+  public async list(customerId: string) {
+    return this.orderRepository.findMany({ where: { customerId } });
+  }
+}

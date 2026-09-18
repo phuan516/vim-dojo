@@ -1,0 +1,114 @@
+@meta
+id: 20-05
+title: Read the register list
+chapter: 20
+type: lesson
+skills: register-named
+par: 32
+minutes: 5
+vscode: open the clipboard history panel and squint
+vimrc: let @a="    @inject(EmailService) protected emailService: EmailService,\n" | let @b="    @inject(PaymentService) protected paymentService: PaymentService,\n" | let @c="    @inject(PaymentService) private paymentService: PaymentService\n"
+open: order.provider.ts
+
+@brief
+Registers are invisible until you ask. `:reg` lists them all; `:reg ab`
+lists just `a` and `b`. Each row shows the register's name, its type —
+`l` for whole lines, `c` for part of a line — and its contents, with
+`^J` standing in for a line break.
+
+For this lesson the dojo has loaded three registers before you arrive,
+as if you had yanked three candidate lines earlier in the session and
+lost track of which is which. One of them is the constructor line that
+injects `PaymentService` into `OrderProvider`, in the codebase's style:
+`protected`, with a trailing comma. The other two are close but wrong.
+
+Look at the list, decide, and put the right one directly under the
+`orderRepository` injection.
+
+@keys
+| `:reg` | every register and its contents |
+| `:reg abc` | just those three |
+| `"bp` | put from `b` |
+
+@hints
+`:reg abc` Enter shows the three candidates side by side. Press Enter
+again to dismiss the list. Only one of them is `protected` *and* ends
+with a comma.
+--
+`/protected` Enter lands on the `orderRepository` injection: it is the
+only `protected` in the file. (`/orderRepos` would stop at the import
+first, because `ignorecase` makes it match `OrderRepository` too.)
+--
+`:reg abc` Enter Enter, `/protected` Enter, `"bp`.
+
+@solution
+    :reg abc<Enter><Enter> /protected<Enter> "bp :wq<Enter>
+
+Reading the list is the skill, and the codes in the type column are
+worth a moment: `l` means the register was filled by a linewise
+operation (`yy`, `dd`) and `p` will put it on a line of its own; `c`
+means characterwise (`yiw`, `dw`) and `p` will splice it into the
+current line. When a put lands in the wrong shape, this column is why.
+
+`:reg` with no argument shows everything, including registers you have
+not met yet: `"0` through `"9`, `"-`, `"%`, `":`, `"/`, and a few more.
+The rest of this chapter goes through them. If you ever see a `"q`
+full of keystrokes, that is a macro, and chapter 21 is where you find
+out how it got there.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  public async cancel(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async cancel(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}

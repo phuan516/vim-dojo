@@ -1,0 +1,317 @@
+@meta
+id: 07-01
+title: The two ends of a long file
+chapter: 07
+type: lesson
+skills: goto-line
+par: 84
+minutes: 6
+vscode: Ctrl-Home and Ctrl-End
+open: CHANGELOG.md
+
+@brief
+This changelog is 125 lines long. Everything you have learned so far moves
+you by a character, a word or a line, and none of that is any use here: the
+bottom of this file is ninety `j` presses away.
+
+Two edits, and do them in this order.
+
+  1. At the very bottom, the link reference for 2.6.0 is missing. Add it as
+     a new last line of the file:
+
+         [2.6.0]: https://git.acme.dev/orders/compare/v2.5.0...v2.6.0
+
+  2. Back at the very top, line 1 lost its `# ` in a bad merge and the
+     title is no longer a heading. It should read `# Changelog`.
+
+Nothing else in the file changes.
+
+@keys
+| `G` | last line of the file |
+| `gg` | first line of the file |
+| `o` | open a line below |
+| `I` | insert at the first non-blank of the line |
+
+@hints
+Two keys get you to either end of any file, whether it is twelve lines or
+twelve thousand. One of them is a doubled letter.
+--
+`G` goes to the last line. `gg` goes back to the first. Neither takes a
+count here — you want the ends, not a number.
+--
+Do the bottom first: `G`, then `o` opens a fresh line below the last one.
+Then `gg` puts you back on line 1 and `I` starts typing in front of it.
+
+@solution
+    G o [2.6.0]: https://git.acme.dev/orders/compare/v2.5.0...v2.6.0 <Esc>
+    gg I #  <Esc> :wq<Enter>
+
+Around seventy keystrokes and sixty of them are the link line you had to
+type. The travel — the part that would have been a scroll, a drag of
+the scrollbar or a very long press on a cursor key — was three keys.
+
+`G` and `gg` are the first motions in the dojo that do not care how big the
+file is. That property is worth more than it sounds. Distance-based movement
+(`j`, `5j`, holding a key) gets slower as files get longer, so you
+unconsciously stop working on long files the way you work on short ones.
+`gg` and `G` cost the same everywhere.
+
+Two things to file away. `gg` is a doubled key because plain `g` is a prefix:
+it begins a whole family of commands, and you have already met one of them,
+`ge`. And `G` on its own means "the end", but `G` with a count in front of it
+means something more precise. That is the next lesson.
+
+@start CHANGELOG.md
+Changelog
+
+All notable changes to the orders service are recorded here. The format
+follows Keep a Changelog, and this project uses semantic versioning.
+
+## [Unreleased]
+
+## [2.13.0] - 2026-08-14
+
+### Added
+
+- `OrderProvider.cancel` now records a cancellation reason.
+- Customers can be looked up by external reference as well as by id.
+
+### Fixed
+
+- Refunds over 30 days old no longer fail silently.
+- The order resolver no longer drops the `placedAt` field.
+
+## [2.12.1] - 2026-07-30
+
+### Fixed
+
+- Payment webhooks arriving twice no longer create duplicate refunds.
+
+## [2.12.0] - 2026-07-22
+
+### Added
+
+- Partial refunds, with an amount in minor units.
+- A `refunded` status on the order entity.
+
+### Changed
+
+- `PaymentService.refund` takes an amount rather than refunding in full.
+- Order search is paginated at 50 rows instead of 200.
+
+### Removed
+
+- The unused `legacyRefund` method on the refund provider.
+
+## [2.11.2] - 2026-07-04
+
+### Fixed
+
+- Customer emails with a plus sign are accepted again.
+
+## [2.11.1] - 2026-06-28
+
+### Fixed
+
+- The nightly reconciliation job no longer runs twice on Sundays.
+- Cancelled orders are excluded from the revenue report.
+
+## [2.11.0] - 2026-06-19
+
+### Added
+
+- An email receipt for every completed refund.
+- `customerId` on the refund audit record.
+
+### Changed
+
+- Order ids are prefixed `ord_` on creation rather than in the resolver.
+
+## [2.10.0] - 2026-05-30
+
+### Added
+
+- Bulk cancellation for orders stuck in `PENDING`.
+
+### Fixed
+
+- Timezone handling in the daily settlement export.
+
+## [2.9.0] - 2026-05-12
+
+### Added
+
+- A GraphQL field for the payment provider reference.
+
+### Changed
+
+- Repository base methods take `{ where }` consistently.
+
+## [2.8.1] - 2026-04-27
+
+### Fixed
+
+- A crash when an order had no customer attached.
+
+## [2.8.0] - 2026-04-15
+
+### Added
+
+- Idempotency keys on the payment service.
+
+## [2.7.0] - 2026-03-28
+
+### Added
+
+- The refund window, defaulting to 30 days.
+
+### Removed
+
+- Support for the v1 payments endpoint.
+
+## [2.6.0] - 2026-03-09
+
+### Added
+
+- Customer notes, editable from the admin tool.
+
+[unreleased]: https://git.acme.dev/orders/compare/v2.13.0...HEAD
+[2.13.0]: https://git.acme.dev/orders/compare/v2.12.1...v2.13.0
+[2.12.1]: https://git.acme.dev/orders/compare/v2.12.0...v2.12.1
+[2.12.0]: https://git.acme.dev/orders/compare/v2.11.2...v2.12.0
+[2.11.2]: https://git.acme.dev/orders/compare/v2.11.1...v2.11.2
+[2.11.1]: https://git.acme.dev/orders/compare/v2.11.0...v2.11.1
+[2.11.0]: https://git.acme.dev/orders/compare/v2.10.0...v2.11.0
+[2.10.0]: https://git.acme.dev/orders/compare/v2.9.0...v2.10.0
+[2.9.0]: https://git.acme.dev/orders/compare/v2.8.1...v2.9.0
+[2.8.1]: https://git.acme.dev/orders/compare/v2.8.0...v2.8.1
+[2.8.0]: https://git.acme.dev/orders/compare/v2.7.0...v2.8.0
+[2.7.0]: https://git.acme.dev/orders/compare/v2.6.0...v2.7.0
+
+@expected CHANGELOG.md
+# Changelog
+
+All notable changes to the orders service are recorded here. The format
+follows Keep a Changelog, and this project uses semantic versioning.
+
+## [Unreleased]
+
+## [2.13.0] - 2026-08-14
+
+### Added
+
+- `OrderProvider.cancel` now records a cancellation reason.
+- Customers can be looked up by external reference as well as by id.
+
+### Fixed
+
+- Refunds over 30 days old no longer fail silently.
+- The order resolver no longer drops the `placedAt` field.
+
+## [2.12.1] - 2026-07-30
+
+### Fixed
+
+- Payment webhooks arriving twice no longer create duplicate refunds.
+
+## [2.12.0] - 2026-07-22
+
+### Added
+
+- Partial refunds, with an amount in minor units.
+- A `refunded` status on the order entity.
+
+### Changed
+
+- `PaymentService.refund` takes an amount rather than refunding in full.
+- Order search is paginated at 50 rows instead of 200.
+
+### Removed
+
+- The unused `legacyRefund` method on the refund provider.
+
+## [2.11.2] - 2026-07-04
+
+### Fixed
+
+- Customer emails with a plus sign are accepted again.
+
+## [2.11.1] - 2026-06-28
+
+### Fixed
+
+- The nightly reconciliation job no longer runs twice on Sundays.
+- Cancelled orders are excluded from the revenue report.
+
+## [2.11.0] - 2026-06-19
+
+### Added
+
+- An email receipt for every completed refund.
+- `customerId` on the refund audit record.
+
+### Changed
+
+- Order ids are prefixed `ord_` on creation rather than in the resolver.
+
+## [2.10.0] - 2026-05-30
+
+### Added
+
+- Bulk cancellation for orders stuck in `PENDING`.
+
+### Fixed
+
+- Timezone handling in the daily settlement export.
+
+## [2.9.0] - 2026-05-12
+
+### Added
+
+- A GraphQL field for the payment provider reference.
+
+### Changed
+
+- Repository base methods take `{ where }` consistently.
+
+## [2.8.1] - 2026-04-27
+
+### Fixed
+
+- A crash when an order had no customer attached.
+
+## [2.8.0] - 2026-04-15
+
+### Added
+
+- Idempotency keys on the payment service.
+
+## [2.7.0] - 2026-03-28
+
+### Added
+
+- The refund window, defaulting to 30 days.
+
+### Removed
+
+- Support for the v1 payments endpoint.
+
+## [2.6.0] - 2026-03-09
+
+### Added
+
+- Customer notes, editable from the admin tool.
+
+[unreleased]: https://git.acme.dev/orders/compare/v2.13.0...HEAD
+[2.13.0]: https://git.acme.dev/orders/compare/v2.12.1...v2.13.0
+[2.12.1]: https://git.acme.dev/orders/compare/v2.12.0...v2.12.1
+[2.12.0]: https://git.acme.dev/orders/compare/v2.11.2...v2.12.0
+[2.11.2]: https://git.acme.dev/orders/compare/v2.11.1...v2.11.2
+[2.11.1]: https://git.acme.dev/orders/compare/v2.11.0...v2.11.1
+[2.11.0]: https://git.acme.dev/orders/compare/v2.10.0...v2.11.0
+[2.10.0]: https://git.acme.dev/orders/compare/v2.9.0...v2.10.0
+[2.9.0]: https://git.acme.dev/orders/compare/v2.8.1...v2.9.0
+[2.8.1]: https://git.acme.dev/orders/compare/v2.8.0...v2.8.1
+[2.8.0]: https://git.acme.dev/orders/compare/v2.7.0...v2.8.0
+[2.7.0]: https://git.acme.dev/orders/compare/v2.6.0...v2.7.0
+[2.6.0]: https://git.acme.dev/orders/compare/v2.5.0...v2.6.0

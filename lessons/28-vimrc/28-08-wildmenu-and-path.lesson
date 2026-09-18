@@ -1,0 +1,124 @@
+@meta
+id: 28-08
+title: Two lines that replace a file picker
+chapter: 28
+type: lesson
+skills: vimrc-structure
+par: 138
+minutes: 6
+vscode: Ctrl-P
+open: .vimrc
+vimrc: set path=.,** | set wildmenu | set wildmode=longest:full,full
+
+@brief
+Chapter 18 gave you `:find`, and it was underwhelming, because out of the
+box `path` is `.,/usr/include,,` — the directory of the current file, and
+C headers. Two lines fix that for good:
+
+    set path=.,**             " :find searches the whole tree
+    set wildmenu              " Tab completion shows a menu, not a guess
+    set wildmode=longest:full,full
+
+`**` means "every directory below the working directory, recursively". With
+it, `:find order.rep` and Tab opens `src/domain/order/order.repository.ts`
+without you knowing or typing the path. `wildmenu` puts the candidates on a
+bar above the command line; `wildmode=longest:full,full` says the first Tab
+completes as far as the candidates agree, and the next one starts stepping
+through them.
+
+Add the three lines to the Editing section of your config. Then use them:
+somewhere under `src/` there is a repository with a `findMany` that has no
+`take`. Open it with `:find`, not with a path you typed out, and give the
+query `take: 100,` under `where`.
+
+The settings are already live in this session, so `:find` works before you
+save the config.
+
+@keys
+| `:find name` `Tab` | open a file by name from anywhere in the tree |
+| `:find *fragment` `Tab` | match a fragment of the name, not just a prefix |
+| `:ls` | which buffers you have |
+| `:wqa` | write everything and quit |
+
+@hints
+Config first: the three lines go in the Editing section, under
+`set backspace`. Then `:w`.
+--
+`:find order.repo` and press Tab. With `path=.,**` the whole tree is in
+scope, so the directory does not have to be part of what you type.
+--
+Inside the `findMany` call, put the cursor on the `where:` line and `o`
+gives you a correctly indented new line. Then `:wqa` writes both files.
+
+@solution
+    /set backspace<Enter> o set path=.,**<Enter> set wildmenu<Enter>
+    set wildmode=longest:full,full <Esc> :w<Enter>
+    :find order.repo<Tab><Enter>
+    /where:<Enter> o take: 100, <Esc> :wqa<Enter>
+
+Everything after the first `:w` is the config doing the work. You never
+typed `src/domain/order/`.
+
+`path` is worth more than the keystrokes it saves, because several other
+commands read it. `gf` on a filename under the cursor uses `path`.
+`:sfind` opens into a split. `:vimgrep /pat/ **/*.ts` is a different
+mechanism but the same habit: stop navigating directories, start naming
+files.
+
+The one warning: `**` walks the whole tree from your working directory,
+so in a repository with a 400MB `node_modules` the first Tab takes a
+noticeable moment. `set wildignore=*/node_modules/**,*/dist/**,*/.git/**`
+keeps those out of completion, and out of `:find`. That line is the fourth
+one you add to this section, on the day it first annoys you.
+
+@start .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Editing ---
+set hidden
+set backspace=indent,eol,start
+
+@expected .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Editing ---
+set hidden
+set backspace=indent,eol,start
+set path=.,**
+set wildmenu
+set wildmode=longest:full,full
+
+@start src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class OrderRepository {
+  public async findMany(args: FindManyArgs) {
+    return this.prisma.order.findMany({
+      where: args.where,
+      orderBy: { placedAt: 'desc' },
+    });
+  }
+}
+
+@expected src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class OrderRepository {
+  public async findMany(args: FindManyArgs) {
+    return this.prisma.order.findMany({
+      where: args.where,
+      take: 100,
+      orderBy: { placedAt: 'desc' },
+    });
+  }
+}

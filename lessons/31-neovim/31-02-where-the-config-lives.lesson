@@ -1,0 +1,89 @@
+@meta
+id: 31-02
+title: Where the config lives now
+chapter: 31
+type: lesson
+skills: nvim-differences, lua-config
+par: 110
+minutes: 5
+vscode: settings.json, in a path nobody can recite either
+open: answers.txt
+
+@brief
+Chapter 28 gave you `~/.vimrc` and `~/.vim/`. Neovim uses neither. It
+follows the XDG convention, so your configuration lives in a directory
+rather than a file:
+
+    ~/.config/nvim/init.lua        the file Neovim reads at startup
+    ~/.config/nvim/lua/            your own modules, loaded with require
+    ~/.config/nvim/after/ftplugin/ per-filetype settings, same idea as vim
+    ~/.local/share/nvim/           plugins and other data, not config
+
+`init.lua` is the entry point. If you are not ready to write Lua, Neovim
+will read `~/.config/nvim/init.vim` instead and run your existing
+vimscript almost unchanged — that is the migration path most people take
+on day one, and there is nothing wrong with staying on it for a while.
+What you must not do is create both: Neovim refuses to guess and stops
+with a conflict error instead of picking one.
+
+Inside Neovim, `:echo stdpath('config')` prints the config directory and
+`:checkhealth` tells you what is missing. Neither is available here.
+
+Answer the five questions in answers.txt from the paragraphs above. This
+lesson is graded in vim, like the whole chapter — you are writing down what
+Neovim would do, not running it.
+
+@keys
+| `A` | append at the end of the line |
+| `j` | down a line — `A` ignores the column, so you can chain them |
+
+@hints
+Every answer is on this page. Four of them are paths; the fifth is one
+word describing what Neovim does rather than choosing for you.
+--
+`A` puts you in insert mode at the end of the current line, wherever the
+cursor sits on it. `Esc`, `j`, `A` again is the whole rhythm.
+--
+Start with `/neovim_reads` and Enter, then work down the file with
+`A ... Esc j`.
+
+@solution
+    /neovim_reads<Enter>
+    A~/.config/nvim/init.lua<Esc>
+    jA~/.config/nvim<Esc>
+    jA~/.config/nvim/init.vim<Esc>
+    jAerrors<Esc>
+    :wq<Enter>
+
+Ninety-five keystrokes, nearly all of them the answers themselves.
+
+Two details worth carrying:
+
+- The directory, not the file, is what you version control. A Neovim
+  config is a small Lua project — `init.lua` plus a `lua/` tree you
+  `require` from — and that is why Neovim configs get shared as git repos
+  while vimrcs get shared as pastes.
+- `init.vim` and `init.lua` are mutually exclusive, but inside `init.lua`
+  you can still run any vimscript you have not ported yet with
+  `vim.cmd([[ ... ]])`. A migration does not have to be finished to be
+  useful.
+
+@start answers.txt
+# Neovim configuration paths.
+# Put your answer right after the = with no spaces.
+
+vim_reads=~/.vimrc
+neovim_reads=
+neovim_config_directory=
+vimscript_compatibility_file=
+if_both_config_files_exist_neovim=
+
+@expected answers.txt
+# Neovim configuration paths.
+# Put your answer right after the = with no spaces.
+
+vim_reads=~/.vimrc
+neovim_reads=~/.config/nvim/init.lua
+neovim_config_directory=~/.config/nvim
+vimscript_compatibility_file=~/.config/nvim/init.vim
+if_both_config_files_exist_neovim=errors

@@ -1,0 +1,38 @@
+@meta
+id: 09-11
+title: Drill — drop the last argument
+chapter: 09
+type: drill
+skills: op-motion
+par: 13
+minutes: 4
+reps: 8
+vscode: select from the comma to the bracket, Delete
+open: notify.ts
+
+@brief
+Eight times: remove the third argument and its comma, leaving
+`send(customer.email, 'REFUND_SENT');`. Save, quit.
+
+@keys
+| `2f,` | onto the second comma |
+| `dt)` | delete up to, not including, the closing bracket |
+
+@hints
+Park on the comma that should go, then delete up to the bracket.
+--
+`2f,` then `dt)`.
+
+@solution
+    2f, dt) :wq<Enter>
+
+Ten keystrokes, six of them navigation. The reason to drill it is that
+the shape — get to the separator with `f`, delete to the terminator with
+`t` — is the same shape whether the line is an argument list, an import,
+an array literal or a CSS rule. Different characters, identical gesture.
+
+@start notify.ts
+await this.emailService.send(customer.email, 'REFUND_SENT', order.id);
+
+@expected notify.ts
+await this.emailService.send(customer.email, 'REFUND_SENT');

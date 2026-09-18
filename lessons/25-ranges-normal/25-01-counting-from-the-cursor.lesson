@@ -1,0 +1,96 @@
+@meta
+id: 25-01
+title: Counting from where you are
+chapter: 25
+type: lesson
+skills: range-syntax
+par: 23
+minutes: 4
+vscode: click the first line, shift-click the fifth, Delete
+open: refund.provider.ts
+
+@brief
+Someone left five lines of debugging in `refund` — the `// DEBUG`
+comment and the four `console.log` calls under it. All five go. Nothing
+else in the file changes.
+
+Chapter 24 gave you ranges made of line numbers, `.`, `$` and `%`. This
+chapter finishes the address grammar, starting with the piece that makes
+`.` worth having: arithmetic. `.+3` is three lines below the cursor.
+`.-1` is the line above it. So a range can say "from here, five lines"
+without you reading a single number out of the gutter.
+
+Search down to the first debug line, then delete from there.
+
+@keys
+| `:.,.+4d` | from the cursor, five lines, gone |
+| `.+1` | the line below the cursor |
+| `.-1` | the line above it |
+| `:.,.+4` | a range: current line through current plus four |
+
+@hints
+Get the cursor onto the `// DEBUG` line first. A search is the cheapest
+way there — the word is in capitals and appears once.
+--
+Now count the lines to remove, including the one you are on: five. The
+last of them is `.+4`.
+--
+`/DEBUG` Enter, then `:.,.+4d` Enter, then `:wq`.
+
+@solution
+    /DEBUG<Enter>  :.,.+4d<Enter>  :wq<Enter>
+
+Nineteen keystrokes. `5dd` would have been shorter here, and on a five-line
+block that is the right call. The reason to learn the address form anyway
+is that it composes. `5dd` deletes. `:.,.+4` is a *noun* — the same five
+lines can be copied with `t`, moved with `m`, indented with `>`, sorted,
+substituted in, or handed to `:normal` later in this chapter, and you
+write the range the same way every time.
+
+The important half is `.`. An address written with `.` does not care
+where in the file you are, so it survives the lines above it changing.
+A range of `14,19` is a fact about today's version of the file; `.,.+4`
+is a fact about the block, and you can search your way to it.
+
+Offsets work on any address, not just `.`. A bare `+3` means `.+3`, and
+`:+3d` deletes the line three below the cursor. You will see the same
+arithmetic on `$` next, and on patterns shortly after that.
+
+@start refund.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class RefundProvider {
+  constructor(
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async refund(orderId: string, amount: number) {
+    // DEBUG remove before merge
+    console.log('refund called', orderId);
+    console.log('amount', amount);
+    console.log('env', process.env.NODE_ENV);
+    console.log('gateway', this.paymentService.name);
+    const receipt = await this.paymentService.refund(orderId, amount);
+
+    return receipt;
+  }
+}
+
+@expected refund.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class RefundProvider {
+  constructor(
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async refund(orderId: string, amount: number) {
+    const receipt = await this.paymentService.refund(orderId, amount);
+
+    return receipt;
+  }
+}

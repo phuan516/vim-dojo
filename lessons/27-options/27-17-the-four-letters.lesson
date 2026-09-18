@@ -1,0 +1,90 @@
+@meta
+id: 27-17
+title: The four letters that matter
+chapter: 27
+type: lesson
+skills: mapping, register-blackhole
+par: 44
+minutes: 7
+vscode: nothing — VS Code keybindings cannot call each other
+open: order.status.ts
+vimrc: source config.vim
+
+@brief
+There is a good idea in `config.vim`:
+
+    nmap x "_x
+
+`x` normally deletes a character *into the unnamed register*, which means
+one careless `x` throws away the word you yanked ten seconds ago. Sending
+it to the black hole register instead fixes that. It is a mapping worth
+having.
+
+It is also written with `:nmap`, and so it does not work. Press `x` in
+this session and vim spends a moment consuming itself and gives up.
+
+Two edits to make. Line one has a doubled semicolon; take one off with
+`x`. Line two's string is empty and should read `'SHIPPED'` — yank the
+identifier from the same line and put it between the quotes.
+
+Do the yank before the `x`. If the mapping is right, the order will not
+matter. That is the point of it.
+
+@keys
+| `:nnoremap x "_x` | map, and do not look at the result again |
+| `:nmap x "_x` | map, then keep expanding the result — recursive |
+| `:nmap x` | show what `x` is bound to |
+| `:verbose nmap x` | and which file did it |
+| `"_` | the black hole register: everything written to it is discarded |
+
+@hints
+The mapping is not wrong about what it wants, it is wrong about how it
+asked. Look at the command name against the ones in the key list.
+--
+`:nmap` re-reads its own output looking for more mappings, so an `x` on
+the right-hand side is expanded again, and again. `:nnoremap` does not.
+--
+`:nnoremap x "_x` `Enter` replaces it. Then `j2wyiw` to take `SHIPPED`,
+`k$x` for the stray semicolon, `j0f'` and `p` to put it inside the quotes.
+
+@solution
+    :nnoremap x "_x<Enter>
+    j2wyiw  k$x  j0f'p  :wq<Enter>
+
+Thirty-four keystrokes.
+
+`:map` and its per-mode relatives are **recursive**: after expanding a
+mapping, vim looks at the result and expands anything it finds there too.
+That is occasionally useful — it is how a mapping can be built out of
+another mapping you defined earlier — and it is almost never what you
+meant. Here it means `x` expands to `"_x`, whose `x` expands to `"_x`,
+until vim notices and errors.
+
+`:noremap` and its relatives expand once and stop. Use them. The rule is
+not "use `nnoremap` unless you are sure" — it is `nnoremap` by default,
+and `nmap` only when you have a specific reason you could explain to
+somebody.
+
+The failure is worse when it does not error. Map `<C-p>` to something, and
+a plugin you install next month maps `<C-p>` to something else, and now
+your recursive mapping runs the plugin's. The bug shows up weeks after the
+line that caused it, in a file you did not touch.
+
+Two more things in that command line worth naming. `"_` is the black hole
+register from chapter 20: writing to it discards. And a mapping's
+right-hand side runs as if typed, so `"_x` in a mapping means exactly what
+`"_x` means at the keyboard.
+
+@start config.vim
+" team defaults, inherited from the old tech lead
+set ignorecase
+" delete a character without clobbering what you yanked
+nmap x "_x
+
+@start order.status.ts
+export const CANCELLED = 'CANCELLED';;
+export const SHIPPED = '';
+
+@expected order.status.ts
+export const CANCELLED = 'CANCELLED';
+export const SHIPPED = 'SHIPPED';

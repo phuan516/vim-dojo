@@ -1,0 +1,88 @@
+@meta
+id: 30-12
+title: When a language server is worth it
+chapter: 30
+type: lesson
+skills: lsp-setup
+par: 220
+minutes: 9
+vscode: nothing to do — the extension is the server
+open: lsp.vim
+
+@brief
+Everything so far has been the poor man's version, and the poor man's
+version is genuinely good. Here is what it cannot do, and what fixes it.
+
+A tags file knows names and places. A language server knows types. That
+one difference is where the last three lessons hurt: the tag list with
+two `refund` entries, the rename that hit another class and a routing
+key, the errors that needed a build to appear at all. A server resolves
+the symbol under your cursor to one declaration, so it gives one
+definition, renames only true references, and reports diagnostics as you
+type without running `tsc`.
+
+Vim 9 does not ship a client. `:h lsp` describes the protocol and points
+at the plugins that speak it — `yegappan/lsp` is the common vim 9 one,
+`prabirshrestha/vim-lsp` the older vimscript one. What follows is the
+whole configuration for TypeScript, and it is short.
+
+`lsp.vim` is open with its first line written. Add, exactly:
+
+    call LspAddServer([#{name: 'tsserver', filetype: ['typescript'], path: 'typescript-language-server', args: ['--stdio']}])
+    nnoremap gd :LspGotoDefinition<CR>
+    nnoremap gr :LspRename<CR>
+
+Nothing runs here: there is no server installed and no network. The file
+is the deliverable.
+
+@keys
+| `:h lsp` | vim's own account of what a language server is |
+| `packadd name` | load a plugin from `pack/*/opt` now, rather than at startup |
+| `LspAddServer` | register a server: which filetypes, which binary, which arguments |
+| `:LspGotoDefinition` `:LspRename` `:LspHover` | the three you will actually press |
+| `:LspDiagnostics` | the errors, into the location list |
+
+@hints
+`G` to the last line, `o` to open a line under it, and type the three
+lines with Enter between them.
+--
+`#{...}` is vim 9's literal dictionary: keys without quotes. The square
+brackets around it are because `LspAddServer` takes a list of servers —
+you would add `pylsp` and `gopls` to the same call.
+--
+The mappings deliberately shadow `gd` and `gr`. When the server is
+running you want the server's answer; when it is not, the built-in `gd`
+is still there and still works.
+
+@solution
+    G o <the three lines, Enter between them> <Esc> :wq<Enter>
+
+Worth it when: the project is one language, it is already on your disk
+with its dependencies installed, and you work in it every day. Rename
+and go-to-definition stop being approximate, and diagnostics arrive
+before you save. For a monorepo you touch daily, the setup cost is an
+hour and it pays back in a week.
+
+Not worth it when: you are on a box you ssh into, the repo is thirty
+gigabytes, the project is four languages, `node_modules` is not
+installed, or you are reading code rather than writing it. A server
+needs a working project to be useful. `ctags -R src` needs a directory.
+
+The two are not rivals, and most people who set up a server keep a tags
+file as well — for the languages the server does not cover, for the
+vendored code it refuses to index, and for the first thirty seconds
+after opening vim while the server is still starting up.
+
+The real reason to understand the tags version is that it is the one
+that is always available. The keys you learned this chapter — `Ctrl-]`,
+`Ctrl-T`, `Ctrl-W }`, `:cn` — are the same keys whatever is answering
+the question. Point them at a server if you have one.
+
+@start lsp.vim
+packadd lsp
+
+@expected lsp.vim
+packadd lsp
+call LspAddServer([#{name: 'tsserver', filetype: ['typescript'], path: 'typescript-language-server', args: ['--stdio']}])
+nnoremap gd :LspGotoDefinition<CR>
+nnoremap gr :LspRename<CR>

@@ -1,0 +1,96 @@
+@meta
+id: 15-12
+title: Gather the matches, in order
+chapter: 15
+type: lesson
+skills: global-move
+par: 25
+minutes: 5
+vscode: cut and paste seven lines one at a time, keeping count
+open: registry.ts
+
+@brief
+Someone added the last few services to the DI registry by putting each
+`import` directly above its `container.register`, so the file is now
+imports and registrations interleaved. The convention is all imports at
+the top, all registrations below, and the registrations in the order
+they were written, because the registry order matters for this
+framework.
+
+Move every `container.register` line to the bottom of the file, in the
+order they currently appear. The imports stay where they are.
+
+You reversed a file last lesson by moving every line to the top. The
+same idea, pointed at the other end of the file, does something
+different: moving each matching line to the bottom, one after another,
+collects them there and keeps their order.
+
+@keys
+| `:g/pattern/m$` | move every matching line to the end of the file, in order |
+| `:m$` | move the current line to the end |
+
+@hints
+The pattern needs to catch the seven registration lines and nothing
+else. They all start the same way.
+--
+Each matched line goes to the end, after the one before it. The result
+is the matches, in the order they were found, at the bottom.
+--
+`:g/^container/m$` and Enter.
+
+@solution
+    :g/^container/m$<Enter>  :wq<Enter>
+
+Twenty-one keystrokes, and the registrations arrive at the bottom in
+the order they left.
+
+`m$` and `m0` are the two ends of the same trick, and they behave
+differently in a way that matters. `m$` appends: the first match goes
+to the bottom, the second match goes below it, and the order is kept.
+`m0` prepends: the first match goes to the top, the second goes above
+it, and the order is reversed. That is exactly why `:g/^/m0` reverses
+a file. So: gather at the bottom when order matters. If you must gather
+at the top, run `:g/pattern/m0` and then run it again, the second pass
+un-reverses the first. It looks like a trick and it is one, but it is
+the honest consequence of the mechanism.
+
+The registry order rule is real, by the way. Producers, then
+repositories, then providers, then consumers, so that nothing is
+resolved before the thing it depends on. Editing tools that preserve
+order are not a nicety in a file like this.
+
+@start registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderResolver } from '../domain/order/order.resolver';
+import { CustomerRepository } from '../domain/customer/customer.repository';
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('CustomerRepository', { useClass: CustomerRepository });
+import { CustomerProvider } from '../domain/customer/customer.provider';
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+import { PaymentService } from '../infrastructure/services/payment.service';
+container.register('PaymentService', { useClass: PaymentService });
+import { EmailService } from '../infrastructure/services/email.service';
+container.register('EmailService', { useClass: EmailService });
+import { OrderConsumer } from '../domain/order/order.consumer';
+container.register('OrderConsumer', { useClass: OrderConsumer });
+
+@expected registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderResolver } from '../domain/order/order.resolver';
+import { CustomerRepository } from '../domain/customer/customer.repository';
+import { CustomerProvider } from '../domain/customer/customer.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+import { EmailService } from '../infrastructure/services/email.service';
+import { OrderConsumer } from '../domain/order/order.consumer';
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('CustomerRepository', { useClass: CustomerRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('PaymentService', { useClass: PaymentService });
+container.register('EmailService', { useClass: EmailService });
+container.register('OrderConsumer', { useClass: OrderConsumer });

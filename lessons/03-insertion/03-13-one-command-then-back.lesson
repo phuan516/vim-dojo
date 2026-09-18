@@ -1,0 +1,75 @@
+@meta
+id: 03-13
+title: One normal command, then straight back
+chapter: 03
+type: lesson
+skills: insert-I, insert-A
+par: 34
+minutes: 5
+vscode: click before the text, type, click after it, type
+open: runbook.md
+
+@brief
+The bare line in this runbook should be a markdown link to the refunds
+doc:
+
+    [Refund window policy](docs/refunds.md)
+
+So the line needs something at the front and something at the back, and
+you already know two keys that do exactly that. This lesson is about a
+third way of getting between them: borrowing a single normal-mode command
+without leaving insert mode at all.
+
+@keys
+| `I` | insert at the first non-blank character |
+| `A` | append at the end of the line |
+| `Ctrl-O` | run one normal-mode command, then return to insert |
+| `$` | end of the line |
+| `Esc` | out |
+
+@hints
+You can do this with `I`, `Esc`, `A`. Do it that way first so it is
+finished, then come back and try it in one insert session.
+--
+`Ctrl-O` suspends insert mode for exactly one command. `Ctrl-O $` moves
+you to the end of the line and leaves you still typing.
+--
+`jj` to the line, `I`, type `[`, then `Ctrl-O` `$`, then type the rest,
+`Esc`, `:wq`.
+
+@solution
+    j j I [ <Ctrl-O> $ ](docs/refunds.md) <Esc> :wq<Enter>
+
+Twenty-nine keystrokes. The `I` … `Esc` `A` … route is twenty-nine too.
+They tie, and that is the honest answer: `Ctrl-O` is not a keystroke
+saving.
+
+What it buys you is that the whole thing stays one insert. One undo step,
+so `u` takes the link back in one press instead of two. And when what you
+need mid-typing is a command with no insert-mode equivalent at all, it is
+the only way to have it without stopping:
+
+| `Ctrl-O` `$` | to the end of the line |
+| `Ctrl-O` `0` | to the front of it |
+| `Ctrl-O` `zz` | redraw with the cursor centred, when you have typed to the bottom of the screen |
+| `Ctrl-O` `D` | delete from the cursor to the end of the line — chapter 8 |
+
+Now the warning, because this key is a trap for people at your stage.
+`Ctrl-O` makes it possible to never leave insert mode, and last lesson was
+about why that is a bad deal. Treat it as a key for *one* command in the
+middle of a genuine burst of typing. If you find yourself pressing
+`Ctrl-O` twice in a row, you did not want `Ctrl-O`. You wanted `Esc`.
+
+@start runbook.md
+# Payments runbook
+
+Refund window policy
+
+Escalate to the finance on-call after two failed reconciliations.
+
+@expected runbook.md
+# Payments runbook
+
+[Refund window policy](docs/refunds.md)
+
+Escalate to the finance on-call after two failed reconciliations.

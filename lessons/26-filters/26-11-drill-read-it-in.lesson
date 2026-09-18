@@ -1,0 +1,54 @@
+@meta
+id: 26-11
+title: Drill — read it in
+chapter: 26
+type: drill
+skills: read-shell
+par: 31
+minutes: 5
+reps: 8
+vscode: terminal panel, run, select, copy, click, paste
+open: report.md
+
+@brief
+Eight times: put the first three lines of `sales.csv` at the end of the
+report, straight from the shell. Do not open the CSV — changing it fails
+the check.
+
+@keys
+| `:$r !cmd` | insert the output at the end of the file |
+| `head -3 file` | the first three lines |
+
+@hints
+`$` in front of `r` is the same `$` as everywhere else: the last line.
+--
+`:$r !head -3 sales.csv` and Enter.
+
+@solution
+    :$r !head -3 sales.csv<Enter>  :wq<Enter>
+
+The reason to drill this one is the habit it replaces. Running the
+command in a terminal and copying the output back is four context
+switches and a mouse. `:r !` is one command typed where you already are,
+and it puts the text exactly where you addressed it rather than wherever
+the cursor happened to be when you pasted.
+
+@start report.md
+# Daily sales spot check
+
+First three lines of today's export:
+
+@expected report.md
+# Daily sales spot check
+
+First three lines of today's export:
+id,store,total
+ord_1001,aberdeen,42.50
+ord_1002,bristol,7.00
+
+@start sales.csv
+id,store,total
+ord_1001,aberdeen,42.50
+ord_1002,bristol,7.00
+ord_1003,cardiff,129.99
+ord_1004,dundee,8.25

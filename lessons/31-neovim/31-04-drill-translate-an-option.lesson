@@ -1,0 +1,54 @@
+@meta
+id: 31-04
+title: Drill — translate one option
+chapter: 31
+type: drill
+skills: lua-config
+par: 42
+minutes: 5
+reps: 8
+vscode: nothing — there is no line to type
+open: init.lua
+
+@brief
+Eight times: add the Lua translation of
+
+    set ignorecase
+
+to the end of the file, and save. Nothing to work out. The shape
+`vim.opt.<name> = true` is one you will type a few hundred times if you
+switch, and it should come out of your fingers without a pause.
+
+Graded in vim. The Lua is written, never run.
+
+@keys
+| `G` `o` | open a line at the bottom |
+| `Esc` `:wq` | out and save |
+
+@hints
+`Go`, then the line, then Esc.
+--
+Booleans are spelled out: `= true`, never a bare `vim.opt.ignorecase`.
+
+@solution
+    G o vim.opt.ignorecase = true <Esc> :wq<Enter>
+
+Thirty-two keystrokes. By rep eight you should not be reading the option
+name off the vimrc line any more — you should be reading `set ignorecase`
+and typing the Lua straight through.
+
+Worth knowing while you drill: `vim.opt.<name>` accepts any option vim
+has, including ones with awkward names. `set ts=4` is `vim.opt.tabstop = 4`
+— Lua has no abbreviations, so the port is also a good excuse to write out
+what the two-letter settings in your vimrc actually mean.
+
+@start init.lua
+-- Search
+vim.opt.hlsearch = true
+vim.opt.incsearch = true
+
+@expected init.lua
+-- Search
+vim.opt.hlsearch = true
+vim.opt.incsearch = true
+vim.opt.ignorecase = true

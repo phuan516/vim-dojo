@@ -1,0 +1,57 @@
+@meta
+id: 01-14
+title: Drill — five doors, one way back
+chapter: 01
+type: drill
+skills: mode-awareness, esc, insert-i, insert-a, cmdline
+par: 30
+minutes: 5
+reps: 8
+vscode: nothing — there is one room and no doors
+open: batch.md
+
+@brief
+Eight times, the same loop. Step into each mode and come straight back out
+with `Esc` before doing the actual edit:
+
+    i  Esc    a  Esc    R  Esc    v  Esc    :  Esc
+
+Then finish the line so it reads `status: queued`, and save and quit.
+
+Five doors, one key that closes all of them. That is the whole idea of
+this chapter and this is the last time you will be asked to practise it
+on its own.
+
+@keys
+| `i` `a` | insert mode, left and right of the cursor |
+| `R` | replace mode |
+| `v` | visual mode |
+| `:` | the command line |
+| `Esc` | normal mode, from all five |
+
+@hints
+Say the mode out loud as you enter it for the first three reps, then stop
+saying it and keep the rhythm. Do not check the indicator before pressing
+`Esc`.
+--
+The edit itself is `$a` then ` queued`, `Esc`, `:wq`. It is the small part.
+
+@solution
+    i <Esc> a <Esc> R <Esc> v <Esc> : <Esc>
+    $ a <space> queued <Esc> :wq<Enter>
+
+Notice that `Esc` in the command line does not run the command, it
+abandons it, and `Esc` in visual mode does not act on the selection, it
+drops it. There is no door where `Esc` commits something by accident. That
+is why it is safe to press it when you have no idea what state you are in,
+and why experienced vim users press it constantly and without thinking.
+
+If your little finger is complaining by rep eight, that is real and
+common. `Ctrl-[` is the identical key without the reach, and a remap of
+`jk` is the usual fix later. Get the reflex first; move the key second.
+
+@start batch.md
+Payout batch 07 status:
+
+@expected batch.md
+Payout batch 07 status: queued

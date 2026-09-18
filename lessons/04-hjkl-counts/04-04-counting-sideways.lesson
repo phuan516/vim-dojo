@@ -1,0 +1,69 @@
+@meta
+id: 04-04
+title: Counting sideways
+chapter: 04
+type: lesson
+skills: hjkl, count-prefix
+par: 17
+minutes: 4
+vscode: double-click the word and retype it
+open: customer.entity.ts
+
+@brief
+`l` moves right one character and takes a count like everything else, so
+`11l` moves eleven characters right. `h` goes back the same way, which is
+what you use when you overshoot by one or two.
+
+The optional address field is spelled `Adress`. The type it refers to,
+`Address`, is spelled correctly — leave that one alone. Put the missing
+`d` in, so the field reads `defaultAddress`.
+
+Columns are counted from where the cursor is, and the cursor starts at
+column 1 of line 1.
+
+@keys
+| `11l` | right eleven characters |
+| `2h` | left two characters |
+| `i` | insert to the left of the cursor |
+
+@hints
+Get to the right line first, then worry about the column. It is the fifth
+line of the file.
+--
+Count the characters from the start of the line up to the letter the `d`
+has to go in front of — the two leading spaces count.
+--
+`4j`, then `11l` puts you on the `r` of `Adress`, then `i` and type `d`.
+If you land one character out, `h` or `l` fixes it before you insert.
+
+@solution
+    4j 11l i d <Esc> :wq<Enter>
+
+Twelve keystrokes, and most of the thinking was counting to eleven.
+
+Which is the honest weakness of counting columns: it is exact, but you
+have to look at the characters one by one to get the number, and a long
+line makes that silly. Nobody types `47l`. Chapters 5 and 6 give you `w`
+to move by words and `fA` to jump straight to the next capital `A`, and
+those are what you will really use sideways.
+
+Counts on `l` and `h` stay useful for the short ones — nudging two or
+three characters into position, or backing up after an overshoot. Counts
+on `j` and `k`, which you met last lesson, are the ones you will use all
+day.
+
+@start customer.entity.ts
+export type Customer = {
+  id: string;
+  email: string;
+  name: string;
+  defaultAdress?: Address;
+};
+
+@expected customer.entity.ts
+export type Customer = {
+  id: string;
+  email: string;
+  name: string;
+  defaultAddress?: Address;
+};

@@ -1,0 +1,102 @@
+@meta
+id: 15-05
+title: Only part of the file
+chapter: 15
+type: lesson
+skills: global-delete
+par: 23
+minutes: 5
+vscode: select from line 14 down, then find-in-selection, then delete each
+open: seed.sql
+vimrc: set number
+
+@brief
+The seed file has two blocks. The staging block at the top deliberately
+includes rows for `test_` customers, so QA has something to click on.
+The production block, from line 14 down, has picked up the same rows
+by copy and paste, and they must not ship.
+
+Delete every `test_` row in the production block. The identical rows in
+the staging block stay.
+
+`:g` takes a range in front of it, the same way `:s` did in chapter 14.
+With no range it works on the whole file. Give it one and it marks only
+the lines inside it.
+
+@keys
+| `:14,$g/pattern/d` | from line 14 to the end, delete every line matching `pattern` |
+| `:g/pattern/d` | the same with no range: the whole file |
+
+@hints
+The pattern alone would delete rows in both blocks. You need to tell
+`:g` where to start looking.
+--
+A range goes before the `g`, exactly where it went before the `s` in
+chapter 14. `14,$` is "line 14 to the end".
+--
+`:14,$g/test_/d` and Enter. Four rows go from production; the four in
+staging are untouched.
+
+@solution
+    :14,$g/test_/d<Enter>  :wq<Enter>
+
+Twenty keystrokes, no counting, no selecting.
+
+Everything that worked as a range in chapter 14 works here: two line
+numbers, `.` for the current line, `$` for the last, `%` for the whole
+file, and a pattern to find the boundary rather than a number. So
+`:/^-- production/,$g/test_/d` would do the same job without you needing
+to know that the block starts on line 14. Use whichever you can say
+faster.
+
+The default range for `:g` is `%`, the whole file. That is the opposite
+of `:s`, whose default is the current line, and it is the single most
+common surprise for people who have just learned substitute. `:s/a/b/`
+touches one line. `:g/a/d` touches every line in the file. Keep the
+asymmetry in mind and it will not bite you.
+
+@start seed.sql
+-- staging
+INSERT INTO customer (id, email, tier) VALUES ('cust_10', 'ana@example.com', 'basic');
+INSERT INTO customer (id, email, tier) VALUES ('cust_11', 'ben@example.com', 'premium');
+INSERT INTO customer (id, email, tier) VALUES ('test_01', 'qa-one@thrive.test', 'basic');
+INSERT INTO customer (id, email, tier) VALUES ('test_02', 'qa-two@thrive.test', 'premium');
+INSERT INTO "order" (id, customer_id, status, total) VALUES ('ord_4001', 'cust_10', 'PENDING', 4999);
+INSERT INTO "order" (id, customer_id, status, total) VALUES ('ord_4002', 'cust_11', 'SHIPPED', 12000);
+INSERT INTO "order" (id, customer_id, status, total) VALUES ('ord_4003', 'test_01', 'PENDING', 100);
+INSERT INTO "order" (id, customer_id, status, total) VALUES ('ord_4004', 'test_02', 'CANCELLED', 100);
+INSERT INTO payment (id, order_id, amount) VALUES ('pay_9001', 'ord_4001', 4999);
+INSERT INTO payment (id, order_id, amount) VALUES ('pay_9002', 'ord_4002', 12000);
+
+-- production
+INSERT INTO customer (id, email, tier) VALUES ('cust_10', 'ana@example.com', 'basic');
+INSERT INTO customer (id, email, tier) VALUES ('cust_11', 'ben@example.com', 'premium');
+INSERT INTO customer (id, email, tier) VALUES ('test_01', 'qa-one@thrive.test', 'basic');
+INSERT INTO customer (id, email, tier) VALUES ('test_02', 'qa-two@thrive.test', 'premium');
+INSERT INTO "order" (id, customer_id, status, total) VALUES ('ord_4001', 'cust_10', 'PENDING', 4999);
+INSERT INTO "order" (id, customer_id, status, total) VALUES ('ord_4002', 'cust_11', 'SHIPPED', 12000);
+INSERT INTO "order" (id, customer_id, status, total) VALUES ('ord_4003', 'test_01', 'PENDING', 100);
+INSERT INTO "order" (id, customer_id, status, total) VALUES ('ord_4004', 'test_02', 'CANCELLED', 100);
+INSERT INTO payment (id, order_id, amount) VALUES ('pay_9001', 'ord_4001', 4999);
+INSERT INTO payment (id, order_id, amount) VALUES ('pay_9002', 'ord_4002', 12000);
+
+@expected seed.sql
+-- staging
+INSERT INTO customer (id, email, tier) VALUES ('cust_10', 'ana@example.com', 'basic');
+INSERT INTO customer (id, email, tier) VALUES ('cust_11', 'ben@example.com', 'premium');
+INSERT INTO customer (id, email, tier) VALUES ('test_01', 'qa-one@thrive.test', 'basic');
+INSERT INTO customer (id, email, tier) VALUES ('test_02', 'qa-two@thrive.test', 'premium');
+INSERT INTO "order" (id, customer_id, status, total) VALUES ('ord_4001', 'cust_10', 'PENDING', 4999);
+INSERT INTO "order" (id, customer_id, status, total) VALUES ('ord_4002', 'cust_11', 'SHIPPED', 12000);
+INSERT INTO "order" (id, customer_id, status, total) VALUES ('ord_4003', 'test_01', 'PENDING', 100);
+INSERT INTO "order" (id, customer_id, status, total) VALUES ('ord_4004', 'test_02', 'CANCELLED', 100);
+INSERT INTO payment (id, order_id, amount) VALUES ('pay_9001', 'ord_4001', 4999);
+INSERT INTO payment (id, order_id, amount) VALUES ('pay_9002', 'ord_4002', 12000);
+
+-- production
+INSERT INTO customer (id, email, tier) VALUES ('cust_10', 'ana@example.com', 'basic');
+INSERT INTO customer (id, email, tier) VALUES ('cust_11', 'ben@example.com', 'premium');
+INSERT INTO "order" (id, customer_id, status, total) VALUES ('ord_4001', 'cust_10', 'PENDING', 4999);
+INSERT INTO "order" (id, customer_id, status, total) VALUES ('ord_4002', 'cust_11', 'SHIPPED', 12000);
+INSERT INTO payment (id, order_id, amount) VALUES ('pay_9001', 'ord_4001', 4999);
+INSERT INTO payment (id, order_id, amount) VALUES ('pay_9002', 'ord_4002', 12000);

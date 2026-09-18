@@ -1,0 +1,122 @@
+@meta
+id: 29-15
+title: Git output is just text in a buffer
+chapter: 29
+type: lesson
+skills: fugitive
+par: 120
+minutes: 8
+vscode: the Source Control panel, which you cannot pipe anywhere
+open: CHANGELOG.md
+
+@brief
+No plugin is shipped with this lesson, which is the lesson.
+
+Fugitive is the git plugin everyone recommends, and the thing worth
+understanding about it is what it is not. It is not a git client with a
+panel and buttons. It runs git, puts the output in a vim buffer, and adds
+mappings on top of that buffer. `:Git status` gives you a buffer of
+statuses where `-` stages a file. `:Gdiffsplit` gives you two buffers and
+vim's own diff mode. `:Git blame` gives you a buffer of blame lines
+beside your code. The value is that git's output becomes text you can
+search, yank, filter and edit with every key you already know.
+
+You can have the underlying half of that today with no plugin at all.
+`:r !cmd` reads a command's output into the buffer. Chapter 26 taught it;
+this lesson points it at git.
+
+The release notes for 0.4.0 are empty. `config.v3.ts` and `config.v4.ts`
+are the payments config before and after. Put the three changed settings
+under `### Changed`, one per line, as bullets:
+
+    - retryLimit: 7
+    - backoffMs: 1000
+    - deadLetterTopic: 'payment.dead'
+
+Get them out of git rather than reading the two files and typing. Both
+config files must be left exactly as they are.
+
+@keys
+| `:r !{cmd}` | read a command's output in below the cursor |
+| `:!{cmd}` | run it and just look at the output |
+| `git diff --no-index a b` | diff two files with no repository involved |
+| `-U0` | no context lines, only the changes |
+| `` `[ `` and `` `] `` | the first and last line `:r` just inserted |
+
+@hints
+`git diff` works on two loose files if you pass `--no-index`. Read its
+output straight into the buffer instead of looking at it.
+--
+The diff has a header and `-` lines you do not want. You can filter it in
+the shell before vim ever sees it, with a pipe, or in vim afterwards.
+--
+`G`, then
+`:r !git diff --no-index -U0 config.v3.ts config.v4.ts | grep "^+[^+]"`,
+then a substitute over the lines you just read to turn `+  retryLimit: 7,`
+into `- retryLimit: 7`. `:'[,']` is the range for exactly those lines.
+
+@solution
+    G
+    :r !git diff --no-index -U0 config.v3.ts config.v4.ts | grep "^+[^+]"<Enter>
+    :'[,']s/^+\s*\(.*\),/- \1/<Enter>
+    :wq<Enter>
+
+About a hundred keystrokes, most of them the command, and none of them a
+value you could get wrong. Read the values out of the file by eye and you
+will type `1000` as `100` about one time in twenty, and the changelog is
+the one place nobody rereads.
+
+Three ideas are stacked here and all three are worth keeping separately.
+
+**Git's output is text.** `git diff`, `git log --oneline`, `git blame`,
+`git ls-files` — all of them print lines. Once lines are in a buffer they
+are yours: `:g/^-/d`, `:sort`, a macro, a substitution. That is why
+fugitive feels different from a source-control panel, and it is available
+to you before you install fugitive.
+
+**The shell pipeline is part of the tool.** `| grep "^+[^+]"` threw away
+the header and the deletions before vim saw them. You could have done it
+in vim with `:g`, and on a big diff the pipe is faster and shorter.
+Chapter 26 gave you `!`, `:r !` and `:w !`; git is just another command
+on the other end of them.
+
+**`'[` and `']` mark what you just inserted.** Every command that brings
+text into a buffer sets them, so "operate on exactly what I just pasted"
+is always available as a range. It is the least-known useful thing in
+this lesson.
+
+When you do install fugitive, install it for the parts you cannot rebuild
+in a line: `:Git blame` in a split that scrolls with your file, staging
+individual hunks from a diff buffer, and `:Gread` to drop a file back to
+its committed state. Not for `:Git status`, which is `:!git status`.
+
+@start CHANGELOG.md
+# Changelog
+
+## 0.4.0 — payments
+
+### Changed
+
+@start config.v3.ts
+export const paymentsConfig = {
+  retryLimit: 3,
+  backoffMs: 250,
+  deadLetterTopic: 'payment.failed',
+};
+
+@start config.v4.ts
+export const paymentsConfig = {
+  retryLimit: 7,
+  backoffMs: 1000,
+  deadLetterTopic: 'payment.dead',
+};
+
+@expected CHANGELOG.md
+# Changelog
+
+## 0.4.0 — payments
+
+### Changed
+- retryLimit: 7
+- backoffMs: 1000
+- deadLetterTopic: 'payment.dead'

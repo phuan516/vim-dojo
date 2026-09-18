@@ -1,0 +1,127 @@
+@meta
+id: 28-15
+title: Proving it is your config
+chapter: 28
+type: lesson
+skills: vimrc-debug
+par: 100
+minutes: 7
+vscode: "Extensions: Disable All and reload", the same technique with a button
+open: .vimrc
+
+@brief
+Something is inserting tab characters into your TypeScript, and you have
+had three settings in your config for about a week. Before you change
+anything, four commands answer the questions in order.
+
+`vim --clean` starts vim with no config at all. If the problem is gone,
+it is yours. `vim -u NONE` goes further — no config, no plugins, no
+filetype detection — which is the baseline the manual means when it says
+"try it with -u NONE". That is question one: mine or vim's?
+
+`:scriptnames` lists every file vim sourced, in order. Question two:
+what is even loaded? It is where you discover that the config you have
+been editing is not the one being read.
+
+`:verbose set expandtab?` prints the value *and* the file and line that
+last set it. Question three: who did this? That one command replaces most
+config debugging. It works for mappings too: `:verbose nmap <leader>w`.
+
+And when none of those pin it down, you bisect. Comment out half the
+config, source it, and see which half the problem lives in. Halving
+beats reading, every time.
+
+Do the bisect step here. The three lines under `Experiments` are the
+newest thing in the file and the only part you cannot account for. Leave
+a note saying why, then comment all three out:
+
+    " --- Experiments ---
+    " bisecting ORD-902: everything below is off until the tabs stop
+    " set noexpandtab
+    " set foldmethod=indent
+    " set conceallevel=2
+
+@keys
+| `vim --clean` | start with no config |
+| `vim -u NONE` | no config, no plugins, no filetype detection |
+| `:scriptnames` | every file vim has sourced, in order |
+| `:verbose set expandtab?` | the value, and who set it last |
+| `:18,20s/^/" /` | comment out a range of lines |
+
+@hints
+Write the note first. `O` from a line that is not yet a comment gives
+you a clean line to type on.
+--
+`set noexpandtab` is on line 17 before you add anything. `17G` gets you
+there without counting.
+--
+After the note, the three settings have moved down to lines 18, 19 and
+20. `:18,20s/^/" /` puts a quote and a space at the start of each.
+
+@solution
+    17G O " bisecting ORD-902: everything below is off until the tabs stop <Esc>
+    :18,20s/^/" /<Enter> :wq<Enter>
+
+`s/^/" /` over a range is the whole bisecting technique. A visual block
+and `I"` does the same job; so does `:18,20 normal I" `. Use whichever
+you reach for fastest, because you will do it often and always in a bad
+mood.
+
+Then source or restart, and you have halved the problem in one step.
+Three lines is a small enough half to finish by eye — `noexpandtab` is
+the one, because it is global and it is not a TypeScript setting at all.
+`:verbose set expandtab?` would have said so directly: *Last set from
+~/.vimrc line 17*.
+
+The bit worth internalising is the order. Reproduce it with `--clean`,
+find out what is loaded with `:scriptnames`, ask who set it with
+`:verbose`, and only then start commenting things out. People do it in
+the opposite order and spend an evening on it.
+
+One more habit: when a line has served its purpose, delete it rather
+than leaving it commented out forever. A config full of commented-out
+settings is a config you have stopped trusting, and every one of them is
+a question you will re-ask in six months.
+
+@start .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Indentation ---
+set autoindent
+set expandtab
+set shiftwidth=2
+
+" --- Editing ---
+set hidden
+set backspace=indent,eol,start
+
+" --- Experiments ---
+set noexpandtab
+set foldmethod=indent
+set conceallevel=2
+
+@expected .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Indentation ---
+set autoindent
+set expandtab
+set shiftwidth=2
+
+" --- Editing ---
+set hidden
+set backspace=indent,eol,start
+
+" --- Experiments ---
+" bisecting ORD-902: everything below is off until the tabs stop
+" set noexpandtab
+" set foldmethod=indent
+" set conceallevel=2

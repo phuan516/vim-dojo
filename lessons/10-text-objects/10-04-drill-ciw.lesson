@@ -1,0 +1,49 @@
+@meta
+id: 10-04
+title: Drill — ciw until it is reflex
+chapter: 10
+type: drill
+skills: obj-word, inner-vs-around
+par: 18
+minutes: 5
+reps: 8
+vscode: double-click, type, repeat
+open: order.repository.ts
+
+@brief
+Eight times: the variable is called `record` and it should be called
+`order`. Land on the word, change it, save, quit.
+
+Do not aim at the first letter. Land in the middle of the word on
+purpose — the point of the drill is that it does not matter.
+
+@keys
+| `w` | forward a word |
+| `ciw` | change the word you are inside |
+| `Esc` `:wq` | out, and save |
+
+@hints
+`w` puts you on `record` in one press from the start of the line.
+--
+`ciw` then type the new name. Do not delete anything by hand first.
+
+@solution
+    w ciw order <Esc> :wq<Enter>
+
+Fourteen keystrokes, five of them the new name.
+
+`ciw` is the single most-used text object in vim, and this is why: renaming
+one occurrence of an identifier is something you do dozens of times a day,
+and it costs three keys plus the word. It replaces the double-click, and
+unlike the double-click it works from anywhere inside the word, never
+selects the `.` or the quotes by accident, and leaves your hands on the
+home row.
+
+Chapter 11 adds `.` to repeat the last change, which turns this drill into
+the fastest rename in the editor. Get the three keys automatic first.
+
+@start order.repository.ts
+const record = await this.model.findOne({ where: { id } });
+
+@expected order.repository.ts
+const order = await this.model.findOne({ where: { id } });

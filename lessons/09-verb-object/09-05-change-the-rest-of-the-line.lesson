@@ -1,0 +1,67 @@
+@meta
+id: 09-05
+title: Change the rest of the line
+chapter: 09
+type: lesson
+skills: op-motion
+par: 38
+minutes: 4
+vscode: select from the cursor to the end of the line, then type
+open: config.ts
+
+@brief
+Support mail has moved off the old domain. The config still points at it:
+
+    supportEmail: 'billing@old-domain.example',
+
+It should read `'billing@thrive.example',` — same quotes, same trailing
+comma, new address. Fix it and save.
+
+The key is on the line already and the value is not; do not retype the
+key, and do not retype the indentation.
+
+@keys
+| `c$` | change from the cursor to the end of the line |
+| `C` | the same edit, one key |
+| `f'` | forward to the next single quote |
+
+@hints
+Everything from the opening quote to the end of the line is going. That
+is a motion you already have.
+--
+`c$` wipes the tail of the line and leaves you in insert mode at the end
+of what remains. `C` is the same thing in one key.
+--
+`j`, then `f'` to land on the opening quote, then `C` and type the whole
+value including its closing quote and comma.
+
+@solution
+    j f' C 'billing@thrive.example', <Esc> :wq<Enter>
+
+Retyping the value is unavoidable — it is new text. Retyping
+`  supportEmail: ` would not have been, and that is the difference between
+this and double-clicking the line in VS Code and starting again.
+
+`C` is worth committing to muscle memory now. Roughly a third of all
+real-world edits are "this line is right up to here, and wrong after it":
+a changed argument, a new default, a different return. `C` is the key for
+exactly that thought, and it reads as "change the rest".
+
+Where `c$` comes into its own over `C` is with a count. `2C` and `c2$`
+are rare, but `c` in front of any motion at all is not — you are about to
+meet `c` with find motions, word counts and paragraph jumps, and every one
+of them is the same two-part sentence: change, then how far.
+
+@start config.ts
+export const config = {
+  supportEmail: 'billing@old-domain.example',
+  refundWindowDays: 30,
+  retryLimit: 5,
+};
+
+@expected config.ts
+export const config = {
+  supportEmail: 'billing@thrive.example',
+  refundWindowDays: 30,
+  retryLimit: 5,
+};

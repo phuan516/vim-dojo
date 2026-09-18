@@ -1,0 +1,131 @@
+@meta
+id: 12-10
+title: When case matters and when it does not
+chapter: 12
+type: lesson
+skills: search-slash
+par: 36
+minutes: 5
+vscode: the Aa button in the find box
+vimrc: set ignorecase smartcase
+open: app.log
+
+@brief
+This log shouts its levels: `INFO`, `WARN`, `ERROR`. Exactly one line
+carries the word `error` in lower case, inside a gateway response body,
+and that is the line that needs following up. Append ` escalated=true` to
+it.
+
+Searching for `error` here finds thirteen shouted ones first, because of
+two settings almost everyone runs with: `ignorecase` makes searches
+case-blind, and `smartcase` makes them case-sensitive again the moment
+you type a capital yourself. Together they do the right thing perhaps
+nine times in ten. This is the tenth, where you want lower case
+specifically and the settings are against you.
+
+There is a way to say "this pattern, case exactly as written" without
+changing any setting.
+
+@keys
+| `/error` | with `ignorecase`, matches `error`, `Error` and `ERROR` |
+| `/Error` | with `smartcase`, a capital in the pattern means case matters |
+| `/\Cerror` | force case-sensitive, wherever it appears in the pattern |
+| `/\cerror` | force case-insensitive, the other way round |
+| `:set ic` / `:set noic` / `:set scs` | the settings themselves |
+
+@hints
+The plain search finds the uppercase levels because case is being
+ignored. You need to overrule that for this one search — not for the
+session.
+--
+`\C` anywhere in a pattern forces the whole pattern to be
+case-sensitive. Its lower-case twin `\c` forces the opposite. Neither
+changes a setting, so the next search behaves normally again.
+--
+`/\Cerror` `Enter` goes straight to the only lower-case one. Then `A`
+and the text you are appending.
+
+@solution
+/\Cerror<Enter>  A escalated=true<Esc>  :wq<Enter>
+
+Thirty keystrokes, and seventeen of them are the text you are adding.
+
+The settings are worth understanding because you will inherit them from
+every vimrc you ever copy. `ignorecase` on its own is annoying: you can
+never search for a constant like `ERROR` specifically. `smartcase` fixes
+that by watching what you type — an all-lower-case pattern is
+case-blind, a pattern with any capital in it is not. So `/error` finds
+everything and `/Error` finds only `Error`. That is the behaviour you
+want by default.
+
+What `smartcase` cannot express is this lesson's case: lower case, and
+only lower case. Typing a capital is how you ask for precision, so there
+is no way to ask for precision about lower case by typing. `\C` is the
+escape hatch, and it works from either direction — `\c` forces a
+case-blind search in a file where you have case sensitivity on.
+
+Both are part of the pattern, not commands, so they travel: `\C` works
+in `:substitute`, in `:global`, in `:vimgrep`, everywhere a pattern is
+accepted. That is the first hint of something chapter 13 leans on
+heavily — search patterns are a small language, and the things you learn
+about them are reusable across half of vim.
+
+@start app.log
+2026-04-02T22:03:11Z INFO  boot.complete service=order-service version=2.4.1
+2026-04-02T22:03:12Z INFO  prisma.connect pool=10 database=orders
+2026-04-02T22:04:40Z ERROR order.submit order=ord_9101 reason=PAYMENT_DECLINED
+2026-04-02T22:04:41Z INFO  email.sent template=payment_failed to=lena@example.com
+2026-04-02T22:06:02Z ERROR order.submit order=ord_9104 reason=PAYMENT_DECLINED
+2026-04-02T22:06:20Z INFO  retry.scheduled order=ord_9104 in_seconds=900
+2026-04-02T22:08:14Z ERROR payout.export batch=pyt_402 reason=SFTP_UNREACHABLE
+2026-04-02T22:08:14Z INFO  alert.raised channel=payments-oncall severity=high
+2026-04-02T22:09:55Z ERROR order.submit order=ord_9112 reason=PAYMENT_DECLINED
+2026-04-02T22:10:31Z INFO  cache.warm keys=880 ms=214
+2026-04-02T22:12:07Z ERROR webhook.verify provider=stripe reason=SIGNATURE_MISMATCH
+2026-04-02T22:12:08Z INFO  webhook.rejected provider=stripe status=400
+2026-04-02T22:14:44Z ERROR order.cancel order=ord_9118 reason=ORDER_ALREADY_SHIPPED
+2026-04-02T22:15:02Z INFO  worker.heartbeat pool=orders inflight=2
+2026-04-02T22:17:19Z ERROR refund.create order=ord_9120 reason=REFUND_EXCEEDS_TOTAL
+2026-04-02T22:18:00Z INFO  worker.heartbeat pool=orders inflight=0
+2026-04-02T22:19:36Z ERROR payout.export batch=pyt_403 reason=SFTP_UNREACHABLE
+2026-04-02T22:19:36Z INFO  alert.suppressed channel=payments-oncall window=15m
+2026-04-02T22:21:48Z WARN  gateway.response status=502 body={"error":"upstream_timeout"} order=ord_9125
+2026-04-02T22:21:49Z INFO  retry.scheduled order=ord_9125 in_seconds=60
+2026-04-02T22:23:10Z ERROR order.submit order=ord_9127 reason=PAYMENT_DECLINED
+2026-04-02T22:24:55Z INFO  email.sent template=payment_failed to=marc@example.com
+2026-04-02T22:26:31Z ERROR queue.consume queue=payments.refunds.v2 reason=SCHEMA_INVALID
+2026-04-02T22:26:32Z INFO  message.deadlettered queue=payments.refunds.v2.dead
+2026-04-02T22:28:04Z ERROR order.submit order=ord_9131 reason=PAYMENT_DECLINED
+2026-04-02T22:29:40Z INFO  worker.heartbeat pool=orders inflight=1
+2026-04-02T22:31:12Z ERROR payout.export batch=pyt_404 reason=SFTP_UNREACHABLE
+2026-04-02T22:32:58Z INFO  reconcile.batch size=64 unmatched=0
+
+@expected app.log
+2026-04-02T22:03:11Z INFO  boot.complete service=order-service version=2.4.1
+2026-04-02T22:03:12Z INFO  prisma.connect pool=10 database=orders
+2026-04-02T22:04:40Z ERROR order.submit order=ord_9101 reason=PAYMENT_DECLINED
+2026-04-02T22:04:41Z INFO  email.sent template=payment_failed to=lena@example.com
+2026-04-02T22:06:02Z ERROR order.submit order=ord_9104 reason=PAYMENT_DECLINED
+2026-04-02T22:06:20Z INFO  retry.scheduled order=ord_9104 in_seconds=900
+2026-04-02T22:08:14Z ERROR payout.export batch=pyt_402 reason=SFTP_UNREACHABLE
+2026-04-02T22:08:14Z INFO  alert.raised channel=payments-oncall severity=high
+2026-04-02T22:09:55Z ERROR order.submit order=ord_9112 reason=PAYMENT_DECLINED
+2026-04-02T22:10:31Z INFO  cache.warm keys=880 ms=214
+2026-04-02T22:12:07Z ERROR webhook.verify provider=stripe reason=SIGNATURE_MISMATCH
+2026-04-02T22:12:08Z INFO  webhook.rejected provider=stripe status=400
+2026-04-02T22:14:44Z ERROR order.cancel order=ord_9118 reason=ORDER_ALREADY_SHIPPED
+2026-04-02T22:15:02Z INFO  worker.heartbeat pool=orders inflight=2
+2026-04-02T22:17:19Z ERROR refund.create order=ord_9120 reason=REFUND_EXCEEDS_TOTAL
+2026-04-02T22:18:00Z INFO  worker.heartbeat pool=orders inflight=0
+2026-04-02T22:19:36Z ERROR payout.export batch=pyt_403 reason=SFTP_UNREACHABLE
+2026-04-02T22:19:36Z INFO  alert.suppressed channel=payments-oncall window=15m
+2026-04-02T22:21:48Z WARN  gateway.response status=502 body={"error":"upstream_timeout"} order=ord_9125 escalated=true
+2026-04-02T22:21:49Z INFO  retry.scheduled order=ord_9125 in_seconds=60
+2026-04-02T22:23:10Z ERROR order.submit order=ord_9127 reason=PAYMENT_DECLINED
+2026-04-02T22:24:55Z INFO  email.sent template=payment_failed to=marc@example.com
+2026-04-02T22:26:31Z ERROR queue.consume queue=payments.refunds.v2 reason=SCHEMA_INVALID
+2026-04-02T22:26:32Z INFO  message.deadlettered queue=payments.refunds.v2.dead
+2026-04-02T22:28:04Z ERROR order.submit order=ord_9131 reason=PAYMENT_DECLINED
+2026-04-02T22:29:40Z INFO  worker.heartbeat pool=orders inflight=1
+2026-04-02T22:31:12Z ERROR payout.export batch=pyt_404 reason=SFTP_UNREACHABLE
+2026-04-02T22:32:58Z INFO  reconcile.batch size=64 unmatched=0

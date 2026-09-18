@@ -1,0 +1,190 @@
+@meta
+id: 18-16
+title: Scenario — the spec that was never written
+chapter: 18
+type: scenario
+skills: edit-file, arglist, sub-basic, buffer-switch
+par: 266
+minutes: 14
+vscode: New File, open template, copy, paste, find-and-replace, three more tabs
+open: src/domain/customer/customer.provider.ts
+
+@brief
+A ticket, not an exercise.
+
+    CUS-212  CustomerProvider has no spec. Create one from the team
+             template. Also: customers now have an optional phone
+             number. Add it to the entity and map it in the repository.
+
+One file is open. Everything else you locate yourself.
+
+  1. The spec — it lives beside the provider, named after it:
+     `customer.provider.spec.ts`. Start from
+     `test/templates/provider.spec.ts`, read in whole. Then replace
+     every `__Provider__` with `CustomerProvider` and `__file__` with
+     `customer.provider`. The template file itself must not change.
+
+  2. customer.entity.ts — `phone?: string;` directly under `name`.
+
+  3. customer.repository.ts — in `toEntity`, directly under the `name`
+     line:
+
+         phone: record.phone ?? undefined,
+
+The customer provider needs nothing. The order entity is there so you
+can prove you edited the right one.
+
+@keys
+| `:e %:r.spec.ts` | a new file named after the current one |
+| `:0r path` | read a file in above line 1 |
+| `:%s/old/new/g` | replace throughout the file |
+| `:args glob` | set the argument list, open the first |
+| `:wn` `:n` | write and next; next |
+
+@hints
+Make the spec while you are in the provider: `:e %:r.spec.ts` names it
+for you. `:0r` the template in, two substitutes, `:w`.
+--
+`:args src/domain/customer/*.ts` lines up the rest. The entity is
+first; `:wn` writes it and moves on. `:n` past the spec and the
+provider; the repository is last.
+--
+Both additions are `/name` Enter then `o` and the line. Autoindent
+supplies the spaces; do not type them.
+--
+Par assumes the template is read in with one command and each of the
+two new lines is typed once.
+
+@solution
+A reasonable route.
+
+**The spec** — from the provider, `:e %:r.spec.ts` Enter opens an empty
+`customer.provider.spec.ts` next door. `:0r test/templates/provider.spec.ts`
+Enter, or Tab through it. `:%s/__Provider__/CustomerProvider/g`,
+`:%s/__file__/customer.provider/`, `:w`.
+
+**The rest** — `:args src/domain/customer/*.ts` Enter. You are in the
+entity: `/name` Enter, `o`, `phone?: string;`, `Esc`, `:wn`. `:n` twice
+(or `:last`) to the repository: `/name` Enter, `o`,
+`phone: record.phone ?? undefined,`, `Esc`, `:wq`.
+
+Nothing in the ticket said where anything was, and you never typed a
+directory. The spec's path came from `%:r`. The template came in with
+`:0r`. The remaining files came from one glob into the arglist, which
+then walked you through them in order. That is the chapter: the editor
+already knows where you are, and most of the files you want are defined
+relative to that.
+
+@start src/domain/customer/customer.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { CustomerRepository } from './customer.repository';
+
+@injectable()
+export class CustomerProvider {
+  constructor(
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return customer;
+  }
+}
+
+@start test/templates/provider.spec.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { __Provider__ } from './__file__';
+
+describe('__Provider__', () => {
+  let provider: __Provider__;
+
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
+  it('is defined', () => {
+    expect(provider).toBeDefined();
+  });
+});
+
+@expected src/domain/customer/customer.provider.spec.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { CustomerProvider } from './customer.provider';
+
+describe('CustomerProvider', () => {
+  let provider: CustomerProvider;
+
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
+  it('is defined', () => {
+    expect(provider).toBeDefined();
+  });
+});
+
+@start src/domain/customer/customer.entity.ts
+export type Customer = {
+  id: string;
+  email: string;
+  name: string;
+};
+
+@expected src/domain/customer/customer.entity.ts
+export type Customer = {
+  id: string;
+  email: string;
+  name: string;
+  phone?: string;
+};
+
+@start src/domain/customer/customer.repository.ts
+import { injectable } from 'tsyringe';
+import { Customer as CustomerRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Customer } from './customer.entity';
+
+@injectable()
+export class CustomerRepository extends BaseRepository<CustomerRecord, Customer> {
+  public toEntity(record: CustomerRecord): Customer {
+    return {
+      id: record.id,
+      email: record.email,
+      name: record.name,
+    };
+  }
+}
+
+@expected src/domain/customer/customer.repository.ts
+import { injectable } from 'tsyringe';
+import { Customer as CustomerRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Customer } from './customer.entity';
+
+@injectable()
+export class CustomerRepository extends BaseRepository<CustomerRecord, Customer> {
+  public toEntity(record: CustomerRecord): Customer {
+    return {
+      id: record.id,
+      email: record.email,
+      name: record.name,
+      phone: record.phone ?? undefined,
+    };
+  }
+}
+
+@start src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';

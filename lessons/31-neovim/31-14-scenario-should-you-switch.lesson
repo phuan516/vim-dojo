@@ -1,0 +1,212 @@
+@meta
+id: 31-14
+title: Scenario — port it, then decide
+chapter: 31
+type: scenario
+skills: nvim-differences, lua-config, nvim-lsp, treesitter
+par: 332
+minutes: 16
+vscode: exporting your settings and hoping
+open: init.lua decisions.txt .vimrc
+vimrc: set hidden
+
+@brief
+A ticket, and the last one in this chapter.
+
+    ORG-77  Spike: move to Neovim. Port the vimrc we actually use, and
+            write down the decisions so the rest of the team does not have
+            to have this argument again.
+
+Three files are open. `:bn` and `:bp` move between them.
+
+  1. **init.lua** — each section has one line ported already. Add the rest,
+     in the style that is there.
+
+     Options, under `vim.opt.number`:
+
+         set ignorecase
+         set smartcase
+         set scrolloff=8
+
+     Mappings, under the `<leader>w` line:
+
+         nnoremap <leader>h :nohlsearch<CR>     desc: Clear search highlight
+
+     Autocommands: the call at the bottom is missing its event and its
+     pattern. It is the trailing-whitespace hook, for TypeScript files.
+
+  2. **decisions.txt** — four questions, one word each, chosen from the
+     options in brackets. They are judgement, not recall; the chapter has
+     argued all four.
+
+  3. **.vimrc** — the config that stays on the servers. It is open so you
+     can read what you are porting from. Change it and the check fails.
+
+Graded in vim, like everything in this chapter. No Lua runs, no Neovim
+starts. What is being graded is whether you can write the config
+correctly without the editor to check it for you — which, the first time
+you do this for real, is exactly the situation.
+
+@keys
+| `:bn` `:bp` | next / previous buffer |
+| `:wqa` | write every buffer and quit |
+| `o` | open a line below — never from a comment line, in Lua or vimscript |
+| `ci'` | change inside the quotes, empty pair included |
+
+@hints
+Do init.lua top to bottom, then the decisions. Search to move; the file is
+short but the searches are shorter than the scrolling.
+--
+Open every new line from the code line above it, not from the `--` header.
+`o` on a comment line gives you a comment leader, and so does Enter at the
+end of one — the expected file has no `--` you did not type.
+--
+The autocommand blanks are two empty quote pairs. `ci'` on the first,
+then `2j`, then `0` before the second `ci'` — `j` keeps the column and
+`ci'` only looks forward on the line.
+--
+Finish with `:wqa`. `:wq` with three files in the list raises E173 and
+leaves you where you started.
+
+@solution
+    /vim.opt.number<Enter> o
+    vim.opt.ignorecase = true<Enter>
+    vim.opt.smartcase = true<Enter>
+    vim.opt.scrolloff = 8<Esc>
+    /leader>w<Enter> o
+    vim.keymap.set('n', '<leader>h', ':nohlsearch<CR>', { desc = 'Clear search highlight' })<Esc>
+    /create_autocmd<Enter> ci'BufWritePre<Esc> 2j 0 ci'*.ts<Esc>
+    :bn<Enter>
+    /editor_on<Enter> Avim<Esc> 4jAlsp<Esc> 4jAkickstart<Esc> 4jAinit.vim<Esc>
+    :wqa<Enter>
+
+About 290 keystrokes, most of them the config itself.
+
+The four decisions, and why:
+
+- **On servers, vim.** This is the one that is not a preference. Neovim is
+  not installed on most boxes you will ssh into, and it is not your call
+  whether it gets installed. Everything this dojo taught you is in the
+  vim that is already there, and the day you need to fix a config file on
+  a machine at 2am is the day that matters. Stay fluent in plain vim
+  regardless of what you run locally.
+- **LSP is the reason to switch.** Not the colours, not the floating
+  windows. If you work on a large typed codebase, project-wide rename and
+  real go-to-definition are worth an evening of porting. If you mostly
+  edit config files, YAML and prose, the honest answer is that Neovim will
+  not make your day better and vim will not hold you back.
+- **Start from kickstart, not a distro.** You have written your own vimrc.
+  That makes a 400-line commented `init.lua` you can read end to end a
+  better fit than a framework whose config you would be configuring rather
+  than writing. Distros are a fine way to *see* what modern Neovim feels
+  like; they are a poor way to learn what your editor is doing.
+- **Tonight, `init.vim`.** The compatibility path costs nothing and works
+  immediately. Port to Lua a section at a time, over weeks, with
+  `vim.cmd([[...]])` holding the parts you have not got to. A migration
+  you can stop halfway through is a migration you will actually finish.
+
+One last thing, and then the chapter is done. Nothing in chapters 1 to 30
+was provisional. Not one motion, operator, text object, macro, register or
+ex command changes under Neovim. Whatever you decide here, you decided it
+about configuration and tooling — and you get to change your mind later,
+cheaply, because the part that took a year to learn transfers whole.
+
+@start init.lua
+-- ~/.config/nvim/init.lua
+-- ORG-77, ported from the vimrc we actually use.
+
+vim.g.mapleader = ' '
+
+-- Options
+vim.opt.number = true
+
+-- Mappings
+vim.keymap.set('n', '<leader>w', ':w<CR>', { desc = 'Write the file' })
+
+-- Autocommands
+local config = vim.api.nvim_create_augroup('Config', { clear = true })
+
+vim.api.nvim_create_autocmd('', {
+  group = config,
+  pattern = '',
+  command = [[%s/\s\+$//e]],
+})
+
+@expected init.lua
+-- ~/.config/nvim/init.lua
+-- ORG-77, ported from the vimrc we actually use.
+
+vim.g.mapleader = ' '
+
+-- Options
+vim.opt.number = true
+vim.opt.ignorecase = true
+vim.opt.smartcase = true
+vim.opt.scrolloff = 8
+
+-- Mappings
+vim.keymap.set('n', '<leader>w', ':w<CR>', { desc = 'Write the file' })
+vim.keymap.set('n', '<leader>h', ':nohlsearch<CR>', { desc = 'Clear search highlight' })
+
+-- Autocommands
+local config = vim.api.nvim_create_augroup('Config', { clear = true })
+
+vim.api.nvim_create_autocmd('BufWritePre', {
+  group = config,
+  pattern = '*.ts',
+  command = [[%s/\s\+$//e]],
+})
+
+@start decisions.txt
+# ORG-77, part two. One word each, from the options in brackets.
+
+# You ssh into three production boxes a day.
+# Which editor must stay in your fingers? (vim / nvim)
+editor_on_servers=
+
+# You maintain a large TypeScript monorepo and want project-wide rename.
+# Which part of Neovim gives you that? (lsp / treesitter / floating-windows)
+worth_switching_for=
+
+# You have a 90 line vimrc you wrote yourself and two evenings to spend.
+# Where do you start? (distro / kickstart)
+start_from=
+
+# You want to try Neovim tonight with the config you already have.
+# Which file do you create? (init.vim / init.lua)
+tonight_you_write=
+
+@expected decisions.txt
+# ORG-77, part two. One word each, from the options in brackets.
+
+# You ssh into three production boxes a day.
+# Which editor must stay in your fingers? (vim / nvim)
+editor_on_servers=vim
+
+# You maintain a large TypeScript monorepo and want project-wide rename.
+# Which part of Neovim gives you that? (lsp / treesitter / floating-windows)
+worth_switching_for=lsp
+
+# You have a 90 line vimrc you wrote yourself and two evenings to spend.
+# Where do you start? (distro / kickstart)
+start_from=kickstart
+
+# You want to try Neovim tonight with the config you already have.
+# Which file do you create? (init.vim / init.lua)
+tonight_you_write=init.vim
+
+@start .vimrc
+" The config that stays on the servers. Do not change it.
+set number
+set ignorecase
+set smartcase
+set scrolloff=8
+
+let mapleader = " "
+nnoremap <leader>w :w<CR>
+nnoremap <leader>h :nohlsearch<CR>
+
+augroup Config
+  autocmd!
+  autocmd BufWritePre *.ts %s/\s\+$//e
+augroup END

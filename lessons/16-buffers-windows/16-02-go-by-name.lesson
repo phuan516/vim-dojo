@@ -1,0 +1,239 @@
+@meta
+id: 16-02
+title: Go by name
+chapter: 16
+type: lesson
+skills: buffer-switch, buffer-list
+par: 90
+minutes: 5
+vscode: squint at six tabs, click the one that looks right
+open: order.entity.ts order.provider.ts order.repository.ts customer.provider.ts customer.repository.ts errors.json
+
+@brief
+Six buffers. Numbers work, but you have to look them up first, and they
+change from session to session. Names do not. `:b` takes a name as well
+as a number, and it does not need the whole name: any unique fragment
+will do. `:b entity` is enough. `:b ent` is enough. If the fragment
+matches more than one buffer vim refuses with E93 and stays put, which
+is the only thing that can go wrong.
+
+Two fixes, in two of the six.
+
+`order.provider.ts` throws `ORDER_MISSING` when an order is not found.
+That code does not exist; `errors.json` has `ORDER_NOT_FOUND`. Fix the
+provider.
+
+`customer.repository.ts` maps `id` and `email` and forgets `name`. Add
+`name: record.name,` directly under the `email` line.
+
+There are two providers and two repositories open, so `:b prov` will not
+do. Write before you leave each file; vim will not switch away from
+unsaved changes yet, and 16-06 explains why.
+
+@keys
+| `:b ent` | go to the one buffer whose name contains `ent` |
+| `:b order.p` | a fragment can include the dot; that is enough to tell two providers apart |
+| `:b ord*rep` | `*` is a wildcard between two fragments |
+| `:b ^cust` | `^` anchors the fragment to the start of the name |
+
+@hints
+`:b order.p` is the order provider and nothing else. `:b customer.r` is
+the customer repository. Read the fragment aloud and check it cannot
+mean two files.
+--
+In the provider, `/MISS` puts you on the bad word. `cw` from there
+replaces `MISSING` because the underscore is part of the word; type
+`NOT_FOUND` and it is done.
+--
+`:w` before the second `:b`. In the customer repository, `/email`,
+`o`, type the mapping, `Esc`, `:wqa`.
+
+@solution
+    :b order.p<Enter>  /MISS<Enter>  cw NOT_FOUND <Esc>  :w<Enter>
+    :b customer.r<Enter>  /email<Enter>  o name: record.name, <Esc>  :wqa<Enter>
+
+About eighty keystrokes for two files out of six, and no list, no
+numbers, no looking.
+
+This is the habit that replaces tab-hunting. You almost always know the
+name of the file you want, or enough of it. `:b` plus three or four
+letters plus Enter is faster than finding a tab with your eyes, and it
+does not get slower as the list grows. The fragment matches anywhere in
+the path, so `:b entity` finds `src/domain/order/order.entity.ts` in a
+real project too.
+
+When a fragment is ambiguous vim tells you rather than guessing, and
+nothing has moved. Add a letter and try again, or use `^` to anchor to
+the start, or `*` to join two fragments. `:b ord*rep` reads as "the one
+with ord and then rep in it", which is how you would say it anyway.
+
+@start order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_MISSING');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}
+
+@start customer.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { CustomerRepository } from './customer.repository';
+
+@injectable()
+export class CustomerProvider {
+  constructor(
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return customer;
+  }
+}
+
+@start customer.repository.ts
+import { injectable } from 'tsyringe';
+import { Customer as CustomerRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Customer } from './customer.entity';
+
+@injectable()
+export class CustomerRepository extends BaseRepository<CustomerRecord, Customer> {
+  public toEntity(record: CustomerRecord): Customer {
+    return {
+      id: record.id,
+      email: record.email,
+    };
+  }
+}
+
+@expected customer.repository.ts
+import { injectable } from 'tsyringe';
+import { Customer as CustomerRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Customer } from './customer.entity';
+
+@injectable()
+export class CustomerRepository extends BaseRepository<CustomerRecord, Customer> {
+  public toEntity(record: CustomerRecord): Customer {
+    return {
+      id: record.id,
+      email: record.email,
+      name: record.name,
+    };
+  }
+}
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}

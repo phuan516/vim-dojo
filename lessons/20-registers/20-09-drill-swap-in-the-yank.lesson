@@ -1,0 +1,67 @@
+@meta
+id: 20-09
+title: Drill — swap in the yank
+chapter: 20
+type: drill
+skills: register-blackhole
+par: 36
+minutes: 5
+reps: 8
+vscode: copy the string, then double-click and paste, twice
+open: order.provider.spec.ts
+
+@brief
+Eight times: the two `'EXPIRED'` strings should be the full
+`'REFUND_WINDOW_EXPIRED'` declared at the top. Yank the real one once,
+then replace each short one without ever losing the yank.
+
+@keys
+| `yi'` | yank inside the quotes |
+| `"_di'` | delete inside the quotes, into nothing |
+| `P` | put the yank back inside |
+| `n` | next match |
+
+@hints
+`yi'` works from anywhere on the line before the quotes. Then
+`/'EXPIRED'` Enter, `"_di'`, `P`, `n`, and the same again.
+--
+Without `"_` the second `P` would put `EXPIRED` — the first `di'`
+would have replaced the yank. That is the whole drill.
+
+@solution
+    yi'  /'EXPIRED'<Enter> "_di'P  n "_di'P  :wq<Enter>
+
+Yank once, then `"_di'P` as one unit at every match. It is a chord
+worth owning: delete-into-nothing followed by put is how you replace
+text with the yank as many times as you like, and the dot command in
+chapter 11 cannot do it because a put is not a change of the deleted
+text.
+
+Chapter 22 adds a second way, `vi'p`, which is shorter and has its own
+clobbering trap. `"_` is the honest one.
+
+@start order.provider.spec.ts
+const reason = 'REFUND_WINDOW_EXPIRED';
+
+it('records the reason outside the window', async () => {
+  const result = await provider.cancel(staleOrder.id);
+
+  expect(result.cancellationReason).toBe('EXPIRED');
+  expect(reveal(orderRepository).update).toHaveBeenCalledWith({
+    where: { id: staleOrder.id },
+    values: { status: 'CANCELLED', cancellationReason: 'EXPIRED' },
+  });
+});
+
+@expected order.provider.spec.ts
+const reason = 'REFUND_WINDOW_EXPIRED';
+
+it('records the reason outside the window', async () => {
+  const result = await provider.cancel(staleOrder.id);
+
+  expect(result.cancellationReason).toBe('REFUND_WINDOW_EXPIRED');
+  expect(reveal(orderRepository).update).toHaveBeenCalledWith({
+    where: { id: staleOrder.id },
+    values: { status: 'CANCELLED', cancellationReason: 'REFUND_WINDOW_EXPIRED' },
+  });
+});

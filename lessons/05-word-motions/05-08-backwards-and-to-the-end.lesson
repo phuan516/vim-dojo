@@ -1,0 +1,81 @@
+@meta
+id: 05-08
+title: B and E, the coarse pair
+chapter: 05
+type: lesson
+skills: WORD-motions, word-b, word-e
+par: 40
+minutes: 6
+vscode: two clicks in a long expression, carefully
+open: invoice.provider.ts
+
+@brief
+`w` `b` `e` all have capitals, and the capital always means the same
+thing: ignore punctuation, stop only at whitespace.
+
+    w  W   start of the next one
+    b  B   start of the previous one
+    e  E   end of this one
+
+Two edits on line three, one in each direction.
+
+The outstanding figure should use the gross total, so `invoice.total`
+becomes `invoice.totalGross`. And credits now come off before payments,
+so `credit.applied - ` goes in front of `payment.amount`. The line ends
+up as:
+
+    const outstanding = invoice.totalGross - credit.applied - payment.amount;
+
+@keys
+| `E` | forward to the end of the current or next WORD |
+| `B` | back to the start of the previous WORD |
+| `$` | end of the line |
+| `a` | append after the cursor |
+| `i` | insert before the cursor |
+
+@hints
+The first edit appends to the end of something, the second inserts in
+front of something. You already know which motion each of those pairs
+with — this time use the capitals.
+
+--
+Going forward, `E` stops at the end of `const`, `outstanding`, `=`, and
+then `invoice.total`. Four. Going back from the end of the line, `B`
+reaches the start of `payment.amount;` in one.
+--
+`2j` `4E` then `a`, type `Gross`, `Esc`. Then `$` `B` `i`, type
+`credit.applied - `, `Esc`, `:wq`.
+
+@solution
+    2j  4E  aGross<Esc>  $  B  i credit.applied -  <Esc>  :wq<Enter>
+
+`4E` walks the *ends* forwards; `$B` walks the *starts* backwards. Between
+them you can reach either edge of any chunk on a line in two or three
+keys, whatever punctuation is in it.
+
+Note the second edit. From the end of the line, one `B` covered
+`payment.amount;` entirely. With `b` it would have been four presses to
+cross the same ground, and three of those landings were on characters
+nobody wants to stand on.
+
+The habit to build: decide which end of the target you need *before* you
+move. Front of it means `b`/`B`/`w`/`W`. Back of it means `e`/`E`. Getting
+that right is the difference between two keys and two keys plus a nudge.
+
+@start invoice.provider.ts
+export class InvoiceProvider {
+  public async summary(invoice: Invoice) {
+    const outstanding = invoice.total - payment.amount;
+
+    return { outstanding, currency: invoice.currency };
+  }
+}
+
+@expected invoice.provider.ts
+export class InvoiceProvider {
+  public async summary(invoice: Invoice) {
+    const outstanding = invoice.totalGross - credit.applied - payment.amount;
+
+    return { outstanding, currency: invoice.currency };
+  }
+}

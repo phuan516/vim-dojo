@@ -1,0 +1,120 @@
+@meta
+id: 30-02
+title: Follow the import, then come back
+chapter: 30
+type: lesson
+skills: goto-definition
+par: 64
+minutes: 6
+vscode: Ctrl-click the import path, then the back arrow
+vimrc: set suffixesadd=.ts hidden
+open: order.resolver.ts
+
+@brief
+The resolver calls `cancel` with one argument. The provider's `cancel`
+has grown a second one — the cancellation reason — and nobody updated
+the caller, so cancellations are landing with `undefined` as the reason.
+
+Go and read the provider's signature, come back, and pass
+`args.reason` as the second argument. The resolver is the only file
+that changes; the provider is correct as it stands.
+
+Vim knows how to open the file named under the cursor. It does not know
+that `./order.provider` means `./order.provider.ts`, so `suffixesadd`
+is set for this lesson — the same line you would keep in an
+`after/ftplugin/typescript.vim`.
+
+@keys
+| `gf` | edit the file whose name is under the cursor |
+| `Ctrl-W f` | the same, in a split |
+| `Ctrl-O` | back to where you jumped from |
+| `Ctrl-I` | forward again |
+| `[{` | to the `{` that opens the block you are inside |
+
+@hints
+Put the cursor anywhere on the import path at the top of the file and
+press `gf`.
+--
+`Ctrl-O` walks back down the jump list, and opening a file with `gf`
+puts an entry on it. You do not have to remember what you were reading.
+--
+`/order\.provider` `Enter`, `gf`, read the signature, `Ctrl-O`, then
+`/cancel(args` `Enter`, `f)`, `i, args.reason`, `Esc`, `:wqa`.
+
+@solution
+    /order\.provider<Enter> gf   Ctrl-O
+    /cancel(args<Enter> f) i , args.reason <Esc> :wqa<Enter>
+
+Three separate ideas are doing the work here.
+
+`gf` resolves a file name the way a shell would: it takes the text
+under the cursor, applies `suffixesadd` and `path`, and edits what it
+finds. On an import line that is go-to-definition for the whole module.
+
+`Ctrl-O` is the back button. Every jump — a search, `gf`, `G`, a tag —
+pushes your old position onto the jump list, so the round trip out to a
+definition and back is two keystrokes in each direction.
+
+`[{` is the one people miss. Deep inside a long method, it puts you on
+the brace that opened the block, which in practice means "show me the
+signature of the thing I am editing". `]}` is its other half.
+
+What `gf` cannot do is find the definition of a *name* rather than a
+file. `OrderProvider` is imported by path, so the path is enough. A
+helper function three directories away, imported nowhere near where you
+are standing, is not. That is the job the next lesson gives to a tags
+file.
+
+@start order.resolver.ts
+import { OrderProvider } from './order.provider';
+
+export class OrderResolver {
+  constructor(protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string; reason: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@expected order.resolver.ts
+import { OrderProvider } from './order.provider';
+
+export class OrderResolver {
+  constructor(protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string; reason: string }) {
+    return this.orderProvider.cancel(args.id, args.reason);
+  }
+}
+
+@start order.provider.ts
+export class OrderProvider {
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string, reason: string) {
+    const order = await this.findOne(id);
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED', cancellationReason: reason },
+    });
+  }
+}

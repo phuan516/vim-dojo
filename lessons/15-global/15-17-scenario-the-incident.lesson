@@ -1,0 +1,244 @@
+@meta
+id: 15-17
+title: Scenario — the overnight incident
+chapter: 15
+type: scenario
+skills: global-invert, global-delete, global-move
+par: 72
+minutes: 12
+vscode: three tabs, a filter box, a lot of cutting and pasting
+open: gateway.log payment.worker.ts registry.ts errors.json
+
+@brief
+A ticket, not an exercise.
+
+    INC-207  Payment gateway timed out from 00:01 to 00:03. The worker
+             was hot-patched during the incident. Clean up before the
+             postmortem at 11:00.
+
+Four files are open. Do them in order; `:w` each one before `:bn` moves
+you to the next, and finish with `:wqa`. `:wq` will refuse with more
+files open.
+
+  1. gateway.log — the postmortem wants only the failures. Keep every
+     `ERROR` line and nothing else.
+
+  2. payment.worker.ts — whoever hot-patched it left `console.log` calls
+     everywhere. All of them go. The `logger` calls are real and stay.
+
+  3. registry.ts — the incident fix registered `RetryProvider` and
+     `RetryConsumer` in a hurry, each `import` sat on top of its
+     `container.register`. Move every `container.register` line to the
+     bottom of the file, keeping their current order. The imports stay.
+
+  4. errors.json — open so you can check the codes the worker throws
+     exist. It does not change. Change it and the check fails.
+
+Every file is one `:g` or `:v`. If you find yourself pressing `n` or
+`dd`, stop and name the lines instead.
+
+@keys
+| `:v/pattern/d` | keep only the lines that match |
+| `:g/pattern/d` | delete every line that matches |
+| `:g/pattern/m$` | move every match to the bottom, in order |
+| `:w` then `:bn` | write this file, then go to the next buffer |
+| `:wqa` | write everything and quit |
+
+@hints
+The log is a keep, not a delete. Name what stays.
+--
+The worker's pattern needs to be `console`, not `log`: `logger.info` has
+`log` in it too, and those lines are wanted.
+--
+The registry is the same move as lesson 12. `m$` keeps order; `m0` would
+reverse it.
+--
+`:v/ERROR/d`, `:w`, `:bn`, `:g/console/d`, `:w`, `:bn`,
+`:g/^container/m$`, `:wqa`. Do not open `errors.json` at all; it is
+there to be left alone.
+
+@solution
+**gateway.log** — `:v/ERROR/d`, then `:w` and `:bn`.
+
+**payment.worker.ts** — `:g/console/d`, then `:w` and `:bn`.
+
+**registry.ts** — `:g/^container/m$`, then `:wqa`.
+
+**errors.json** — nothing.
+
+Three commands and three files, and no line was ever selected by hand.
+Everything in this scenario was in the first twelve lessons of the
+chapter; what it tests is whether you reach for the pattern before you
+reach for `j`.
+
+The judgement calls, for the record. The log was a `:v` because the keep
+set has one name and the drop set has three. The worker was a `:g//d`
+with a pattern chosen against the file, not against the word: `log`
+alone would have matched `logger`, and you would have found out by
+reading the diff. The registry was `m$` and not `m0` because order was
+part of the ticket. Reading the ticket for the words that constrain the
+tool is most of the skill.
+
+@start gateway.log
+2026-09-16T00:00:00Z INFO  gateway rotating log
+2026-09-16T00:00:31Z INFO  gateway request POST /captures ord_4103
+2026-09-16T00:00:33Z WARN  gateway slow upstream 1840ms
+2026-09-16T00:00:33Z INFO  gateway 200 /captures ord_4103 1912ms
+2026-09-16T00:01:05Z INFO  gateway request POST /captures ord_4104
+2026-09-16T00:01:07Z WARN  gateway slow upstream 2210ms
+2026-09-16T00:01:08Z ERROR gateway 502 /captures ord_4104 upstream timeout
+2026-09-16T00:01:08Z INFO  gateway retry 1 /captures ord_4104
+2026-09-16T00:01:11Z ERROR gateway 502 /captures ord_4104 upstream timeout
+2026-09-16T00:01:11Z INFO  gateway retry 2 /captures ord_4104
+2026-09-16T00:01:14Z ERROR gateway 502 /captures ord_4104 giving up
+2026-09-16T00:01:20Z DEBUG gateway pool size 7
+2026-09-16T00:01:44Z INFO  gateway request POST /captures ord_4105
+2026-09-16T00:01:46Z ERROR gateway 502 /captures ord_4105 upstream timeout
+2026-09-16T00:01:46Z INFO  gateway retry 1 /captures ord_4105
+2026-09-16T00:01:49Z INFO  gateway 200 /captures ord_4105 2980ms
+2026-09-16T00:02:15Z WARN  gateway circuit half-open
+2026-09-16T00:02:30Z INFO  gateway request POST /refunds ord_4090
+2026-09-16T00:02:31Z ERROR gateway 503 /refunds ord_4090 circuit open
+2026-09-16T00:02:31Z INFO  gateway request POST /refunds ord_4091
+2026-09-16T00:02:31Z ERROR gateway 503 /refunds ord_4091 circuit open
+2026-09-16T00:02:40Z DEBUG gateway pool size 6
+2026-09-16T00:03:00Z INFO  gateway circuit probe
+2026-09-16T00:03:02Z WARN  gateway probe failed 2005ms
+2026-09-16T00:03:30Z INFO  gateway circuit probe
+2026-09-16T00:03:31Z INFO  gateway probe ok 210ms
+2026-09-16T00:03:31Z INFO  gateway circuit closed
+2026-09-16T00:03:45Z INFO  gateway request POST /captures ord_4106
+2026-09-16T00:03:46Z INFO  gateway 200 /captures ord_4106 130ms
+2026-09-16T00:04:01Z DEBUG gateway pool size 8
+
+@expected gateway.log
+2026-09-16T00:01:08Z ERROR gateway 502 /captures ord_4104 upstream timeout
+2026-09-16T00:01:11Z ERROR gateway 502 /captures ord_4104 upstream timeout
+2026-09-16T00:01:14Z ERROR gateway 502 /captures ord_4104 giving up
+2026-09-16T00:01:46Z ERROR gateway 502 /captures ord_4105 upstream timeout
+2026-09-16T00:02:31Z ERROR gateway 503 /refunds ord_4090 circuit open
+2026-09-16T00:02:31Z ERROR gateway 503 /refunds ord_4091 circuit open
+
+@start payment.worker.ts
+import { inject, injectable } from 'tsyringe';
+import { logger } from '../configuration/logger';
+import { exception } from '../configuration/errors';
+import { PaymentService } from '../infrastructure/services/payment.service';
+import { RetryProvider } from '../domain/retry/retry.provider';
+
+type CaptureMessage = {
+  orderId: string;
+  amount: number;
+  attempt: number;
+};
+
+@injectable()
+export class PaymentWorker {
+  constructor(
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(RetryProvider) protected retryProvider: RetryProvider,
+  ) {}
+
+  public async handle(message: CaptureMessage) {
+    console.log('handle', message);
+    logger.info('capture received', { orderId: message.orderId, attempt: message.attempt });
+
+    if (message.attempt > 3) {
+      console.log('giving up', message.orderId);
+      logger.warn('capture abandoned', { orderId: message.orderId });
+      throw exception('CAPTURE_ABANDONED');
+    }
+
+    try {
+      console.log('calling gateway', message.orderId);
+      const result = await this.paymentService.capture(message.orderId, message.amount);
+      console.log('gateway result', result);
+
+      return result;
+    } catch (error) {
+      console.log('gateway failed', error);
+      logger.error('capture failed', { orderId: message.orderId, error });
+      console.log('scheduling retry', message.attempt + 1);
+
+      return this.retryProvider.schedule({ ...message, attempt: message.attempt + 1 });
+    }
+  }
+}
+
+@expected payment.worker.ts
+import { inject, injectable } from 'tsyringe';
+import { logger } from '../configuration/logger';
+import { exception } from '../configuration/errors';
+import { PaymentService } from '../infrastructure/services/payment.service';
+import { RetryProvider } from '../domain/retry/retry.provider';
+
+type CaptureMessage = {
+  orderId: string;
+  amount: number;
+  attempt: number;
+};
+
+@injectable()
+export class PaymentWorker {
+  constructor(
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(RetryProvider) protected retryProvider: RetryProvider,
+  ) {}
+
+  public async handle(message: CaptureMessage) {
+    logger.info('capture received', { orderId: message.orderId, attempt: message.attempt });
+
+    if (message.attempt > 3) {
+      logger.warn('capture abandoned', { orderId: message.orderId });
+      throw exception('CAPTURE_ABANDONED');
+    }
+
+    try {
+      const result = await this.paymentService.capture(message.orderId, message.amount);
+
+      return result;
+    } catch (error) {
+      logger.error('capture failed', { orderId: message.orderId, error });
+
+      return this.retryProvider.schedule({ ...message, attempt: message.attempt + 1 });
+    }
+  }
+}
+
+@start registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+import { PaymentWorker } from '../workers/payment.worker';
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('PaymentService', { useClass: PaymentService });
+import { RetryProvider } from '../domain/retry/retry.provider';
+container.register('RetryProvider', { useClass: RetryProvider });
+import { RetryConsumer } from '../domain/retry/retry.consumer';
+container.register('RetryConsumer', { useClass: RetryConsumer });
+container.register('PaymentWorker', { useClass: PaymentWorker });
+
+@expected registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+import { PaymentWorker } from '../workers/payment.worker';
+import { RetryProvider } from '../domain/retry/retry.provider';
+import { RetryConsumer } from '../domain/retry/retry.consumer';
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('PaymentService', { useClass: PaymentService });
+container.register('RetryProvider', { useClass: RetryProvider });
+container.register('RetryConsumer', { useClass: RetryConsumer });
+container.register('PaymentWorker', { useClass: PaymentWorker });
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "CAPTURE_FAILED": { "statusCode": 502, "sentry": true },
+  "CAPTURE_ABANDONED": { "statusCode": 502, "sentry": true },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}

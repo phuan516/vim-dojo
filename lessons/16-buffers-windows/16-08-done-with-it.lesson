@@ -1,0 +1,136 @@
+@meta
+id: 16-08
+title: Done with it
+chapter: 16
+type: lesson
+skills: buffer-list, buffer-switch
+par: 145
+minutes: 6
+vscode: the x on the tab, or middle-click
+open: order.entity.ts order.repository.ts errors.json
+
+@brief
+A buffer stays in the list until you remove it. After a morning of
+`:b` the list is long, the fragments stop being unique, and Tab shows
+you six candidates. `:bd` deletes the current buffer from the list.
+The file on disk is untouched; vim just stops holding it. The window
+that was showing it moves on to another buffer, and `:ls` gets one
+line shorter.
+
+`:bd` will not delete a buffer with unsaved changes; it says E89 and
+waits. Write first, or `:bd!` to discard. It also takes a name or a
+number, so you can close a buffer you are not looking at.
+
+The ticket is a refund timestamp, and the working style is: finish a
+file, close its buffer, move on.
+
+  1. `order.entity.ts`: `refundedAt?: Date;` directly under
+     `cancellationReason`.
+  2. `order.repository.ts`: `refundedAt: record.refundedAt ?? undefined,`
+     directly under the `cancellationReason` line in `toEntity`.
+  3. `errors.json`: nothing. It is the last buffer standing when the
+     other two are gone, and `:q` from there ends the session.
+
+@keys
+| `:bd` | delete the current buffer from the list |
+| `:bd 2` `:bd name` | delete another one by number or fragment |
+| `:bd!` | delete it and discard its unsaved changes |
+| `:ls` | confirm it is gone |
+
+@hints
+Entity: `/cancellationReason`, `o`, the field, `Esc`, `:w`, then `:bd`.
+You land in the repository because it is next in the list.
+--
+Same shape in the repository. `:w` before `:bd`; try `:bd` first
+without writing if you want to see E89.
+--
+`:ls` after the second `:bd` shows only `errors.json`. `:q`.
+
+@solution
+    /cancellationReason<Enter>  o refundedAt?: Date; <Esc>  :w<Enter>  :bd<Enter>
+    /cancellationReason<Enter>  o refundedAt: record.refundedAt ?? undefined, <Esc>  :w<Enter>  :bd<Enter>
+    :q<Enter>
+
+About a hundred and twenty-five keystrokes; the typed code is most of
+them and the two `:bd` are eight.
+
+The instinct from VS Code is that closing is tidying, and there is some
+truth in it: a short list is one where every fragment is unique. But do
+not over-tidy. A buffer costs nothing to keep, `Ctrl-^` and `:b` only
+work on buffers that are still in the list, and reopening a file you
+closed two minutes ago is the buffer equivalent of re-finding a tab.
+The habit worth having is to close a buffer when the task that needed
+it is finished, not every time you look away from it.
+
+`:bd` on the last buffer leaves you with an empty one rather than
+quitting; `:q` is still how you leave.
+
+@start order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@expected order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+  refundedAt?: Date;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}
+
+@expected order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      cancellationReason: record.cancellationReason ?? undefined,
+      refundedAt: record.refundedAt ?? undefined,
+    };
+  }
+}
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}

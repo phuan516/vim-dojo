@@ -1,0 +1,57 @@
+@meta
+id: 06-10
+title: Backwards until, with T
+chapter: 06
+type: lesson
+skills: find-t
+par: 36
+minutes: 4
+vscode: End, then click between the space and the handler
+open: webhooks.ts
+
+@brief
+The Stripe webhook is mounted without signature verification, which means
+anyone who finds the URL can post refunds into the system. Add the missing
+middleware and terminate the statement:
+
+    app.use('/webhooks/stripe', rawBodyParser, verifySignature, stripeWebhookHandler);
+
+You arrive at the right-hand end of the line to add the terminator. The
+insert point is back to the left, in the gap that already exists after the
+last comma — and it is that gap, rather than the comma itself, that you want
+the cursor on.
+
+@keys
+| `F,` | backward onto the previous comma |
+| `T,` | backward until just past the previous comma |
+| `a` | insert to the right of the cursor |
+
+@hints
+Terminate the line first. That leaves you at the right-hand end, looking
+leftwards.
+--
+`T` is the backwards `t`: it stops one character past the target, so `T,`
+leaves you on the space that follows the comma rather than on the comma.
+--
+`A` `;` `Esc`, then `T,`, then `a`, and type `verifySignature, ` with a
+trailing space, then `Esc`.
+
+@solution
+    A ; <Esc> T , a verifySignature,  <Esc> :wq<Enter>
+
+Four keys together — `f`, `F`, `t`, `T` — and the whole system is two
+questions. Which direction, and do you want to land on the character or
+beside it. Lower case goes right, upper case goes left; `f` arrives on it,
+`t` stops beside it.
+
+`F,a` would have worked here too, with the space typed at the front of the
+insert instead of the back. Neither is more correct. What matters is that
+you decided where to land before you pressed anything, rather than landing
+somewhere approximate and nudging with `h` and `l`. Approximate landings are
+how one-character errors get into commits.
+
+@start webhooks.ts
+app.use('/webhooks/stripe', rawBodyParser, stripeWebhookHandler)
+
+@expected webhooks.ts
+app.use('/webhooks/stripe', rawBodyParser, verifySignature, stripeWebhookHandler);

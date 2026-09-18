@@ -1,0 +1,145 @@
+@meta
+id: 14-06
+title: From here to the end of the file
+chapter: 14
+type: lesson
+skills: sub-range
+par: 53
+minutes: 6
+vscode: scroll to the block, shift-click the end, Ctrl-H in selection
+open: refund.test.ts
+
+@brief
+The second `describe` block tests the v2 refunds API, and v2 is served
+under `/v2`. Every request path in that block, `post` and `get` alike,
+needs the prefix: `'/refunds'` becomes `'/v2/refunds'`, and the query
+string version does too. The v1 block above it keeps its paths.
+
+Counting line numbers would work, until someone adds a test. A range
+that starts at the cursor and runs to the end of the file does not
+care how long the file is. Get to the v2 block by search and let the
+range take it from there.
+
+The pattern contains a slash, and so does the replacement. Escaping
+each one is legal and ugly; there is a cleaner way.
+
+@keys
+| `:.,$s/old/new/` `Enter` | from the current line to the last line |
+| `:.,+3s/old/new/` `Enter` | this line and the three below it |
+| `.` and `$` | as line addresses: the cursor line, the last line |
+| `:s#a/b#c/d#` `Enter` | any punctuation can be the delimiter, so `/` needs no escaping |
+
+@hints
+Search to the v2 `describe` line first. Then the range is "from here
+down", which is two addresses joined by a comma.
+--
+`.` is the current line and `$` is the last line, so `.,$` is
+everything from the cursor down. And since the paths have slashes in
+them, pick `#` as the separator for this one command.
+--
+`/refunds v2` `Enter`, then `:.,$s#'/refunds#'/v2/refunds#` and Enter.
+Leaving the closing quote out of the pattern lets it match both the
+plain path and the one with a query string.
+
+@solution
+    /refunds v2<Enter>  :.,$s#'/refunds#'/v2/refunds#<Enter>  :wq<Enter>
+
+Forty-six keystrokes for four changes in the right block and none in
+the wrong one.
+
+Two things happened there. The range `.,$` is the workhorse for "from
+this point down": `.` is wherever the cursor is, `$` is the last line,
+and the search put the cursor exactly where the block starts. Its
+cousins are `.,+3` for "here and the next three" and `.,.+3` which is
+the same thing spelled out, and `1,.` for "from the top to here". Any
+address that works alone works on either side of the comma.
+
+The other is the delimiter. Vim only asks that the separator be a
+character that is not in the pattern, so when the text is full of
+slashes you use `#`, or `|`, or `,`. Reading `s#'/refunds#'/v2/refunds#`
+is easier than reading `s/'\/refunds/'\/v2\/refunds/`, and easier to
+type without a mistake, which matters more.
+
+@start refund.test.ts
+import { request } from './helpers';
+
+describe('refunds v1', () => {
+  it('creates a refund', async () => {
+    const response = await request.post('/refunds', { orderId: 'ord_8101' });
+    expect(response.status).toEqual(201);
+  });
+
+  it('rejects an unknown order', async () => {
+    const response = await request.post('/refunds', { orderId: 'ord_0000' });
+    expect(response.status).toEqual(404);
+  });
+
+  it('lists refunds for an order', async () => {
+    const response = await request.get('/refunds?orderId=ord_8101');
+    expect(response.status).toEqual(200);
+  });
+});
+
+describe('refunds v2', () => {
+  it('creates a refund', async () => {
+    const response = await request.post('/refunds', { orderId: 'ord_8101', reason: 'DAMAGED' });
+    expect(response.status).toEqual(201);
+  });
+
+  it('requires a reason', async () => {
+    const response = await request.post('/refunds', { orderId: 'ord_8101' });
+    expect(response.status).toEqual(422);
+  });
+
+  it('lists refunds for an order', async () => {
+    const response = await request.get('/refunds?orderId=ord_8101');
+    expect(response.status).toEqual(200);
+  });
+
+  it('returns the refund by id', async () => {
+    const response = await request.get('/refunds/rfd_0301');
+    expect(response.status).toEqual(200);
+  });
+});
+
+@expected refund.test.ts
+import { request } from './helpers';
+
+describe('refunds v1', () => {
+  it('creates a refund', async () => {
+    const response = await request.post('/refunds', { orderId: 'ord_8101' });
+    expect(response.status).toEqual(201);
+  });
+
+  it('rejects an unknown order', async () => {
+    const response = await request.post('/refunds', { orderId: 'ord_0000' });
+    expect(response.status).toEqual(404);
+  });
+
+  it('lists refunds for an order', async () => {
+    const response = await request.get('/refunds?orderId=ord_8101');
+    expect(response.status).toEqual(200);
+  });
+});
+
+describe('refunds v2', () => {
+  it('creates a refund', async () => {
+    const response = await request.post('/v2/refunds', { orderId: 'ord_8101', reason: 'DAMAGED' });
+    expect(response.status).toEqual(201);
+  });
+
+  it('requires a reason', async () => {
+    const response = await request.post('/v2/refunds', { orderId: 'ord_8101' });
+    expect(response.status).toEqual(422);
+  });
+
+  it('lists refunds for an order', async () => {
+    const response = await request.get('/v2/refunds?orderId=ord_8101');
+    expect(response.status).toEqual(200);
+  });
+
+  it('returns the refund by id', async () => {
+    const response = await request.get('/v2/refunds/rfd_0301');
+    expect(response.status).toEqual(200);
+  });
+});

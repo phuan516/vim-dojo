@@ -1,0 +1,98 @@
+@meta
+id: 09-17
+title: Mark one end, delete to it
+chapter: 09
+type: lesson
+skills: op-to-mark, op-linewise
+par: 18
+minutes: 5
+vscode: click the first line, scroll, shift-click the last, Delete
+open: orders.fixture.ts
+
+@brief
+Fixtures `ORD-406` through `ORD-414` belonged to the CSV importer test,
+which was deleted last sprint. They are dead weight and one of them
+breaks the new total assertion.
+
+Remove those nine entries. Everything above `ORD-406` and everything from
+`ORD-415` down stays.
+
+@keys
+| `ma` | drop a mark called `a` on this line |
+| `'a` | jump back to the line holding mark `a` |
+| `d'a` | delete every line from here to the marked line |
+| `` `a `` | jump to the exact character the mark was set on |
+
+@hints
+You can see both ends of the dead run, but they are nine lines apart and
+counting nine lines correctly at speed is optimistic. Put something at one
+end instead.
+--
+`ma` marks the line under the cursor. Marks are invisible and free, and
+there are twenty-six of them. Once one end is marked, go to the other end
+and delete back to it.
+--
+`7G` onto the `ORD-406` line, `ma`, then `15G` onto the `ORD-414` line,
+then `d'a`.
+
+@solution
+    7G ma 15G d'a :wq<Enter>
+
+`'a` is a motion. That is the entire idea: once you accept that, `d'a`,
+`y'a` and `c'a` need no separate explanation, and neither will every other
+motion you meet for the rest of your vim career.
+
+Marks change the shape of an edit in a way worth noticing. Every operator
+so far has needed you to commit to the extent *before* you could see the
+result — `d9j` means deciding the number first and finding out afterwards.
+With a mark you go to one end, drop it, travel to the other end by
+whatever means you like, look at where you actually are, and only then
+press `d`. Nothing is destroyed until both ends are confirmed by eye.
+
+Two flavours, and the difference matters:
+
+    d'a     line mark — whole lines, from this line to that line
+    d`a     character mark — from this character to that character
+
+The straight quote is linewise, the backtick is charwise. The same split
+runs through every one of vim's position keys, and `'` versus `` ` `` is
+how you choose.
+
+Marks survive until you set them again or close the file, so `ma` at the
+top of a function you keep returning to is worth the two keystrokes.
+Chapter 17 does the rest of them, including the ones vim sets for you.
+
+@start orders.fixture.ts
+export const orderFixtures = [
+  { id: 'ORD-401', customerId: 'CUS-12', status: 'PENDING', total: 4200 },
+  { id: 'ORD-402', customerId: 'CUS-12', status: 'SHIPPED', total: 1150 },
+  { id: 'ORD-403', customerId: 'CUS-31', status: 'CANCELLED', total: 990 },
+  { id: 'ORD-404', customerId: 'CUS-31', status: 'PENDING', total: 8800 },
+  { id: 'ORD-405', customerId: 'CUS-44', status: 'SHIPPED', total: 2300 },
+  { id: 'ORD-406', customerId: 'CUS-77', status: 'PENDING', total: 100 },
+  { id: 'ORD-407', customerId: 'CUS-77', status: 'PENDING', total: 100 },
+  { id: 'ORD-408', customerId: 'CUS-77', status: 'PENDING', total: 100 },
+  { id: 'ORD-409', customerId: 'CUS-77', status: 'SHIPPED', total: 100 },
+  { id: 'ORD-410', customerId: 'CUS-77', status: 'SHIPPED', total: 100 },
+  { id: 'ORD-411', customerId: 'CUS-77', status: 'CANCELLED', total: 100 },
+  { id: 'ORD-412', customerId: 'CUS-77', status: 'CANCELLED', total: 100 },
+  { id: 'ORD-413', customerId: 'CUS-77', status: 'PENDING', total: 100 },
+  { id: 'ORD-414', customerId: 'CUS-77', status: 'PENDING', total: 100 },
+  { id: 'ORD-415', customerId: 'CUS-08', status: 'SHIPPED', total: 5600 },
+  { id: 'ORD-416', customerId: 'CUS-08', status: 'PENDING', total: 1400 },
+  { id: 'ORD-417', customerId: 'CUS-19', status: 'CANCELLED', total: 720 },
+  { id: 'ORD-418', customerId: 'CUS-19', status: 'SHIPPED', total: 3050 },
+];
+
+@expected orders.fixture.ts
+export const orderFixtures = [
+  { id: 'ORD-401', customerId: 'CUS-12', status: 'PENDING', total: 4200 },
+  { id: 'ORD-402', customerId: 'CUS-12', status: 'SHIPPED', total: 1150 },
+  { id: 'ORD-403', customerId: 'CUS-31', status: 'CANCELLED', total: 990 },
+  { id: 'ORD-404', customerId: 'CUS-31', status: 'PENDING', total: 8800 },
+  { id: 'ORD-405', customerId: 'CUS-44', status: 'SHIPPED', total: 2300 },
+  { id: 'ORD-415', customerId: 'CUS-08', status: 'SHIPPED', total: 5600 },
+  { id: 'ORD-416', customerId: 'CUS-08', status: 'PENDING', total: 1400 },
+  { id: 'ORD-417', customerId: 'CUS-19', status: 'CANCELLED', total: 720 },
+  { id: 'ORD-418', customerId: 'CUS-19', status: 'SHIPPED', total: 3050 },
+];

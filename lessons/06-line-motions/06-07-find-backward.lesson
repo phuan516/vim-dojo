@@ -1,0 +1,56 @@
+@meta
+id: 06-07
+title: Going back with F
+chapter: 06
+type: lesson
+skills: find-f
+par: 32
+minutes: 4
+vscode: End, then click back between the comma and the handler
+open: routes.ts
+
+@brief
+The refund route is missing its statement terminator, and it is missing the
+body validation middleware. Both need fixing:
+
+    const refundRoute = router.post('/orders/:id/refunds', requireAuth, validateBody, refundHandler);
+
+`validateBody` goes between `requireAuth` and `refundHandler`, so it belongs
+just after the last comma on the line. You will be at the far right of the
+line by the time you get to it, which means travelling leftwards to a
+character rather than rightwards.
+
+@keys
+| `f` | find forward on this line |
+| `F` | find backward on this line |
+| `a` | insert to the right of the cursor |
+
+@hints
+Fix the terminator first, with the key that appends at the end of the line.
+That leaves the cursor at the right-hand end.
+--
+`F` is `f` pointing the other way: `F,` jumps back onto the nearest comma to
+the left of the cursor.
+--
+`A` `;` `Esc`, then `F,`, then `a`, then type ` validateBody,` — note the
+leading space — then `Esc`.
+
+@solution
+    A ; <Esc> F , a  validateBody, <Esc> :wq<Enter>
+
+`f` and `F` are the same instrument aimed in opposite directions, and the
+shifted key meaning backwards is a pattern you will meet again and again in
+vim. Anything you can say forwards you can say backwards, and getting into
+the habit of thinking which way is the character rather than reaching for
+the mouse is most of what makes editing feel quick.
+
+Landing on the comma rather than before `refundHandler` is deliberate. The
+comma is a single, unmissable character; the identifier is a word you would
+have to aim at more carefully. Aim for the punctuation, then use `a` or `i`
+to pick which side of it you end up on.
+
+@start routes.ts
+const refundRoute = router.post('/orders/:id/refunds', requireAuth, refundHandler)
+
+@expected routes.ts
+const refundRoute = router.post('/orders/:id/refunds', requireAuth, validateBody, refundHandler);

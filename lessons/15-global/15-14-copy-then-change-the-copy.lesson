@@ -1,0 +1,86 @@
+@meta
+id: 15-14
+title: Copy, then change the copy
+chapter: 15
+type: lesson
+skills: global-copy
+par: 48
+minutes: 6
+vscode: copy the block, paste it, find-and-replace inside the selection
+open: flags.fixture.ts
+
+@brief
+The feature flags fixture only seeds `staging`. Production needs the
+same six flags with the same settings, so every `staging` row needs a
+twin directly under it with `env: 'production'` and everything else
+identical. The `ci` rows at the bottom are not part of this.
+
+`:t.` copies a line to just below itself. On its own that gives you six
+pairs of identical lines and a second job. But the command after a `:g`
+pattern can be more than one Ex command; join them with a bar and they
+run in turn on each marked line. After `:t.` the cursor is on the new
+copy, so a substitute that follows it changes the copy and only the
+copy.
+
+@keys
+| `:g/pattern/t.` | copy every matching line to directly below itself |
+| `cmd1 | cmd2` | run two Ex commands one after the other |
+| `:s/old/new/` | substitute on the current line, from chapter 14 |
+
+@hints
+Two steps per line, in one command: make the copy, then fix the copy.
+--
+`:t.` leaves the cursor on the copy. Whatever Ex command comes after the
+bar runs there.
+--
+`:g/staging/t.|s/staging/production/` and Enter.
+
+@solution
+    :g/staging/t.|s/staging/production/<Enter>  :wq<Enter>
+
+Forty keystrokes for six new lines, each one correct on arrival.
+
+Two things are happening and both are worth keeping.
+
+The first is `:t.`: copy to here. With `:g` it duplicates every match in
+place, which is the fixture-doubling move. Note that the copies are not
+themselves marked, even though they match the pattern: marking happened
+before anything ran. So `:g/staging/t.` produces exactly one copy of
+each, never a runaway.
+
+The second is the bar. `:g/pattern/A | B` runs `A` and then `B` on each
+marked line, and the cursor position after `A` is where `B` starts. That
+is what lets you copy and then edit the copy, or move a line and then
+indent it, or delete a line and then substitute on the one that took
+its place. It turns `:g` from "one command per match" into "one small
+script per match", which is the last piece of the machine.
+
+@start flags.fixture.ts
+export const flags = [
+  { flag: 'refund-window', env: 'staging', enabled: true },
+  { flag: 'email-receipts', env: 'staging', enabled: true },
+  { flag: 'partial-refunds', env: 'staging', enabled: false },
+  { flag: 'order-notes', env: 'staging', enabled: true },
+  { flag: 'gateway-v2', env: 'staging', enabled: false },
+  { flag: 'customer-tiers', env: 'staging', enabled: true },
+  { flag: 'refund-window', env: 'ci', enabled: true },
+  { flag: 'gateway-v2', env: 'ci', enabled: true },
+];
+
+@expected flags.fixture.ts
+export const flags = [
+  { flag: 'refund-window', env: 'staging', enabled: true },
+  { flag: 'refund-window', env: 'production', enabled: true },
+  { flag: 'email-receipts', env: 'staging', enabled: true },
+  { flag: 'email-receipts', env: 'production', enabled: true },
+  { flag: 'partial-refunds', env: 'staging', enabled: false },
+  { flag: 'partial-refunds', env: 'production', enabled: false },
+  { flag: 'order-notes', env: 'staging', enabled: true },
+  { flag: 'order-notes', env: 'production', enabled: true },
+  { flag: 'gateway-v2', env: 'staging', enabled: false },
+  { flag: 'gateway-v2', env: 'production', enabled: false },
+  { flag: 'customer-tiers', env: 'staging', enabled: true },
+  { flag: 'customer-tiers', env: 'production', enabled: true },
+  { flag: 'refund-window', env: 'ci', enabled: true },
+  { flag: 'gateway-v2', env: 'ci', enabled: true },
+];

@@ -1,0 +1,131 @@
+@meta
+id: 30-01
+title: Where does this thing come from
+chapter: 30
+type: lesson
+skills: goto-definition
+par: 30
+minutes: 5
+vscode: F12, or Ctrl-clicking the name
+open: order.provider.ts
+
+@brief
+This chapter rebuilds the parts of an IDE you actually use — go to
+definition, rename symbol, the Problems panel, the diff view — out of
+things vim has had since before any of them existed. Start with the one
+you press most.
+
+`windowDays` appears in three methods of this provider. Each one declares
+its own, and the three values are different on purpose. Finance have
+raised a ticket: the refund window on `cancel` is three days and it was
+agreed at thirty. The other two windows are correct.
+
+Find the declaration that belongs to the method you are standing in, and
+change the number. The trap is that searching for the name from the top
+of the file finds whichever declaration comes first, which is not always
+the one you want.
+
+@keys
+| `gd` | go to the local declaration of the word under the cursor |
+| `gD` | go to the first occurrence in the whole file |
+| `*` | next occurrence of the word under the cursor |
+| `#` | previous occurrence |
+
+@hints
+Get the cursor onto a *use* of `windowDays` inside `cancel` first —
+searching for `windowDays *` puts you on one.
+--
+`gd` reads "goto declaration". From a use, it jumps back to where that
+name was first declared inside the current function.
+--
+`/windowDays \*` then `gd`. You land on the declaration in `cancel`.
+`f3` to the number, `a0` to make it thirty.
+
+@solution
+    /windowDays \*<Enter>  gd  f3 a 0 <Esc> :wq<Enter>
+
+`gd` is not clever. It finds the start of the current function, then
+searches forward for the first occurrence of the word, and it ignores
+matches inside comments and strings. That is enough to be right about
+local variables and parameters nearly all the time, and it costs two
+keystrokes with no index, no plugin and no server.
+
+`gD` does the same from the top of the file, which is what you want for
+something declared at module scope.
+
+Where they stop being enough is the moment the definition is in another
+file — and that is most of them. The next few lessons go after that,
+first with the file system, then with a tags file.
+
+One habit worth building now: when you want to know what something is,
+do not scroll. Put the cursor on the name and ask vim.
+
+@start order.provider.ts
+export class OrderProvider {
+  public async cancel(id: string) {
+    const windowDays = 3;
+    const order = await this.findOne(id);
+    const cutoff = Date.now() - windowDays * 86_400_000;
+
+    if (order.placedAt.getTime() < cutoff) {
+      return this.close(order, windowDays);
+    }
+
+    return this.refund(order);
+  }
+
+  public async expire(id: string) {
+    const windowDays = 90;
+    const order = await this.findOne(id);
+    const cutoff = Date.now() - windowDays * 86_400_000;
+
+    if (order.placedAt.getTime() < cutoff) {
+      return this.close(order, windowDays);
+    }
+
+    return order;
+  }
+
+  public async archive(id: string) {
+    const windowDays = 365;
+    const order = await this.findOne(id);
+    const cutoff = Date.now() - windowDays * 86_400_000;
+
+    return order.placedAt.getTime() < cutoff ? this.store(order) : order;
+  }
+}
+
+@expected order.provider.ts
+export class OrderProvider {
+  public async cancel(id: string) {
+    const windowDays = 30;
+    const order = await this.findOne(id);
+    const cutoff = Date.now() - windowDays * 86_400_000;
+
+    if (order.placedAt.getTime() < cutoff) {
+      return this.close(order, windowDays);
+    }
+
+    return this.refund(order);
+  }
+
+  public async expire(id: string) {
+    const windowDays = 90;
+    const order = await this.findOne(id);
+    const cutoff = Date.now() - windowDays * 86_400_000;
+
+    if (order.placedAt.getTime() < cutoff) {
+      return this.close(order, windowDays);
+    }
+
+    return order;
+  }
+
+  public async archive(id: string) {
+    const windowDays = 365;
+    const order = await this.findOne(id);
+    const cutoff = Date.now() - windowDays * 86_400_000;
+
+    return order.placedAt.getTime() < cutoff ? this.store(order) : order;
+  }
+}

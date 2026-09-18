@@ -1,0 +1,70 @@
+@meta
+id: 01-01
+title: The editor that types back
+chapter: 01
+type: lesson
+skills: insert-i, esc, cmdline, mode-awareness
+par: 16
+minutes: 3
+vscode: clicking in the file and typing
+open: standup.md
+
+@brief
+Open standup.md and you are in NORMAL mode. Nothing you type will appear.
+That is not a fault. In normal mode every letter on the keyboard is a
+command, which is why vim can do so much with so few keys. You type text
+only after you have asked to.
+
+The title line is missing its first word. It should read:
+
+    Daily notes for Tuesday standup
+
+Add the missing word, get back out of insert mode, and save.
+
+The cursor already starts exactly where the word goes, so you do not need
+to move at all yet.
+
+@keys
+| `i` | insert — start typing to the left of the cursor |
+| `Esc` | leave insert mode, back to normal mode |
+| `:w` | write (save) |
+| `:q` | quit |
+| `:wq` | both, the one you will type a thousand times |
+
+@hints
+Press `i` first. The bottom of the screen will say `-- INSERT --`. Now
+your typing goes into the file.
+--
+When the word is typed, press `Esc`. The `-- INSERT --` marker disappears
+and you are back in normal mode.
+--
+From normal mode, type `:wq` and press Enter. The colon moves you to the
+command line at the bottom; `w` writes, `q` quits.
+
+@solution
+    i Daily <Esc> :wq<Enter>
+
+Sixteen keystrokes, twelve of them the word itself.
+
+The thing to take from this is the shape, not the keys. You *entered* a
+mode, did one small job, and *left* it. Beginners coming from VS Code tend
+to press `i` once and stay in insert mode all day, using arrow keys to get
+around. That works, and it throws away every advantage vim has.
+
+Normal mode is home. Insert mode is somewhere you visit to type a few
+words, then leave. If you are ever lost or confused, `Esc` twice puts you
+back on solid ground, and `u` undoes whatever you just did.
+
+@start standup.md
+notes for Tuesday standup
+
+Yesterday: shipped the checkout fix
+Today: reviewing the payments PR
+Blocked: nothing
+
+@expected standup.md
+Daily notes for Tuesday standup
+
+Yesterday: shipped the checkout fix
+Today: reviewing the payments PR
+Blocked: nothing

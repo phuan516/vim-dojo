@@ -1,0 +1,134 @@
+@meta
+id: 15-16
+title: The whole edit, per line
+chapter: 15
+type: lesson
+skills: global-normal
+par: 58
+minutes: 8
+vscode: a regex replace with two capture groups, if you can get it right first time
+open: legacy.worker.ts
+
+@brief
+The last CommonJS file in the service is being moved to ES modules.
+Every `const x = require('y');` at the top of `legacy.worker.ts` becomes
+`import x from 'y';`. Seven of them, including the one that destructures
+`{ inject }`. The rest of the file, which already uses `import` for the
+newer modules, does not change.
+
+The edit on one line, by hand, goes: change `const` to `import`, change
+`=` to `from`, delete `require(` and the `)`. That is a sequence with an
+`Esc` in the middle of it, between one insert and the next. A `:normal`
+sequence can carry that `Esc`, but you cannot just press the key: on
+the command line, `Esc` cancels the command. You have to tell vim the
+next key is to be taken literally.
+
+Do the whole edit on every line with one `:g`.
+
+@keys
+| `Ctrl-V` then `Esc` | on the command line, insert a literal Escape (shows as `^[`) |
+| `:g/pattern/normal keys` | replay `keys` on every matching line |
+| `cw` | change to the end of the word |
+| `dt'` | delete up to, not including, the next quote |
+
+@hints
+Write out the normal-mode sequence you would type on one line, then
+notice where you would press `Esc` to finish an insert before moving
+on. Each of those becomes `Ctrl-V` `Esc`.
+--
+From the left edge: `cwimport`, `Esc`, `f=cwfrom`, `Esc`, then move onto
+`require` with `w`, `dt'` takes `require(` and `f)x` takes the bracket.
+The last step is not an insert, so no `Esc` is needed at the end.
+--
+`:g/require(/normal cwimport^[f=cwfrom^[wdt'f)x` where each `^[` is
+`Ctrl-V` followed by `Esc`.
+
+@solution
+    :g/require(/normal cwimport<C-v><Esc>f=cwfrom<C-v><Esc>wdt'f)x<Enter>  :wq<Enter>
+
+Fifty-one keystrokes for seven lines, and it reads exactly like what
+you would do by hand, because it is what you would do by hand.
+
+This is the top of the ladder for `:g//normal`. The sequence has two
+inserts, two motions, an operator with a `t` motion and a plain delete,
+and the only new thing is the way to get an `Esc` into it. `Ctrl-V`
+says "the next key is a character, not a command", which is the same
+`Ctrl-V` you met in chapter 3 for inserting literal characters in insert
+mode. It works on the command line too.
+
+You could do this with a substitute and two groups:
+
+    :g/require(/s/const \(.*\) = require(\(.*\))/import \1 from \2/
+
+It is shorter. It is also the kind of pattern you get wrong once, fix,
+and get wrong again, while the `:normal` version is a transcript of
+your own hands. Choose the substitute when the change is a textual
+rearrangement you can see in one line. Choose `:normal` when you would
+describe the change as a series of moves.
+
+There is one more tool for this shape, and chapter 21 owns it: record
+the keystrokes once as a macro and replay it. The trade-off, when you
+get there, will be this. `:g` runs on every line a pattern can select,
+without you touching any of them, and it is the right choice whenever
+that describes the job. A macro wins when the lines cannot be named by
+a pattern, when each repeat needs to move to the next place itself, or
+when you want to watch the first run before trusting it. Both are the
+same idea, a sequence replayed, driven by different engines.
+
+@start legacy.worker.ts
+const { inject } = require('tsyringe');
+const amqp = require('amqplib');
+const config = require('../configuration/config');
+const logger = require('../configuration/logger');
+const { OrderRepository } = require('../domain/order/order.repository');
+const { PaymentService } = require('../infrastructure/services/payment.service');
+const { exception } = require('../configuration/errors');
+import { OrderProvider } from '../domain/order/order.provider';
+import { RefundConsumer } from '../domain/refund/refund.consumer';
+
+export async function start() {
+  const connection = await amqp.connect(config.rabbitUrl);
+  const channel = await connection.createChannel();
+
+  await channel.assertQueue('orders.cancelled');
+  logger.info('legacy worker listening', { queue: 'orders.cancelled' });
+
+  channel.consume('orders.cancelled', async (message) => {
+    if (!message) {
+      throw exception('EMPTY_MESSAGE');
+    }
+
+    const consumer = new RefundConsumer(new OrderProvider(new OrderRepository(), new PaymentService()));
+    await consumer.handle(JSON.parse(message.content.toString()));
+    channel.ack(message);
+  });
+}
+
+@expected legacy.worker.ts
+import { inject } from 'tsyringe';
+import amqp from 'amqplib';
+import config from '../configuration/config';
+import logger from '../configuration/logger';
+import { OrderRepository } from '../domain/order/order.repository';
+import { PaymentService } from '../infrastructure/services/payment.service';
+import { exception } from '../configuration/errors';
+import { OrderProvider } from '../domain/order/order.provider';
+import { RefundConsumer } from '../domain/refund/refund.consumer';
+
+export async function start() {
+  const connection = await amqp.connect(config.rabbitUrl);
+  const channel = await connection.createChannel();
+
+  await channel.assertQueue('orders.cancelled');
+  logger.info('legacy worker listening', { queue: 'orders.cancelled' });
+
+  channel.consume('orders.cancelled', async (message) => {
+    if (!message) {
+      throw exception('EMPTY_MESSAGE');
+    }
+
+    const consumer = new RefundConsumer(new OrderProvider(new OrderRepository(), new PaymentService()));
+    await consumer.handle(JSON.parse(message.content.toString()));
+    channel.ack(message);
+  });
+}

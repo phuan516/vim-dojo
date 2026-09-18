@@ -1,0 +1,111 @@
+@meta
+id: 18-03
+title: Drill — Tab down the tree
+chapter: 18
+type: drill
+skills: edit-file, wildmenu
+par: 40
+minutes: 5
+reps: 8
+vscode: Ctrl+P, "cusent", Enter
+vimrc: set wildmenu wildmode=longest:full,full
+open: README.md
+
+@brief
+Eight times: from the README, open the customer entity at
+`src/domain/customer/customer.entity.ts` using one letter and one Tab per
+level, fix `emial` to `email`, save, quit.
+
+The last level is the interesting one. `c` Tab gives you `customer.` and
+stops, because three files start that way. One more letter and one more
+Tab finishes it.
+
+@keys
+| `Tab` | complete as far as is unambiguous |
+| `:e` | edit |
+
+@hints
+`:e s<Tab>d<Tab>c<Tab>` gets you to `src/domain/customer/`. Then
+`c<Tab>` fills in `customer.` and waits.
+--
+`e<Tab>` picks `customer.entity.ts` from the three. `/emial`, `ciw`,
+`email`, done.
+
+@solution
+    :e s<Tab>d<Tab>c<Tab>c<Tab>e<Tab><Enter>
+    /emial<Enter> ciwemail <Esc> :wq<Enter>
+
+The rhythm is letter, Tab, letter, Tab. When Tab stops short, look at
+the bar, add the letter that settles it, Tab again. By the eighth rep
+you should not be reading the bar at all for the directories, only for
+the file.
+
+@start README.md
+# Orders service
+
+    src/domain/<name>/<name>.entity.ts       the shape of a record
+    src/domain/<name>/<name>.repository.ts   how it is loaded and saved
+    src/domain/<name>/<name>.provider.ts     the business rules
+
+@start src/domain/customer/customer.entity.ts
+export type Customer = {
+  id: string;
+  emial: string;
+  name: string;
+};
+
+@expected src/domain/customer/customer.entity.ts
+export type Customer = {
+  id: string;
+  email: string;
+  name: string;
+};
+
+@start src/domain/customer/customer.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { CustomerRepository } from './customer.repository';
+
+@injectable()
+export class CustomerProvider {
+  constructor(
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return customer;
+  }
+}
+
+@start src/domain/customer/customer.repository.ts
+import { injectable } from 'tsyringe';
+import { Customer as CustomerRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Customer } from './customer.entity';
+
+@injectable()
+export class CustomerRepository extends BaseRepository<CustomerRecord, Customer> {
+  public toEntity(record: CustomerRecord): Customer {
+    return {
+      id: record.id,
+      email: record.email,
+      name: record.name,
+    };
+  }
+}
+
+@start src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';

@@ -1,0 +1,90 @@
+@meta
+id: 10-12
+title: Which pair of brackets did you mean
+chapter: 10
+type: lesson
+skills: obj-paren, inner-vs-around
+par: 66
+minutes: 7
+vscode: count brackets with your eyes, select, discover you were one out
+open: refund-window.ts
+
+@brief
+Brackets nest, so "inside the brackets" is ambiguous, and vim resolves it
+the simplest way: the innermost pair that contains the cursor.
+
+When you meant one of the outer pairs, you say so with a count. `2i(` is
+the second pair out, `3i(` the third. The count is not how many brackets —
+it is how far out.
+
+This module was changed to take `elapsed` as a number of milliseconds and
+the two bodies were never updated. Both still compute the elapsed time
+themselves from an `order` that is no longer in scope, and both hard-code
+the day in milliseconds when there is a constant for it at the top of the
+file.
+
+Both `Math.floor` calls should end up as `Math.floor(elapsed / DAY_MS)`.
+Nothing else changes: the constant, the signatures and the `t()` call stay
+exactly as they are.
+
+@keys
+| `ci(` | the innermost pair containing the cursor |
+| `c2i(` | one pair further out |
+| `c2a(` | one pair further out, brackets included |
+| `f(` with a count | land on the bracket you want |
+
+@hints
+Your cursor will land inside the innermost brackets. That is not the pair
+you want to replace.
+--
+Text objects take counts. `2i(` means the second enclosing pair, counting
+outwards from the cursor.
+--
+`2f(` on the first line and `3f(` on the second put you in the innermost
+group. From there `c2i(` replaces the argument of `Math.floor`, brackets
+left alone.
+
+@solution
+    3j 2f( c2i( elapsed / DAY_MS <Esc>
+    4j 0 3f( c2i( elapsed / DAY_MS <Esc>
+    :wq<Enter>
+
+Fifty-seven keystrokes, thirty-two of them the replacement text typed
+twice.
+
+The two lines are the same edit at two different depths — on the second
+one there is a `t(` call wrapped around everything — and the only thing
+that changed was which bracket `f(` landed on. The object did the rest.
+That is the property to trust: you do not have to find the closing
+bracket, ever. Vim matches them for you and it does not miscount at
+eleven at night.
+
+The other half of the pair behaves the same way. `2a(` is the second
+enclosing pair *with* its brackets, which is what you reach for when a
+wrapper call has to go — although watch what it leaves behind. `d2a(`
+inside `Math.floor((a) / b)` removes `((a) / b)` and leaves the bare name
+`Math.floor`, because the name is not part of the bracket object. Removing
+a call cleanly usually means `d2a(` and then `daw` for the name, or
+`c2a(` and typing the replacement where it stood.
+
+@start refund-window.ts
+export const DAY_MS = 86_400_000;
+
+export function refundWindowDays(elapsed: number) {
+  return Math.floor((Date.now() - order.placedAt.getTime()) / 86_400_000);
+}
+
+export function formatWindow(elapsed: number) {
+  return t('refund.window', { days: Math.floor((Date.now() - elapsed) / 86_400_000) });
+}
+
+@expected refund-window.ts
+export const DAY_MS = 86_400_000;
+
+export function refundWindowDays(elapsed: number) {
+  return Math.floor(elapsed / DAY_MS);
+}
+
+export function formatWindow(elapsed: number) {
+  return t('refund.window', { days: Math.floor(elapsed / DAY_MS) });
+}

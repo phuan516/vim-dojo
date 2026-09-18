@@ -1,0 +1,95 @@
+@meta
+id: 27-11
+title: Why is my prose wrapping
+chapter: 27
+type: lesson
+skills: verbose-set, autocmd
+par: 118
+minutes: 7
+vscode: nothing — word wrap in VS Code is a view setting, not an editing one
+open: CHANGELOG.md
+vimrc: source config.vim|e
+
+@brief
+Add one line to the `Fixed` section of the changelog:
+
+    - Refunds outside the 30 day window now record a reason instead of failing.
+
+Type it and vim will break it in half somewhere around the word "record".
+Not wrapped on screen — actually broken, with a newline written into the
+file.
+
+That is `textwidth`, and something set it to 60 for this buffer. Find out
+what, turn it off for this buffer, and get the line in as one line.
+
+`config.vim` is in this directory and is not yours to change.
+
+@keys
+| `:verbose setlocal textwidth?` | the value, and who set it |
+| `:setlocal textwidth=0` | 0 means never break lines while typing |
+| `:setlocal fo-=t` | keep textwidth, stop it applying to plain text |
+| `:verbose autocmd FileType` | list FileType autocommands and their sources |
+
+@hints
+The line is being broken as you type it, which is a formatting option and
+not a display one. Ask vim who set `textwidth` before you guess a fix.
+--
+`:verbose setlocal textwidth?` names the file and the line. Then
+`:setlocal textwidth=0`.
+--
+`:setlocal textwidth=0` `Enter`, then `G`, `o`, type the line, `Esc`,
+`:wq` `Enter`.
+
+@solution
+    :setlocal textwidth=0<Enter>
+    Go- Refunds outside the 30 day window now record a reason instead of failing.<Esc>
+    :wq<Enter>
+
+A hundred and four keystrokes, seventy-five of them the sentence.
+
+Two things showed up here for the first time.
+
+**`:verbose` on a local option.** `:verbose set tw?` and
+`:verbose setlocal tw?` can give different answers, because `set` reports
+whichever value applies and `setlocal` reports the buffer's own. When you
+are chasing a per-file surprise, ask with `setlocal`.
+
+**The answer was an autocommand.** `config.vim` does not contain
+`set textwidth=60` anywhere. It contains this:
+
+    autocmd FileType markdown setlocal textwidth=60
+
+An autocommand is a standing instruction: *when this event happens to a
+buffer matching this pattern, run this command*. `FileType` fires the
+moment vim decides what a buffer is, which is after the file is read and
+after the shipped ftplugins have run — so an autocommand always wins
+against an ftplugin, whether or not you meant it to. That ordering is the
+single most common reason a setting "does not stick".
+
+`textwidth=0` means never break. If you want the wrapping for prose but
+not for the line you are typing right now, `:setlocal fo-=t` leaves the
+option alone and takes away its licence to act on ordinary text — and
+`gq` still reflows a paragraph on demand.
+
+Autocommands are the next two lessons. This one is about finding them.
+
+@start config.vim
+" team defaults, inherited from the old tech lead
+set ignorecase
+autocmd FileType markdown setlocal textwidth=60
+autocmd FileType gitcommit setlocal textwidth=72
+
+@start CHANGELOG.md
+# Changelog
+
+## 2026.09.2
+
+### Fixed
+
+@expected CHANGELOG.md
+# Changelog
+
+## 2026.09.2
+
+### Fixed
+- Refunds outside the 30 day window now record a reason instead of failing.

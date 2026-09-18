@@ -1,0 +1,300 @@
+@meta
+id: 15-18
+title: Scenario — the fixture sweep
+chapter: 15
+type: scenario
+skills: global-copy, global-normal, global-delete, sub-basic
+par: 118
+minutes: 14
+vscode: four tabs and an afternoon
+open: currency.spec.ts order.provider.ts sprint-notes.md errors.json
+
+@brief
+A ticket, not an exercise.
+
+    ORD-460  Euro pricing goes live Monday. Double the currency test
+             table, retire the deprecated provider methods, and archive
+             the sprint notes.
+
+Four files are open. Work through them in order, `:w` before each
+`:bn`, and finish with `:wqa`.
+
+  1. currency.spec.ts — the refund window must not depend on currency,
+     so every `'GBP'` row in the test table needs a twin directly below
+     it that is identical except for `'EUR'`. The `USD` rows are not
+     touched, and neither is the assertion further down that also
+     says `'GBP'`.
+
+  2. order.provider.ts — three methods are marked `@deprecated`. Each
+     goes, comment and all, leaving one blank line between what remains.
+
+  3. sprint-notes.md — the sprint is closing. Copy every open `- [ ]`
+     item to the bottom under `## Carry over`, in order, then delete
+     every ticked `- [x]` item from the daily sections.
+
+  4. errors.json — open for reference. Leave it alone.
+
+Nothing here needs a key you have not used in this chapter. The
+difficulty is that each file needs a different one of them, and the
+first file needs a pattern more careful than the obvious one.
+
+@keys
+| `:g/pattern/t.|s/old/new/` | copy each match below itself, then edit the copy |
+| `:g/pattern/normal dap` | delete a paragraph at every match |
+| `:g/pattern/t$` | collect a copy of every match at the end |
+| `:g/pattern/d` | delete every match |
+| `:w` `:bn` `:wqa` | write, next buffer, write all and quit |
+
+@hints
+In the spec, `GBP` on its own marks the assertion line too, and so does
+`'GBP'`, and so does `, 'GBP'`. Look at what the table rows have that
+the assertion does not, at the start of the line rather than the end.
+--
+The rows begin with an opening square bracket after the indentation.
+`^\s*\[.*GBP` says "a table row that mentions GBP" and nothing else
+in the file matches it.
+--
+The provider is lesson 10 exactly. The notes are lesson 13 followed by
+a `:g//d`; do the copy first, so the ticked items are gone from the
+sections but the open ones still exist to be copied.
+--
+`:g/^\s*\[.*GBP/t.|s/GBP/EUR/`, `:w`, `:bn`, `:g/@deprecated/normal dap`,
+`:w`, `:bn`, `:g/^- \[ \]/t$`, `:g/\[x\]/d`, `:wqa`.
+
+@solution
+**currency.spec.ts** — `:g/^\s*\[.*GBP/t.|s/GBP/EUR/`. The opening
+bracket at the start of the line is what a table row has and the
+`expect` line does not; that is the whole reason this file is first.
+`:w`, `:bn`.
+
+**order.provider.ts** — `:g/@deprecated/normal dap`. `:w`, `:bn`.
+
+**sprint-notes.md** — `:g/^- \[ \]/t$` to collect, then `:g/\[x\]/d` to
+sweep. `:wqa`.
+
+**errors.json** — nothing.
+
+Five commands across three files. If your count is far above par, the
+likely reason is that one of the files was done a line at a time; go
+back and find the pattern that names all of its lines.
+
+The pattern in the spec is the lesson inside the scenario. `'GBP'`
+appears on six lines and only five are rows; the sixth is an assertion
+whose string happens to contain it, and it is written so that the
+tempting refinements, the quotes, the comma, all still match it. Every
+`:g` starts with the question from lesson 2: what do the lines I want
+have that the lines I do not want lack? Here it was the bracket at the
+left edge. It is usually something that small, and finding it is faster
+than checking the result by eye afterwards.
+
+The order in the notes file matters, and it is a general habit: when
+one `:g` deletes and another copies, run the copy first. Deleting first
+can only lose you material.
+
+@start currency.spec.ts
+import { isRefundable } from './refund-window';
+import { withDefaults } from './order.defaults';
+
+describe('isRefundable', () => {
+  const cases = [
+    ['ord_4001', 'GBP', 4999, 3, true],
+    ['ord_4002', 'GBP', 12000, 29, true],
+    ['ord_4003', 'USD', 4999, 3, true],
+    ['ord_4004', 'GBP', 5, 30, true],
+    ['ord_4005', 'USD', 100, 31, false],
+    ['ord_4006', 'GBP', 100000, 31, false],
+    ['ord_4007', 'GBP', 0, 90, false],
+  ];
+
+  it.each(cases)('%s in %s, total %i, %i days old', (id, currency, total, ageInDays, expected) => {
+    expect(isRefundable({ id, currency, total, ageInDays })).toBe(expected);
+  });
+
+  it('defaults the currency to sterling', () => {
+    expect(withDefaults({ id: 'ord_4008', total: 250 }, 'GBP').currency).toBe('GBP');
+  });
+});
+
+@expected currency.spec.ts
+import { isRefundable } from './refund-window';
+import { withDefaults } from './order.defaults';
+
+describe('isRefundable', () => {
+  const cases = [
+    ['ord_4001', 'GBP', 4999, 3, true],
+    ['ord_4001', 'EUR', 4999, 3, true],
+    ['ord_4002', 'GBP', 12000, 29, true],
+    ['ord_4002', 'EUR', 12000, 29, true],
+    ['ord_4003', 'USD', 4999, 3, true],
+    ['ord_4004', 'GBP', 5, 30, true],
+    ['ord_4004', 'EUR', 5, 30, true],
+    ['ord_4005', 'USD', 100, 31, false],
+    ['ord_4006', 'GBP', 100000, 31, false],
+    ['ord_4006', 'EUR', 100000, 31, false],
+    ['ord_4007', 'GBP', 0, 90, false],
+    ['ord_4007', 'EUR', 0, 90, false],
+  ];
+
+  it.each(cases)('%s in %s, total %i, %i days old', (id, currency, total, ageInDays, expected) => {
+    expect(isRefundable({ id, currency, total, ageInDays })).toBe(expected);
+  });
+
+  it('defaults the currency to sterling', () => {
+    expect(withDefaults({ id: 'ord_4008', total: 250 }, 'GBP').currency).toBe('GBP');
+  });
+});
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  /** @deprecated use findOne */
+  public async get(id: string) {
+    return this.orderRepository.findOne({ where: { id } });
+  }
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  /** @deprecated totals are stored in pence now */
+  public async totalInPounds(id: string) {
+    return (await this.findOne(id)).total / 100;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  /** @deprecated the shipping consumer owns this transition */
+  public async markShipped(id: string) {
+    return this.orderRepository.update({ where: { id }, values: { status: 'SHIPPED' } });
+  }
+
+  public async findByCustomer(customerId: string) {
+    return this.orderRepository.findByCustomer({ customerId });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async findByCustomer(customerId: string) {
+    return this.orderRepository.findByCustomer({ customerId });
+  }
+}
+
+@start sprint-notes.md
+# Sprint 42 notes
+
+## Monday
+- [x] seed the EUR price list
+- [ ] confirm rounding rules with finance
+- [x] review the currency PR
+
+## Tuesday
+- [ ] migrate the totals column to pence
+- [x] delete the legacy refund path
+- [ ] update the API docs for currency
+
+## Wednesday
+- [x] pair with Ben on the formatter
+- [ ] load test the gateway with EUR captures
+
+## Thursday
+- [ ] write the runbook for Monday
+- [x] demo to support
+
+## Carry over
+
+@expected sprint-notes.md
+# Sprint 42 notes
+
+## Monday
+- [ ] confirm rounding rules with finance
+
+## Tuesday
+- [ ] migrate the totals column to pence
+- [ ] update the API docs for currency
+
+## Wednesday
+- [ ] load test the gateway with EUR captures
+
+## Thursday
+- [ ] write the runbook for Monday
+
+## Carry over
+- [ ] confirm rounding rules with finance
+- [ ] migrate the totals column to pence
+- [ ] update the API docs for currency
+- [ ] load test the gateway with EUR captures
+- [ ] write the runbook for Monday
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CURRENCY_UNSUPPORTED": { "statusCode": 400, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}

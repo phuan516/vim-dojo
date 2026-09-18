@@ -1,0 +1,87 @@
+@meta
+id: 04-13
+title: Moving by screen row with gj
+chapter: 04
+type: lesson
+skills: gj-gk, hjkl, count-prefix
+par: 26
+minutes: 6
+vscode: click in the middle of the paragraph
+open: cancellations.md
+
+@brief
+Last lesson: `j` moves a line, not a row, and in wrapped prose that means
+it jumps over whole paragraphs. Sometimes a whole paragraph is exactly
+what you want to skip. Sometimes you want to get *into* one.
+
+`gj` moves down one screen row. `gk` moves up one. Inside a wrapped
+paragraph they crawl down the folded rows the way an arrow key would in
+any other editor; on a line that is not wrapped they behave exactly like
+`j` and `k`, so nothing is lost by using them in prose.
+
+The long paragraph in this file holds two sentences. House style is one
+sentence per line. Split it: the second sentence starts at `Refunds are
+issued`, and that word `Refunds` should begin a new line. Leave the rest
+of the file alone.
+
+On an eighty-column terminal that sentence starts partway along the third
+row of the paragraph. There is no sensible count of characters to get you
+there — the only sane route is down the rows and then a nudge sideways.
+
+@keys
+| `gj` | down one screen row |
+| `gk` | up one screen row |
+| `2gj` | down two screen rows |
+| `i` `Enter` `Esc` | break the line at the cursor |
+
+@hints
+Get onto the paragraph with `j` first — it is one line, so one jump gets
+you to the start of the whole thing.
+--
+Now use `gj` to walk down the folded rows until you can see `Refunds` on
+the row the cursor is on, and `l` or `h` until the cursor sits on the
+capital `R` itself.
+--
+With the cursor on the `R`, press `i` to insert before it, press Enter,
+then `Esc`. The line breaks where the cursor was.
+
+@solution
+    4j 2gj <a few l> i <Enter> <Esc> :wq<Enter>
+
+Around twenty keystrokes, most of them the sideways nudge.
+
+Three things this lesson is really about.
+
+`gj` and `gk` exist because the file and the screen disagree, and vim
+lets you say which one you meant. Almost every `g`-prefixed key in vim is
+that kind of variant: the same idea, measured differently.
+
+Second: this is one of the few places where you are allowed to move by
+feel rather than by count. The count for a sideways move here would be
+something like 190, and nobody works that out. Getting close and nudging
+is fine, and chapters 5, 6 and 12 will replace the nudging with `w`, `fR`
+and a search for the word itself.
+
+Third: many people map `j` to `gj` in their config so that wrapped lines
+just work. That is a reasonable thing to want and a bad thing to do early
+— you will sit at someone else's machine, and counts read off the margin
+stop matching what the cursor does. Learn both keys, keep them separate.
+
+@start cancellations.md
+# Cancellations
+
+Support agents may cancel on the customer's behalf.
+
+Cancelling an order before it ships releases the reserved stock immediately and clears the authorisation on the card, which can take a further two days to fall off the customer's statement. Refunds are issued to the original payment method and never as account credit, unless the order is older than ninety days and the provider has closed the transaction.
+
+Escalate anything else to the payments on-call rota.
+
+@expected cancellations.md
+# Cancellations
+
+Support agents may cancel on the customer's behalf.
+
+Cancelling an order before it ships releases the reserved stock immediately and clears the authorisation on the card, which can take a further two days to fall off the customer's statement.
+Refunds are issued to the original payment method and never as account credit, unless the order is older than ninety days and the provider has closed the transaction.
+
+Escalate anything else to the payments on-call rota.

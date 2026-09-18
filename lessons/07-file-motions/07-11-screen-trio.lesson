@@ -1,0 +1,103 @@
+@meta
+id: 07-11
+title: Top, middle and bottom of the screen
+chapter: 07
+type: lesson
+skills: screen-HML, find-f, line-end
+par: 43
+minutes: 5
+vscode: three clicks, or three careful drags of the cursor
+open: order.entity.ts
+
+@brief
+Thirteen lines. The whole file is on the screen in front of you, which is
+the case that the last few lessons have not covered: no jumping, no
+scrolling, everything already visible, and three edits to make.
+
+  1. The first line is missing its `export`. It should read
+     `export type Order = {`.
+
+  2. The seventh line, `currency`, is optional on legacy orders:
+     `currency?: string;`.
+
+  3. The last line needs one more member on the union, at the end and
+     before the semicolon: `| 'REFUNDED'`.
+
+The edits are at the top, the middle and the bottom of what you can see.
+That is not a coincidence; it is the lesson.
+
+@keys
+| `H` | the highest line on the screen |
+| `M` | the middle line on the screen |
+| `L` | the lowest line on the screen |
+| `I` | insert at the first non-blank |
+| `f:` | forward to the colon |
+| `$` | end of the line |
+
+@hints
+There are three motions that move by where something is on your screen
+rather than by where it is in the file. They are the first letters of high,
+middle and low.
+--
+`H`, `M` and `L`. When a file is shorter than the window — as this one is —
+they are the first line, the middle line and the last line of the file.
+When it is longer, they are the first, middle and last lines you can
+currently see, which is a different thing and the whole point of them.
+--
+`H` `I` `export ` `Esc` does the first. `M` `f:` `i` `?` `Esc` does the
+second. `L` `$` `i` puts you just before the final semicolon for the third.
+
+@solution
+    H I export  <Esc>
+    M f : i ? <Esc>
+    L $ i  | 'REFUNDED' <Esc>
+    :wq<Enter>
+
+Thirty-seven keystrokes, and none of them was a line number.
+
+`H`, `M` and `L` are the answer to a question the other motions cannot
+answer: "that thing, there, where I am already looking." Your eye has
+already found the line. You do not know its number, you do not know how far
+down it is, and working either of those out costs more than the jump is
+worth.
+
+They take counts, and the counts read oddly at first: `3H` is the third line
+from the top of the screen and `3L` is the third from the bottom. So the
+full set is a little grid — anywhere in the top few lines, anywhere in the
+bottom few, and the middle.
+
+The habit to build is noticing which question you are answering. "Line 74"
+is `74G`. "The next block" is `}`. "That line I can see near the bottom" is
+`L` or `3L`. Reaching for the wrong family is what makes people feel that
+vim is slow: it is not that the motion is missing, it is that they are
+asking with the wrong one.
+
+@start order.entity.ts
+type Order = {
+  id: string;
+  customerId: string;
+  reference: string;
+  status: OrderStatus;
+  amount: number;
+  currency: string;
+  placedAt: Date;
+  cancelledAt: Date;
+  cancellationReason: string;
+};
+
+export type OrderStatus = 'PENDING' | 'COMPLETED' | 'CANCELLED';
+
+@expected order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  reference: string;
+  status: OrderStatus;
+  amount: number;
+  currency?: string;
+  placedAt: Date;
+  cancelledAt: Date;
+  cancellationReason: string;
+};
+
+export type OrderStatus = 'PENDING' | 'COMPLETED' | 'CANCELLED' | 'REFUNDED';

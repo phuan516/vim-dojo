@@ -1,0 +1,61 @@
+@meta
+id: 06-08
+title: Drill — f to the colon
+chapter: 06
+type: drill
+skills: find-f, line-start
+par: 56
+minutes: 5
+reps: 8
+vscode: four double-clicks and four question marks, eight times
+open: order.record.ts
+
+@brief
+Four fields, all of them becoming optional. Each line needs a `?` inserted
+immediately before its colon. Eight passes over the file.
+
+The rep is `^` to the start of the code, `f:` onto the colon, `i?` `Esc`,
+`j` down.
+
+@keys
+| `^` | first non-blank |
+| `f:` | forward to the colon |
+| `i` | insert before the cursor |
+| `j` | down a line |
+
+@hints
+Press `^` at the start of every line. Without it you are counting from
+wherever the last insert dropped you, and on a shorter line there may be no
+colon left ahead of you.
+--
+Do not read the field names. `f:` does not care what they are called, and
+neither should you.
+
+@solution
+    four times: j ^ f : i ? <Esc>
+
+Six keys a field, and none of them depend on how long the field name is.
+That independence is the thing to notice — the same rep works on `id` and on
+`cancellationReason` at identical cost, which is why `f` scales to real code
+where names are long and columns are meaningless.
+
+The `^` at the head of each line is a habit worth keeping for life. Motions
+like `f` measure from the cursor, so a rep that does not start from a known
+position is a rep that eventually lands somewhere surprising. Start from an
+anchor, travel by name, insert, move on.
+
+@start order.record.ts
+export type OrderRecord = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  cancellationReason: string;
+};
+
+@expected order.record.ts
+export type OrderRecord = {
+  id?: string;
+  customerId?: string;
+  status?: OrderStatus;
+  cancellationReason?: string;
+};

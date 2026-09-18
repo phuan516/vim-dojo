@@ -1,0 +1,214 @@
+@meta
+id: 32-19
+title: Review — walk the list backwards
+chapter: 32
+type: scenario
+skills: code-review, speed-under-pressure, quickfix-nav, make-errorformat
+par: 110
+minutes: 10
+vscode: five comments in a browser tab, five hunts through two files
+open: review.txt
+vimrc: set hidden errorformat=%f:%l:\ %m
+
+@brief
+    !344  Five comments. Your reviewer exports them as `file:line:
+          message`, because she got tired of people missing the
+          fourth one.
+
+That file is open. It is a list of positions in files, which is exactly
+what the quickfix list is, so do not read it and go hunting — load it and
+let it take you there.
+
+    src/domain/order/order.provider.ts:14  'PENDING' is now 'AWAITING_PAYMENT'
+    src/domain/order/order.provider.ts:18  leftover console.log, the line goes
+    src/domain/order/order.provider.ts:25  magic number, APPROVAL_LIMIT exists
+    src/domain/order/order.resolver.ts:2   exception is not used in this file
+    src/domain/order/order.resolver.ts:17  dead method, it and the gap above it
+
+Neither file is open. You do not need to open either of them by hand.
+
+**The budget is 110 keystrokes.** It assumes you never type a file
+name and never type a line number.
+
+Do not change review.txt.
+
+@keys
+| `:cfile review.txt` | load a `file:line: message` list as the quickfix list |
+| `:clast` `:cp` | the last entry, then the one before |
+| `:cn` `:cc` | the next entry, the current one |
+| `ciw` `ci'` | change the word, change inside the quotes |
+
+@hints
+Two of the five comments delete a line. Deleting a line moves everything
+below it, and three of the entries are below. Think about what that does
+to line numbers you have not visited yet.
+--
+It does nothing at all to them if you visit them first. Start at the end
+of the list and walk up: every entry you have already dealt with is below
+the one you are on, so nothing you have done can have moved it.
+--
+`:cfile review.txt`, `:clast`, then `:cp` four times, doing the edit at
+each stop. `k4dd` for the dead method, `dd` for the import, `f5` `ciw`
+for the magic number, `dd` for the log, `f'` `ci'` for the status.
+
+@solution
+`:cfile review.txt` `:clast` `k4dd` `:cp` `dd` `:cp` `f5ciwAPPROVAL_LIMIT`
+`Esc` `:cp` `dd` `:cp` `f'ci'AWAITING_PAYMENT` `Esc` `:wqa`.
+96 keystrokes, and you never typed a path.
+
+**A review is a quickfix list.** Anything shaped like `file:line: message`
+loads with `:cfile`, and from that moment the review is navigation rather
+than searching. Most review tools will export this, and `git grep -n`,
+`tsc`, `eslint --format compact` and `jest` all produce it natively. The
+habit worth forming is noticing the shape: the moment you find yourself
+reading a list of file names and line numbers off a screen and typing
+them back in, there is a `:cfile`, a `:grep` or a `:make` that would have
+done it.
+
+**Backwards is not a trick, it is the general rule.** Any time you apply
+a list of positional edits to a file, work from the bottom up. Line
+numbers below your cursor move when you insert or delete; line numbers
+above it never do. `:clast` and `:cp` cost the same as `:cfirst` and
+`:cn`, and one of them is correct regardless of what your edits do to the
+line count. Batch tools like `:cdo` sidestep this by re-resolving each
+entry as they go — but the moment you are steering by hand, go backwards.
+
+**The errorformat.** Vim's default recognises `file:line:message`, and
+this lesson sets it explicitly anyway so the list parses the same on any
+machine. If `:cfile` gives you a list of entries with no file attached,
+that is almost always the errorformat and almost never the file: check it
+with `:set errorformat?` before you start editing the list by hand.
+
+The comment you should look hardest at is the third one. "Magic number,
+`APPROVAL_LIMIT` exists" is only correct if the constant means the same
+thing here as it does where it was defined — five lines up in this case,
+so it does. When the constant lives in another module and a reviewer
+suggests reusing it, go and read it first. Two things being 50000 today
+is not the same as two things being the same number.
+
+@start review.txt
+src/domain/order/order.provider.ts:14: 'PENDING' was renamed to 'AWAITING_PAYMENT' in !301
+src/domain/order/order.provider.ts:18: leftover console.log, the whole line goes
+src/domain/order/order.provider.ts:25: magic number, APPROVAL_LIMIT is five lines up
+src/domain/order/order.resolver.ts:2: exception is not used in this file
+src/domain/order/order.resolver.ts:17: dead since !298, the method and the blank line above it
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+const APPROVAL_LIMIT = 50000;
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  public async place(id: string) {
+    return this.orderRepository.update({ where: { id }, values: { status: 'PENDING' } });
+  }
+
+  public async cancel(id: string) {
+    console.log('cancelling', id);
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    if (order.total > 50000) {
+      throw exception('REFUND_NEEDS_APPROVAL');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+const APPROVAL_LIMIT = 50000;
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  public async place(id: string) {
+    return this.orderRepository.update({ where: { id }, values: { status: 'AWAITING_PAYMENT' } });
+  }
+
+  public async cancel(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    if (order.total > APPROVAL_LIMIT) {
+      throw exception('REFUND_NEEDS_APPROVAL');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async placeOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.place(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+
+  public async legacyCancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@expected src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async placeOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.place(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@start src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+};
+
+export type OrderStatus = 'AWAITING_PAYMENT' | 'SHIPPED' | 'CANCELLED';

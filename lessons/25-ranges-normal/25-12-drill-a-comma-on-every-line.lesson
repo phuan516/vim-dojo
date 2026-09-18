@@ -1,0 +1,58 @@
+@meta
+id: 25-12
+title: Drill — a comma on every line
+chapter: 25
+type: drill
+skills: ex-normal
+par: 21
+minutes: 4
+reps: 8
+vscode: Alt-click six line ends, type one comma
+open: skus.ts
+
+@brief
+Eight times: the six sku strings on lines 2 to 7 have lost their trailing
+commas. Put them back with one command. The brackets on lines 1 and 8
+must not get one.
+
+@keys
+| `:2,7normal A,` | press `A,` on lines 2 to 7 |
+
+@hints
+Range first, then `normal`, then the two keys you would have pressed on
+one line.
+--
+`:2,7normal A,` Enter, `:wq`.
+
+@solution
+    :2,7normal A,<Enter>  :wq<Enter>
+
+Eighteen keystrokes. The habit being drilled is the order you build the
+command in: decide the keys for one line, then put a range in front of
+them. People who learn it the other way round end up staring at a half
+typed `:2,7` wondering what they were going to do with it.
+
+Numeric ranges are fine when the block is on screen and the gutter is
+right there. Everything you learned in the first half of this chapter
+still applies — `:/\[/+1,/]/-1normal A,` is the version that does not
+care what line the array starts on.
+
+@start skus.ts
+export const skus = [
+  'sku_101'
+  'sku_102'
+  'sku_103'
+  'sku_104'
+  'sku_105'
+  'sku_106'
+];
+
+@expected skus.ts
+export const skus = [
+  'sku_101',
+  'sku_102',
+  'sku_103',
+  'sku_104',
+  'sku_105',
+  'sku_106',
+];

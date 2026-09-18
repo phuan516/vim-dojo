@@ -1,0 +1,183 @@
+@meta
+id: 09-19
+title: Scenario — legal say stop the email
+chapter: 09
+type: scenario
+skills: op-motion, op-linewise, op-counts, op-to-mark
+par: 44
+minutes: 10
+vscode: two tabs, four careful selections, one file you must not save
+open: customer.provider.ts customer.entity.ts notification.service.ts
+
+@brief
+A ticket, not an exercise.
+
+    CUS-77   We are sending a marketing email every time a customer
+             edits their own profile. Legal want it gone today. While
+             you are in there, the CSV exporter went with the admin
+             tool last sprint and the notification gateway no longer
+             takes an email address.
+
+Three files, already open as three buffers. `:bn` and `:bp` move between
+them, `:ls` lists them.
+
+  1. customer.provider.ts
+
+     - The `sendMarketing` call in `update` goes. Nothing replaces it.
+     - The `notify` call must stop passing `customer.email`. The first
+       two arguments and the closing bracket stay exactly as they are.
+     - `exportToCsv` is dead with the admin tool. The method goes, and
+       one of the blank lines around it, leaving the single blank line
+       that separates every other method in the file.
+
+  2. customer.entity.ts — `lastExportedAt` was only ever written by the
+     exporter. Remove it. `marketingOptIn` stays; other services read it.
+
+  3. notification.service.ts — nothing to do. It is open so you can check
+     that `notify` really does take two arguments now. Change it and the
+     check fails.
+
+@keys
+| `dt)` | delete up to, not including, the closing bracket |
+| `d}` | delete from here to the next blank line |
+| `2f,` | onto the second comma on this line |
+| `:bn` `:bp` `:ls` | next buffer, previous buffer, list them |
+| `:w` | write — vim will not leave a modified buffer without it |
+| `:wqa` | write every buffer and quit |
+
+@hints
+Work bottom-up within the provider. Every line you delete moves the lines
+below it, so if you start at the top you will be re-reading line numbers
+after every edit.
+--
+None of the four edits wants a count. The argument is bounded by a
+bracket, the stale call is one line, the dead method is a paragraph, and
+the entity field is one line.
+--
+In the provider: line 29 is the `notify` call, `2f,` then `dt)`. Line 28
+is the marketing call, `dd`. Line 20 is the blank line above
+`exportToCsv`, `d}`. Then `:w`, `:bn`, and the entity field is `5G dd`.
+
+@solution
+A reasonable route, buffer by buffer.
+
+**customer.provider.ts** — bottom-up:
+
+    29G 2f, dt)     drop the third argument, keep the bracket
+    28G dd          drop the marketing call
+    20G d}          drop the dead method and one blank line
+    :w
+
+**customer.entity.ts** — `:bn`, then `5G dd`, then `:wqa` to write
+everything and leave.
+
+**notification.service.ts** — do not touch it.
+
+Around thirty-five keystrokes for a four-part change across two files,
+and not one of them was a selection.
+
+Three things in here are worth taking away.
+
+The provider's three edits are three different extents — a bracket, a
+line, a paragraph — and each one has a motion that describes it exactly.
+The alternative, counting, would have worked and would have been wrong
+the next time somebody adds a line to `update`.
+
+Bottom-up is not fussiness. `d}` on line 20 shifts everything below it by
+four lines; do that first and the `notify` call is no longer on line 29,
+and you will not notice until you have deleted the wrong thing.
+
+And the decoy file is the real test. Vim makes it very easy to wander
+into a buffer, press something, and write it without meaning to. `:wqa`
+writes all three files here, which is fine precisely because you left the
+third one alone. If you are not sure whether you touched it, `:ls` marks
+modified buffers with a `+`.
+
+@start customer.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { CustomerRepository } from './customer.repository';
+import { NotificationService } from '../../infrastructure/services/notification.service';
+
+@injectable()
+export class CustomerProvider {
+  constructor(
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+    @inject(NotificationService) protected notificationService: NotificationService,
+  ) {}
+
+  public async findOne(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+    return customer;
+  }
+
+  public async exportToCsv(id: string) {
+    const customer = await this.findOne(id);
+    return [customer.id, customer.email, customer.name].join(',');
+  }
+
+  public async update(id: string, values: Partial<Customer>) {
+    const customer = await this.findOne(id);
+    await this.notificationService.sendMarketing(customer.email, 'PROFILE_UPDATED');
+    await this.notificationService.notify(customer.id, 'PROFILE_UPDATED', customer.email);
+    return this.customerRepository.update({ where: { id }, values });
+  }
+}
+
+@expected customer.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { CustomerRepository } from './customer.repository';
+import { NotificationService } from '../../infrastructure/services/notification.service';
+
+@injectable()
+export class CustomerProvider {
+  constructor(
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+    @inject(NotificationService) protected notificationService: NotificationService,
+  ) {}
+
+  public async findOne(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+    return customer;
+  }
+
+  public async update(id: string, values: Partial<Customer>) {
+    const customer = await this.findOne(id);
+    await this.notificationService.notify(customer.id, 'PROFILE_UPDATED');
+    return this.customerRepository.update({ where: { id }, values });
+  }
+}
+
+@start customer.entity.ts
+export type Customer = {
+  id: string;
+  email: string;
+  name: string;
+  lastExportedAt?: Date;
+  marketingOptIn: boolean;
+};
+
+@expected customer.entity.ts
+export type Customer = {
+  id: string;
+  email: string;
+  name: string;
+  marketingOptIn: boolean;
+};
+
+@start notification.service.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class NotificationService {
+  public async notify(customerId: string, event: string) {
+    return this.transport.send(customerId, event);
+  }
+}

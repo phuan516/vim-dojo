@@ -1,0 +1,56 @@
+@meta
+id: 21-16
+title: Drill — paste, fix, yank back
+chapter: 21
+type: drill
+skills: macro-edit
+par: 32
+minutes: 4
+reps: 6
+vscode: no equivalent
+open: status-codes.ts
+vimrc: let @a="^f,s: \<Esc>A;\<Esc>j"
+
+@brief
+Register `a` holds a macro that turns `ORDER_NOT_FOUND,404` into
+`ORDER_NOT_FOUND: 404;`. The semicolon should be a comma. Paste the
+macro, fix the one character, yank it back, run it on all five lines.
+Six times, until the round trip is a reflex.
+
+@keys
+| `"ap` | macro into the file |
+| `0"ay$` | line back into the macro |
+| `r,` | replace the character under the cursor with a comma |
+
+@hints
+`Go<Esc>"ap` puts it on a fresh last line. `0f;r,` fixes it. `0"ay$`
+takes it back, `dd` cleans up.
+--
+After `"ap` the cursor is at the end of the pasted text, so start the
+fix with `0`. `f;` from the end of the line finds nothing.
+
+@solution
+    G o <Esc> "ap   0f; r,   0"ay$   dd   ggj   5@a   :wq<Enter>
+
+Twenty-eight keystrokes. Paste, fix, `0"ay$`, `dd`. The `0` before the
+yank and the `$` at its end are the two things worth drilling: one
+makes sure you take the whole macro, the other makes sure you do not
+take the newline.
+
+@start status-codes.ts
+export const statusCodes = {
+  ORDER_NOT_FOUND,404
+  ORDER_ALREADY_SHIPPED,409
+  CUSTOMER_NOT_FOUND,404
+  PAYMENT_DECLINED,402
+  REFUND_FAILED,502
+};
+
+@expected status-codes.ts
+export const statusCodes = {
+  ORDER_NOT_FOUND: 404,
+  ORDER_ALREADY_SHIPPED: 409,
+  CUSTOMER_NOT_FOUND: 404,
+  PAYMENT_DECLINED: 402,
+  REFUND_FAILED: 502,
+};

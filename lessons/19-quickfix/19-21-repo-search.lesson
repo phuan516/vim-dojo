@@ -1,0 +1,362 @@
+@meta
+id: 19-21
+title: Capstone — search the repo, fix every hit
+chapter: 19
+type: scenario
+skills: vimgrep, quickfix-nav, cdo
+par: 210
+minutes: 12
+vscode: Ctrl+Shift+F
+open: src/configuration/registry.ts
+
+@brief
+Ctrl+Shift+F gives you a list of matches across the project and you
+click each one. Vim's version is the QUICKFIX LIST: a search fills
+it, :cn walks it, and the file each result lives in opens as you go.
+
+    :vimgrep /PaymentService/ **/*.ts
+    :copen        see the list
+    :cn  :cp      next / previous result
+
+The payments integration moved to Stripe. Rename the class
+PaymentService to StripeService everywhere in src/ - the class
+itself, both import lines, the injected property, the constructor
+type, and the DI registration.
+
+The injected property is called paymentService. Framework rule: an
+injected dependency is named after its class, so it becomes
+stripeService. Rename its uses too.
+
+Do NOT rename the file. Do NOT touch anything in the errors JSON.
+
+@keys
+:vimgrep /pattern/ **/*.ts     search the repo, fill the quickfix list
+:vimgrep /\<Foo\>/ **/*.ts     whole word only
+:copen  :cclose                open / close the results window
+:cn  :cp                       next / previous result
+:cfirst  :clast                jump to the first / last one
+:cdo s/old/new/g | update      run a substitution on EVERY result
+                               and save each file  - the big gun
+
+In the :copen window, Enter opens the result under the cursor.
+
+If you install ripgrep later:
+    :set grepprg=rg\ --vimgrep
+    :grep Foo          same quickfix list, much faster on big repos
+
+@hints
+Start with :vimgrep /PaymentService/ **/*.ts then :copen to see how
+many places you have to touch. Count them before you start.
+--
+:cn moves to the next match and opens its file for you. You do not
+need to open anything by hand.
+--
+The one-command version, once you trust it:
+  :vimgrep /PaymentService/ **/*.ts
+  :cdo s/PaymentService/StripeService/g | update
+"update" writes the file only if it changed. Then repeat the pair for
+paymentService -> stripeService.
+--
+Careful with ordering: replacing paymentService first would also hit
+the capital-P class name? No - :s is case sensitive, so the two
+renames are independent. But do check the result with a fresh
+:vimgrep /[Pp]aymentService/ **/*.ts - it should come back empty.
+
+@solution
+:vimgrep /PaymentService/ **/*.ts
+:cdo s/PaymentService/StripeService/g | update
+
+:vimgrep /paymentService/ **/*.ts
+:cdo s/paymentService/stripeService/g | update
+
+:vimgrep /[Pp]aymentService/ **/*.ts     should report "no match"
+:qa
+
+The manual version is worth doing once so you believe it:
+:copen , then :cn / edit / :cn ... all the way down the list.
+
+:cdo is the single command that replaces the whole Ctrl+Shift+F
+"replace all in files" panel, and unlike that panel you can put any
+vim command after it, not just a substitution.
+
+@start src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@start src/configuration/registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderResolver } from '../domain/order/order.resolver';
+import { CustomerRepository } from '../domain/customer/customer.repository';
+import { CustomerProvider } from '../domain/customer/customer.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+import { EmailService } from '../infrastructure/services/email.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('CustomerRepository', { useClass: CustomerRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('PaymentService', { useClass: PaymentService });
+container.register('EmailService', { useClass: EmailService });
+container.register('OrderResolver', { useClass: OrderResolver });
+
+@start src/domain/customer/customer.entity.ts
+export type Customer = {
+  id: string;
+  email: string;
+  name: string;
+};
+
+@start src/domain/customer/customer.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { CustomerRepository } from './customer.repository';
+
+@injectable()
+export class CustomerProvider {
+  constructor(
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return customer;
+  }
+}
+
+@start src/domain/customer/customer.repository.ts
+import { injectable } from 'tsyringe';
+import { Customer as CustomerRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Customer } from './customer.entity';
+
+@injectable()
+export class CustomerRepository extends BaseRepository<CustomerRecord, Customer> {
+  public toEntity(record: CustomerRecord): Customer {
+    return {
+      id: record.id,
+      email: record.email,
+      name: record.name,
+    };
+  }
+}
+
+@start src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@start src/infrastructure/base.repository.ts
+export abstract class BaseRepository<TRecord, TEntity> {
+  protected prisma: any;
+
+  public async findOne(args: { where: object }) {
+    return null;
+  }
+
+  public async update(args: { where: object; values: object }) {
+    return null;
+  }
+
+  public abstract toEntity(record: TRecord): TEntity;
+}
+
+@start src/infrastructure/services/email.service.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class EmailService {
+  public async send(args: { to: string; template: string }) {
+    return this.http.post(`/send`, args);
+  }
+}
+
+@start src/infrastructure/services/payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string) {
+    const response = await this.http.post(`/refunds`, { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@expected src/configuration/registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderResolver } from '../domain/order/order.resolver';
+import { CustomerRepository } from '../domain/customer/customer.repository';
+import { CustomerProvider } from '../domain/customer/customer.provider';
+import { StripeService } from '../infrastructure/services/payment.service';
+import { EmailService } from '../infrastructure/services/email.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('CustomerRepository', { useClass: CustomerRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('StripeService', { useClass: StripeService });
+container.register('EmailService', { useClass: EmailService });
+container.register('OrderResolver', { useClass: OrderResolver });
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { StripeService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(StripeService) protected stripeService: StripeService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.stripeService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected src/infrastructure/services/payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class StripeService {
+  public async refund(orderId: string) {
+    const response = await this.http.post(`/refunds`, { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}

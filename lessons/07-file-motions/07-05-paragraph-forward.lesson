@@ -1,0 +1,285 @@
+@meta
+id: 07-05
+title: Fall down the file a block at a time
+chapter: 07
+type: lesson
+skills: paragraph-motion
+par: 88
+minutes: 7
+vscode: scroll, scroll, count the blocks with your finger on the screen
+open: seed.ts
+
+@brief
+Fifteen seed blocks, 104 lines, all the same shape. Three of them are for
+non-sterling customers and are missing a currency.
+
+Add a `currency` line directly under `amount` in three of the blocks:
+
+  * the fourth block, `ord_1045`, gets `currency: 'USD',`
+  * the ninth block, `ord_1050`, gets `currency: 'EUR',`
+  * the thirteenth block, `ord_1054`, gets `currency: 'SEK',`
+
+The other twelve blocks are correct and must be left exactly as they are.
+
+Counting to the thirteenth block with `j` means counting to line 85. There
+is a motion that counts blocks instead, and this file is nothing but
+blocks.
+
+@keys
+| `}` | forward to the next blank line |
+| `j` | down a line |
+| `o` | open a line below |
+
+@hints
+Vim calls a run of text with blank lines around it a paragraph. It does not
+care that this is TypeScript — a blank line is a blank line, and your code
+is already divided into paragraphs by the blank lines you put between the
+blocks.
+--
+`}` moves forward to the next blank line. Press it three times and you are
+at the gap after the third block, which is one `j` from the start of the
+fourth.
+--
+From a blank line, `4j` lands on the `amount` line of the block below it,
+and `o` opens the new line under it. Vim keeps the indent for you, so type
+`currency: 'USD',` with no leading spaces.
+
+@solution
+    } } } 4j o currency: 'USD', <Esc>
+    } } } } } 4j o currency: 'EUR', <Esc>
+    } } } } 4j o currency: 'SEK', <Esc>
+    :wq<Enter>
+
+Around eighty keystrokes, sixty of them the three lines of text.
+
+The idea is that vim already understands your file as a list of blocks,
+because you already write blank lines between things that belong together.
+Functions, test cases, config stanzas, log entries, paragraphs of prose,
+rows in a fixture file: all of them are paragraphs to vim, and `}` steps
+over one whole one per press regardless of how many lines it contains.
+
+That last part is what makes it better than a count of `j`. `5j` means "five
+lines", which is a fact about the current formatting and stops being true
+the moment someone adds a property. `}` means "the next thing", which stays
+true. Motions that describe structure survive edits; motions that describe
+distance do not.
+
+Notice also how cheaply the coarse and the fine mix: `}` for the long haul,
+`4j` for the last few lines. You do not need one motion that does the whole
+journey. You need a short one and a big one, and the habit of using the big
+one first.
+
+@start seed.ts
+await seedOrder({
+  id: 'ord_1042',
+  customerId: 'cus_88',
+  amount: 4999,
+  status: 'COMPLETED',
+});
+
+await seedOrder({
+  id: 'ord_1043',
+  customerId: 'cus_91',
+  amount: 1250,
+  status: 'COMPLETED',
+});
+
+await seedOrder({
+  id: 'ord_1044',
+  customerId: 'cus_88',
+  amount: 899,
+  status: 'CANCELLED',
+});
+
+await seedOrder({
+  id: 'ord_1045',
+  customerId: 'cus_92',
+  amount: 15750,
+  status: 'COMPLETED',
+});
+
+await seedOrder({
+  id: 'ord_1046',
+  customerId: 'cus_17',
+  amount: 2400,
+  status: 'PENDING',
+});
+
+await seedOrder({
+  id: 'ord_1047',
+  customerId: 'cus_91',
+  amount: 7300,
+  status: 'COMPLETED',
+});
+
+await seedOrder({
+  id: 'ord_1048',
+  customerId: 'cus_53',
+  amount: 640,
+  status: 'REFUNDED',
+});
+
+await seedOrder({
+  id: 'ord_1049',
+  customerId: 'cus_17',
+  amount: 11900,
+  status: 'COMPLETED',
+});
+
+await seedOrder({
+  id: 'ord_1050',
+  customerId: 'cus_88',
+  amount: 3150,
+  status: 'PENDING',
+});
+
+await seedOrder({
+  id: 'ord_1051',
+  customerId: 'cus_60',
+  amount: 980,
+  status: 'COMPLETED',
+});
+
+await seedOrder({
+  id: 'ord_1052',
+  customerId: 'cus_92',
+  amount: 22400,
+  status: 'COMPLETED',
+});
+
+await seedOrder({
+  id: 'ord_1053',
+  customerId: 'cus_53',
+  amount: 1475,
+  status: 'CANCELLED',
+});
+
+await seedOrder({
+  id: 'ord_1054',
+  customerId: 'cus_60',
+  amount: 5090,
+  status: 'PENDING',
+});
+
+await seedOrder({
+  id: 'ord_1055',
+  customerId: 'cus_17',
+  amount: 760,
+  status: 'REFUNDED',
+});
+
+await seedOrder({
+  id: 'ord_1056',
+  customerId: 'cus_91',
+  amount: 18300,
+  status: 'COMPLETED',
+});
+
+@expected seed.ts
+await seedOrder({
+  id: 'ord_1042',
+  customerId: 'cus_88',
+  amount: 4999,
+  status: 'COMPLETED',
+});
+
+await seedOrder({
+  id: 'ord_1043',
+  customerId: 'cus_91',
+  amount: 1250,
+  status: 'COMPLETED',
+});
+
+await seedOrder({
+  id: 'ord_1044',
+  customerId: 'cus_88',
+  amount: 899,
+  status: 'CANCELLED',
+});
+
+await seedOrder({
+  id: 'ord_1045',
+  customerId: 'cus_92',
+  amount: 15750,
+  currency: 'USD',
+  status: 'COMPLETED',
+});
+
+await seedOrder({
+  id: 'ord_1046',
+  customerId: 'cus_17',
+  amount: 2400,
+  status: 'PENDING',
+});
+
+await seedOrder({
+  id: 'ord_1047',
+  customerId: 'cus_91',
+  amount: 7300,
+  status: 'COMPLETED',
+});
+
+await seedOrder({
+  id: 'ord_1048',
+  customerId: 'cus_53',
+  amount: 640,
+  status: 'REFUNDED',
+});
+
+await seedOrder({
+  id: 'ord_1049',
+  customerId: 'cus_17',
+  amount: 11900,
+  status: 'COMPLETED',
+});
+
+await seedOrder({
+  id: 'ord_1050',
+  customerId: 'cus_88',
+  amount: 3150,
+  currency: 'EUR',
+  status: 'PENDING',
+});
+
+await seedOrder({
+  id: 'ord_1051',
+  customerId: 'cus_60',
+  amount: 980,
+  status: 'COMPLETED',
+});
+
+await seedOrder({
+  id: 'ord_1052',
+  customerId: 'cus_92',
+  amount: 22400,
+  status: 'COMPLETED',
+});
+
+await seedOrder({
+  id: 'ord_1053',
+  customerId: 'cus_53',
+  amount: 1475,
+  status: 'CANCELLED',
+});
+
+await seedOrder({
+  id: 'ord_1054',
+  customerId: 'cus_60',
+  amount: 5090,
+  currency: 'SEK',
+  status: 'PENDING',
+});
+
+await seedOrder({
+  id: 'ord_1055',
+  customerId: 'cus_17',
+  amount: 760,
+  status: 'REFUNDED',
+});
+
+await seedOrder({
+  id: 'ord_1056',
+  customerId: 'cus_91',
+  amount: 18300,
+  status: 'COMPLETED',
+});

@@ -1,0 +1,174 @@
+@meta
+id: 19-04
+title: Drill — first and last
+chapter: 19
+type: drill
+skills: quickfix-nav
+par: 58
+minutes: 5
+reps: 8
+vscode: click the first result, click the last
+vimrc: set hidden
+open: src/domain/order/order.provider.ts
+
+@brief
+Three `console.log` calls under `src/`. The first and last hits are
+debugging leftovers and go. The middle one is the logger's own
+implementation and stays. Eight times: search, delete the first hit's
+line, jump to the last, delete that, quit.
+
+@keys
+| `:vimgrep /pattern/ **/*.ts` | fill the list, land on the first hit |
+| `:clast` | jump to the last hit |
+| `:cfirst` | jump back to the first |
+| `dd` `:w` | delete the line, write before leaving |
+
+@hints
+`:vimgrep /console\.log/ **/*.ts` puts you on the first hit. `dd`, `:w`.
+--
+`:clast` skips straight over the middle one. `dd`, `:wq`.
+
+@solution
+    :vimgrep /console\.log/ **/*.ts<Enter>  dd  :w<Enter>  :clast<Enter>  dd  :wq<Enter>
+
+`:clast` is `:cn` repeated until it runs out, and `:cfirst` is the same
+in reverse. Neither needs you to know how many entries there are. The
+drill is about not looking: the brief told you the ends are the ones you
+want, so you go to the ends.
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+    console.log('cancel', id, order.status);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.sendRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.sendRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start src/infrastructure/logger.ts
+export type LogEntry = {
+  level: 'debug' | 'info' | 'error';
+  message: string;
+  context?: Record<string, unknown>;
+};
+
+export class Logger {
+  public write(entry: LogEntry) {
+    console.log(JSON.stringify(entry));
+  }
+
+  public info(message: string, context?: Record<string, unknown>) {
+    this.write({ level: 'info', message, context });
+  }
+}
+
+@start src/infrastructure/services/payment.service.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { HttpClient } from '../http/http.client';
+
+@injectable()
+export class PaymentService {
+  constructor(@inject(HttpClient) protected http: HttpClient) {}
+
+  public async sendRefund(orderId: string) {
+    const response = await this.http.post('/sendRefund', { orderId });
+    console.log('gateway', response.status);
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@expected src/infrastructure/services/payment.service.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { HttpClient } from '../http/http.client';
+
+@injectable()
+export class PaymentService {
+  constructor(@inject(HttpClient) protected http: HttpClient) {}
+
+  public async sendRefund(orderId: string) {
+    const response = await this.http.post('/sendRefund', { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}

@@ -1,0 +1,123 @@
+@meta
+id: 17-10
+title: Where you stopped typing
+chapter: 17
+type: lesson
+skills: mark-backtick, changelist
+par: 43
+minutes: 5
+vscode: click back into the line and hope you hit the right column
+open: incident.md
+
+@brief
+The timeline entry `09:24 worker paused` is missing who paused it. It
+should end `paused by raj@example.com`. Start the sentence: append
+` by ` to the line and leave insert mode.
+
+Now you need the address, and it is in the People section at the
+bottom. Go there. Delete the `Former owner` line entirely, since Sam
+has left, and then copy the address from the `On call` line. That
+order matters: a delete fills the same register a yank does, so copy
+last.
+
+Then return to the exact spot where you stopped typing and put the
+address there. Not the line: the character. Vim keeps a mark on the
+place insert mode last ended, and it survives the delete you just did.
+
+@keys
+| `` `^ `` | exact position where insert mode was last left |
+| `` `. `` | exact position of the last change |
+| `y$` | yank to the end of the line |
+| `p` | put after the cursor |
+
+@hints
+The backtick marks are exact positions. `'^` would take you to the
+line; `` `^ `` takes you to the column as well.
+--
+After `A by ` Esc, insert mode ended just past the space. `` `^ ``
+puts the cursor on that space, and `p` puts after the cursor.
+--
+`/paused` Enter, `A by ` Esc. `/On call` Enter, `j` `dd`, `k` `3W`
+`y$`. Then `` `^ `` `p`.
+
+@solution
+    /paused<Enter> A by <Esc>
+    /On call<Enter> jdd k3Wy$
+    `^ p :wq<Enter>
+
+Vim sets several marks for you without being asked. Two are about your
+own editing:
+
+    `.    where the last change happened
+    `^    where insert mode was last left
+
+The dot mark moved when you deleted the Former owner line: that was a
+change. The caret mark did not, because `dd` never entered insert
+mode. So `` `. `` would have taken you to the People section, and
+`` `^ `` took you back to the half-typed sentence. Pick by what you
+mean: "the thing I last edited" or "the place I was typing".
+
+Backtick versus apostrophe is the same split as `` `a `` versus `'a`
+from chapter 9, and it applies to every mark: the apostrophe form goes
+to the line, the backtick form goes to the character. For automatic
+marks the backtick is nearly always what you want, because the whole
+point is to land exactly where you were.
+
+You may meet `gi` later: it is `` `^ `` followed by `i`, resuming
+insert mode where you left it. Learn the mark first; then `gi` is
+obviously just a shortcut.
+
+@start incident.md
+# Incident 2026-09-14: duplicate refunds
+
+## Summary
+
+Between 09:12 and 09:19 the refund worker retried every failed
+request without an idempotency key. Eleven orders were refunded
+twice. All eleven have since been reversed with the gateway.
+
+## Timeline
+
+- 09:12 first duplicate charge seen for ord_8891
+- 09:19 alert fired from the reconcile job
+- 09:24 worker paused
+- 09:51 gateway reversals confirmed
+
+## Action items
+
+- [ ] Add an idempotency key to PaymentService.refund
+- [ ] Alert on reconcile.unmatched above zero
+- [ ] Write the runbook entry for pausing the worker
+
+## People
+
+- On call: raj@example.com
+- Former owner: sam@example.com (left in June)
+- Payments owner: ada@example.com
+
+@expected incident.md
+# Incident 2026-09-14: duplicate refunds
+
+## Summary
+
+Between 09:12 and 09:19 the refund worker retried every failed
+request without an idempotency key. Eleven orders were refunded
+twice. All eleven have since been reversed with the gateway.
+
+## Timeline
+
+- 09:12 first duplicate charge seen for ord_8891
+- 09:19 alert fired from the reconcile job
+- 09:24 worker paused by raj@example.com
+- 09:51 gateway reversals confirmed
+
+## Action items
+
+- [ ] Add an idempotency key to PaymentService.refund
+- [ ] Alert on reconcile.unmatched above zero
+- [ ] Write the runbook entry for pausing the worker
+
+## People
+
+- On call: raj@example.com
+- Payments owner: ada@example.com

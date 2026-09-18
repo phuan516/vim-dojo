@@ -1,0 +1,301 @@
+@meta
+id: 19-01
+title: Every hit in the tree
+chapter: 19
+type: lesson
+skills: vimgrep
+par: 55
+minutes: 5
+vscode: Ctrl+Shift+F, type the name, click the one result
+open: README.md
+
+@brief
+The README says refunds go through `PaymentService.sendRefund`. The
+method was called `refund` until last sprint, and one caller somewhere
+under `src/` was missed by the rename and still calls `refund(` on the
+payment service. Nothing tells you which file.
+
+In VS Code you would press Ctrl+Shift+F, type the name, and click the
+result. Vim has the same search, and it puts the results somewhere more
+useful than a sidebar. `:vimgrep /pattern/ **/*.ts` searches every
+TypeScript file under the current directory, collects every match into
+the quickfix list, and jumps to the first one. The quickfix list is a
+list of places: file, line, column, and the text found there. The rest
+of this chapter is about what you can do with such a list. For now you
+need one thing from it: when there is exactly one hit, `:vimgrep` takes
+you straight to it.
+
+Find the stale call and change it to `sendRefund`. The README mentions
+the old name too and stays as it is: it is not a TypeScript file, so the
+glob never opens it.
+
+@keys
+| `:vimgrep /pattern/ **/*.ts` | search every .ts file under the tree, jump to the first hit |
+| `:vim` | the same command, abbreviated |
+| `**` | any depth of directories |
+
+@hints
+The pattern is a vim regex, the same dialect as `/` and `:s`. You want a
+call to `.refund(` and nothing else, so the dot has to be escaped or it
+matches any character, and `sendRefund(` would be a hit too.
+--
+`:vimgrep /\.refund(/ **/*.ts` and Enter. One hit, so vim opens the file
+and puts the cursor on the match.
+--
+The cursor lands on the dot, which is where the match starts. `w` moves
+onto `refund`; `ciw` changes the word. `:wq` from there.
+
+@solution
+    :vimgrep /\.refund(/ **/*.ts<Enter>  w ciw sendRefund <Esc> :wq<Enter>
+
+`:vimgrep` is search across files, and it puts what it finds where it
+can be acted on rather than looked at. The glob after the pattern says
+which files: `**/*.ts` is every TypeScript file at any depth below the
+directory vim was started in, which here is the project root.
+`src/**/*.ts` would narrow it to `src`; `*.ts` would be the top level
+only. `:vim` is accepted as an abbreviation and is what people type.
+
+The cursor lands on the first character of the match, which for the
+pattern `\.refund(` is the dot. That is why there is a `w` in the
+solution: a pattern that starts one character left of the word you want
+lands you one character left of it. `/refund(/` would have landed on
+the `r`, but it also matches `sendRefund(`, and the escaped dot was
+there to rule that out. Pattern precision and landing position trade
+off, and `w` is cheap.
+
+When there are many hits the list holds all of them. That is the next
+lesson.
+
+@start README.md
+# Orders service
+
+Cancelling an order refunds it through `PaymentService.sendRefund` (it was
+`refund` until last sprint), which
+is named after the gateway's `/sendRefund` endpoint. A refund the gateway
+rejects raises `REFUND_FAILED`. Refund events go out on the
+`payment.sendRefund` routing key, which the ledger service consumes.
+
+@start src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  placedAt: Date;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.sendRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start src/domain/order/order.provider.test.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { orderFactory } from '../../../test/factories/order.factory';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const provider = new OrderProvider(orderRepository, paymentService);
+
+  afterEach(() => jest.resetAllMocks());
+
+  it('refunds a pending order when it is cancelled', async () => {
+    const order = orderFactory({ status: 'PENDING' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    reveal(paymentService).sendRefund.mockResolvedValue(undefined);
+
+    await provider.cancel(order.id);
+
+    expect(paymentService.sendRefund).toHaveBeenCalledWith(order.id);
+  });
+
+  it('refuses to cancel a shipped order', async () => {
+    const order = orderFactory({ status: 'SHIPPED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+
+    await expect(provider.cancel(order.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+    expect(paymentService.sendRefund).not.toHaveBeenCalled();
+  });
+});
+
+@start src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      placedAt: record.placedAt,
+    };
+  }
+}
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@start src/domain/payment/payment.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { PaymentRepository } from './payment.repository';
+import { PaymentProducer } from './payment.producer';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class PaymentProvider {
+  constructor(
+    @inject(PaymentRepository) protected paymentRepository: PaymentRepository,
+    @inject(PaymentProducer) protected paymentProducer: PaymentProducer,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async reverse(id: string) {
+    const payment = await this.paymentRepository.findOne({ where: { id } });
+
+    if (!payment) {
+      throw exception('PAYMENT_NOT_FOUND');
+    }
+
+    const receipt = await this.paymentService.refund(payment.orderId);
+
+    await this.paymentProducer.refundIssued({ paymentId: id, receipt });
+
+    return receipt;
+  }
+}
+
+@expected src/domain/payment/payment.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { PaymentRepository } from './payment.repository';
+import { PaymentProducer } from './payment.producer';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class PaymentProvider {
+  constructor(
+    @inject(PaymentRepository) protected paymentRepository: PaymentRepository,
+    @inject(PaymentProducer) protected paymentProducer: PaymentProducer,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async reverse(id: string) {
+    const payment = await this.paymentRepository.findOne({ where: { id } });
+
+    if (!payment) {
+      throw exception('PAYMENT_NOT_FOUND');
+    }
+
+    const receipt = await this.paymentService.sendRefund(payment.orderId);
+
+    await this.paymentProducer.refundIssued({ paymentId: id, receipt });
+
+    return receipt;
+  }
+}
+
+@start src/domain/payment/payment.producer.ts
+import { injectable, inject } from 'tsyringe';
+import { Channel } from '../../infrastructure/rabbit/channel';
+
+type RefundIssuedEvent = {
+  paymentId: string;
+  receipt: string;
+};
+
+@injectable()
+export class PaymentProducer {
+  constructor(@inject(Channel) protected channel: Channel) {}
+
+  public async refundIssued(event: RefundIssuedEvent) {
+    await this.channel.publish('payments', 'payment.sendRefund', event);
+  }
+}
+
+@start src/infrastructure/services/payment.service.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { HttpClient } from '../http/http.client';
+
+@injectable()
+export class PaymentService {
+  constructor(@inject(HttpClient) protected http: HttpClient) {}
+
+  public async sendRefund(orderId: string) {
+    const response = await this.http.post('/sendRefund', { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}

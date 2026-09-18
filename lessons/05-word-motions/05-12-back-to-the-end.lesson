@@ -1,0 +1,85 @@
+@meta
+id: 05-12
+title: ge, the one people never learn
+chapter: 05
+type: lesson
+skills: word-e, word-b
+par: 23
+minutes: 5
+vscode: click just after the identifier
+open: customer.provider.ts
+
+@brief
+Four motions cover three of the four possibilities:
+
+    w   start of the next word        e   end of the next word
+    b   start of the previous word    ?   end of the previous word
+
+The missing one is `ge`. It walks backwards and lands on word *ends*,
+which is precisely where you want to be when something needs appending to
+a word you have already gone past — including anything sitting just
+before a closing bracket, quote or semicolon.
+
+`firstName` can carry stray whitespace from the import. Trim it. Line
+three should read:
+
+    const label = customer.firstName.trim() + customer.lastName;
+
+`gE` is the WORD-sized version, exactly as you would expect. Either gets
+you there.
+
+@keys
+| `ge` | back to the end of the previous word |
+| `gE` | back to the end of the previous WORD |
+| `$` | end of the line |
+| `a` | append after the cursor |
+
+@hints
+The insertion point is the end of `firstName`, which is nearer the end of
+the line than the start. So travel backwards — but `b` lands on starts,
+and a start is not what you want.
+--
+`ge` is the backwards `e`. From the semicolon it visits the end of
+`lastName`, the dot, the end of `customer`, the plus, and then the end of
+`firstName`.
+--
+`2j$5ge` then `a`, type `.trim()`, `Esc`, `:wq`. Or `2j$2gE` if you would
+rather count whitespace chunks — the same landing, three keys less
+counting.
+
+@solution
+    2j $ 5ge  a.trim()<Esc>  :wq<Enter>
+
+or
+
+    2j $ 2gE  a.trim()<Esc>  :wq<Enter>
+
+`ge` is the least known of the six and it is worth the two keys it costs.
+The situation it owns is appending to a token that already has something
+after it — a closing paren, a comma, a semicolon. From `$` you are on the
+punctuation; `i` would insert in front of the punctuation, which is
+sometimes right, and `ge` puts you at the end of the actual word, which is
+what you meant when the thing you are adding belongs to the identifier.
+
+Compare the two routes in the solution. `5ge` counts every dot as a stop;
+`2gE` counts whitespace chunks and gets there in less. That choice, made
+fast and without thinking about it, is most of what this chapter is
+teaching.
+
+@start customer.provider.ts
+export class CustomerProvider {
+  public displayName(customer: Customer) {
+    const label = customer.firstName + customer.lastName;
+
+    return label.trim();
+  }
+}
+
+@expected customer.provider.ts
+export class CustomerProvider {
+  public displayName(customer: Customer) {
+    const label = customer.firstName.trim() + customer.lastName;
+
+    return label.trim();
+  }
+}

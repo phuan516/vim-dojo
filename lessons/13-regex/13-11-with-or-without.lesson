@@ -1,0 +1,160 @@
+@meta
+id: 13-11
+title: With or without
+chapter: 13
+type: lesson
+skills: regex-quantifiers
+par: 45
+minutes: 6
+vscode: two separate find-and-replaces, and check neither touched customerEmail
+open: notification.provider.ts
+
+@brief
+The `customer` object on the notification args has been renamed
+`contact`. Four places in this provider read its `email` — two as
+`customer.email` and two, where the object might be missing, as
+`customer?.email`. Rename the object in all four.
+
+Nothing else with `customer` in it changes: not `customerId`, not
+`customerEmail`, not `customer_email` in the template map. The local
+`customer` in `fallbackEmail`, at the bottom, is a different object
+loaded from the repository and keeps its name — it is the fifth match
+of your pattern, and you stop before it.
+
+So the pattern is `customer`, then *maybe* a question mark, then a dot,
+then `email`. "Maybe" is a quantifier too: zero or one.
+
+@keys
+| `\?` | zero or one of the atom before it — optional |
+| `\=` | the same thing, another spelling |
+| `?` | on its own, in a forward search, an ordinary question mark |
+| `cw` | change the word — stops at the `?` or the `.` on its own |
+
+@hints
+One pattern that accepts both spellings, then `cw` at each match and
+`.` for the rest.
+--
+`\?` makes the thing before it optional. A literal `?` needs no escape
+in a forward search, so the optional question mark is `?\?` — a
+question mark, made optional.
+--
+`/customer?\?\.email` `Enter`, then `cwcontact`, `Esc`, and `n.` three
+times.
+
+@solution
+/customer?\?\.email<Enter>  cwcontact<Esc>  n.  n.  n.  :wq<Enter>
+
+Forty keystrokes, one pattern, four edits.
+
+`\?` is "zero or one". `colou\?r` finds both spellings of colour;
+`https\?://` finds both kinds of URL; `refunds\?` finds the singular and
+the plural. It is the quantifier you reach for when two forms of a thing
+are in circulation and you want to treat them as one.
+
+`?\?` looks silly and is worth understanding. The first `?` is a
+literal question mark — in a forward search it has no special meaning
+at all. The second is the quantifier, applied to it. If that reads
+badly to you, `\=` means exactly the same as `\?`, and `?\=` is the
+same pattern. The reason vim offers two spellings is that in a
+*backward* search, started with `?`, a bare `?` ends the pattern, so
+`\?` cannot be typed there and `\=` is the only option.
+
+`cw` did the rename because `customer` is a word and both `?` and `.`
+end it. The pattern found four places; `cw` only ever touched the
+first word at each. That split — a pattern precise enough to land, an
+edit small enough to be safe — is what the whole chapter is building
+towards.
+
+@start notification.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { EmailService } from '../../infrastructure/services/email.service';
+import { CustomerRepository } from '../customer/customer.repository';
+
+const templates = {
+  order_confirmed: 'order-confirmed',
+  customer_email_changed: 'email-changed',
+  refund_issued: 'refund-issued',
+};
+
+@injectable()
+export class NotificationProvider {
+  constructor(
+    @inject(EmailService) protected emailService: EmailService,
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+  ) {}
+
+  public async orderConfirmed(args: { orderId: string; customerId: string; customer?: Contact }) {
+    const to = args.customer?.email ?? (await this.fallbackEmail(args.customerId));
+
+    return this.emailService.send({ to, template: templates.order_confirmed, orderId: args.orderId });
+  }
+
+  public async refundIssued(args: { refundId: string; customer: Contact }) {
+    const customerEmail = args.customer.email;
+
+    return this.emailService.send({ to: customerEmail, template: templates.refund_issued, refundId: args.refundId });
+  }
+
+  public async emailChanged(args: { customerId: string; customer?: Contact; previous: string }) {
+    const to = args.customer?.email ?? args.previous;
+
+    return this.emailService.send({ to, template: templates.customer_email_changed, previous: args.previous });
+  }
+
+  public async digest(args: { customer: Contact; orderIds: string[] }) {
+    return this.emailService.send({ to: args.customer.email, template: 'digest', orderIds: args.orderIds });
+  }
+
+  public async fallbackEmail(customerId: string) {
+    const customer = await this.customerRepository.findOne({ where: { id: customerId } });
+
+    return customer.email;
+  }
+}
+
+@expected notification.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { EmailService } from '../../infrastructure/services/email.service';
+import { CustomerRepository } from '../customer/customer.repository';
+
+const templates = {
+  order_confirmed: 'order-confirmed',
+  customer_email_changed: 'email-changed',
+  refund_issued: 'refund-issued',
+};
+
+@injectable()
+export class NotificationProvider {
+  constructor(
+    @inject(EmailService) protected emailService: EmailService,
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+  ) {}
+
+  public async orderConfirmed(args: { orderId: string; customerId: string; customer?: Contact }) {
+    const to = args.contact?.email ?? (await this.fallbackEmail(args.customerId));
+
+    return this.emailService.send({ to, template: templates.order_confirmed, orderId: args.orderId });
+  }
+
+  public async refundIssued(args: { refundId: string; customer: Contact }) {
+    const customerEmail = args.contact.email;
+
+    return this.emailService.send({ to: customerEmail, template: templates.refund_issued, refundId: args.refundId });
+  }
+
+  public async emailChanged(args: { customerId: string; customer?: Contact; previous: string }) {
+    const to = args.contact?.email ?? args.previous;
+
+    return this.emailService.send({ to, template: templates.customer_email_changed, previous: args.previous });
+  }
+
+  public async digest(args: { customer: Contact; orderIds: string[] }) {
+    return this.emailService.send({ to: args.contact.email, template: 'digest', orderIds: args.orderIds });
+  }
+
+  public async fallbackEmail(customerId: string) {
+    const customer = await this.customerRepository.findOne({ where: { id: customerId } });
+
+    return customer.email;
+  }
+}

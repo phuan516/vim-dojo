@@ -1,0 +1,107 @@
+@meta
+id: 10-01
+title: Change the word you are standing on
+chapter: 10
+type: lesson
+skills: obj-word, inner-vs-around
+par: 46
+minutes: 5
+vscode: double-click the word, type the new one, repeat
+open: order.provider.ts
+
+@brief
+Everything so far has been operator plus motion: the operator acts on the
+ground between where the cursor is and where the motion lands. That works,
+but it makes you responsible for standing in the right place first. `cw`
+from the middle of a word changes the second half of it.
+
+A text object is the other half of the grammar. It is not a direction, it
+is a thing: the word, the string, the argument list, the block. You say
+which thing you mean and vim works out where it starts and ends. The
+cursor only has to be somewhere inside it.
+
+Someone has reviewed this provider and asked for one change: the local
+variable called `record` reads like a database row. It is an order. Rename
+all three of them.
+
+Nothing else in the file changes.
+
+@keys
+| `iw` | inner word — the word the cursor is inside |
+| `ciw` | change that word, from anywhere in it |
+| `diw` | delete it |
+
+@hints
+`cw` only works if you are on the first letter. You have a better option
+now — one that does not care where in the word you landed.
+--
+`ciw` changes the whole word under the cursor and drops you into insert
+mode with it gone.
+--
+`f` gets you onto the word, `ciw` replaces it, `j` or a count of `j`
+carries you to the next one. You never need to aim at the first letter.
+
+@solution
+    11j fr ciw order <Esc>
+    2j ciw order <Esc>
+    4j ciw order <Esc>
+    :wq<Enter>
+
+Read the second and third edits again. After the first `ciw` the cursor
+sits in the middle of `order`; `2j` carries that column down to the middle
+of the next `record`, and `ciw` still does exactly the right thing. No
+`b`, no `^`, no aiming.
+
+That is the whole argument for text objects. Operator plus motion asks
+where do I want to go. Operator plus object asks what do I mean. The
+second question is nearly always easier to answer, and it is the one your
+hands can answer without looking.
+
+`iw` is precise about what a word is: letters, digits and underscores.
+Punctuation is a word of its own. In `order.total` the cursor on `total`
+gives you `total`, not the whole expression. That is usually what you
+wanted, and when it is not there is another object for it.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const record = await this.orderRepository.findOne({ where: { id } });
+
+    if (!record) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return record;
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+}

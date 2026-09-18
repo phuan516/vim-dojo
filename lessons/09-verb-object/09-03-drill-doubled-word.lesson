@@ -1,0 +1,42 @@
+@meta
+id: 09-03
+title: Drill — the doubled word
+chapter: 09
+type: drill
+skills: op-motion
+par: 11
+minutes: 4
+reps: 8
+vscode: double-click, Backspace, Backspace
+open: orders.md
+
+@brief
+Eight times: delete the second `are`, save, quit. Nothing to think about.
+
+`dw` should become one gesture rather than two decisions.
+
+@keys
+| `3w` | three words forward |
+| `dw` | delete from here to the start of the next word |
+
+@hints
+Count the words on the way in rather than pressing `w` three times.
+--
+`3w` then `dw`. Four keys before the colon.
+
+@solution
+    3w dw :wq<Enter>
+
+Eight keystrokes, and after a few reps your hand stops spelling it out.
+
+There is a faster answer here — `d3w` from the first `are` deletes three
+words at once, and if the duplication were a whole phrase that is what you
+would reach for. It is not faster for one word, and reaching for it here
+would mean counting under pressure. Counting when you do not have to is
+how people end up deleting one word too many.
+
+@start orders.md
+Cancelled orders are are refunded within thirty days.
+
+@expected orders.md
+Cancelled orders are refunded within thirty days.

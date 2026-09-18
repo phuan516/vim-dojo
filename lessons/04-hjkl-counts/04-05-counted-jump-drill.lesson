@@ -1,0 +1,105 @@
+@meta
+id: 04-05
+title: Drill — sixteen down, no scrolling
+chapter: 04
+type: drill
+skills: hjkl, count-prefix
+par: 17
+minutes: 5
+reps: 10
+vscode: scroll, squint, click
+open: access.log
+vimrc: set number
+
+@brief
+Ten times: mark the slow request on line 17 with `  SLOW` — two spaces,
+then the word — at the end of the line. Save, quit, repeat.
+
+One jump, one count, no arrow keys and no scrolling. If you find yourself
+tapping `j` more than once per rep, stop and start the rep again.
+
+@keys
+| `16j` | down sixteen lines |
+| `A` | append at the end of the line |
+
+@hints
+Line 1 to line 17 is sixteen lines of travel.
+--
+Type the digits before the motion, every time, without checking. The rep
+is training the order — number first, motion second.
+
+@solution
+    16j A <space><space>SLOW <Esc> :wq<Enter>
+
+The reason this is worth ten repetitions is that the number-then-motion
+order has to survive being under pressure. Typed the other way round —
+`j16` — you get one line down and then a stray `1` and `6` looking for a
+motion of their own, which is harmless but breaks your rhythm.
+
+Counts feel like arithmetic homework for about a week, and then they stop
+being numbers at all. You will look at a line four below the cursor and
+your hand will type `4j` without any number appearing in your head.
+
+@start access.log
+GET    /orders            200     12ms
+GET    /orders/1001       200      9ms
+POST   /orders            201     48ms
+GET    /customers         200     15ms
+GET    /customers/88      200      7ms
+POST   /payments          201     61ms
+GET    /orders/1002       200     10ms
+PATCH  /orders/1002       200     22ms
+GET    /health            200      1ms
+GET    /orders            200     13ms
+POST   /refunds           201     74ms
+GET    /orders/1003       200      8ms
+GET    /customers/91      200      6ms
+POST   /payments          201     57ms
+GET    /orders            200     14ms
+GET    /health            200      1ms
+POST   /reports/monthly   200   4180ms
+GET    /orders/1004       200     11ms
+GET    /customers         200     16ms
+POST   /payments          201     52ms
+GET    /orders/1005       200      9ms
+PATCH  /orders/1005       200     19ms
+GET    /health            200      1ms
+GET    /orders            200     12ms
+POST   /refunds           201     68ms
+GET    /customers/95      200      7ms
+GET    /orders/1006       200     10ms
+POST   /payments          201     55ms
+GET    /health            200      1ms
+GET    /orders            200     13ms
+
+@expected access.log
+GET    /orders            200     12ms
+GET    /orders/1001       200      9ms
+POST   /orders            201     48ms
+GET    /customers         200     15ms
+GET    /customers/88      200      7ms
+POST   /payments          201     61ms
+GET    /orders/1002       200     10ms
+PATCH  /orders/1002       200     22ms
+GET    /health            200      1ms
+GET    /orders            200     13ms
+POST   /refunds           201     74ms
+GET    /orders/1003       200      8ms
+GET    /customers/91      200      6ms
+POST   /payments          201     57ms
+GET    /orders            200     14ms
+GET    /health            200      1ms
+POST   /reports/monthly   200   4180ms  SLOW
+GET    /orders/1004       200     11ms
+GET    /customers         200     16ms
+POST   /payments          201     52ms
+GET    /orders/1005       200      9ms
+PATCH  /orders/1005       200     19ms
+GET    /health            200      1ms
+GET    /orders            200     12ms
+POST   /refunds           201     68ms
+GET    /customers/95      200      7ms
+GET    /orders/1006       200     10ms
+POST   /payments          201     55ms
+GET    /health            200      1ms
+GET    /orders            200     13ms

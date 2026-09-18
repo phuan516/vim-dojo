@@ -1,0 +1,185 @@
+@meta
+id: 29-13
+title: A fuzzy finder in thirty lines
+chapter: 29
+type: lesson
+skills: fuzzy-finder, packadd
+par: 33
+minutes: 6
+vscode: Ctrl-P, the feature you will miss most
+open: notes.md
+vimrc: set packpath^=. | packloadall!
+
+@brief
+Third plugin, shipped with the lesson:
+
+    pack/dojo/start/files/plugin/files.vim
+
+Thirty lines. It defines one command, `:Files`, which takes a scrap of a
+path and opens the file that best matches it. `:Files opr` opens
+`src/domain/order/order.provider.ts`. The letters have to appear in the
+path in that order and nothing else has to be true — that is what
+"fuzzy" means, and it is the entire idea behind fzf, Telescope, Ctrl-P
+and every finder you have used.
+
+The ranking is `matchfuzzy()`, which vim has had built in since 8.2. The
+plugin lists the files with `globpath()` and hands the list to it. There
+is no fuzzy-matching algorithm in this plugin because there did not need
+to be one.
+
+`notes.md` has the ticket. Do what it says. You should not need to type a
+full path, and you should not need `:e` with a directory tree in it.
+
+Leave `notes.md` alone.
+
+@keys
+| `:Files {fragment}` | open the best match for `{fragment}` |
+| `:Files ordrep` | letters in order, anywhere in the path |
+| `:Files <Tab>` | complete on the command line, best match first |
+
+@hints
+The file you want is `src/domain/order/order.repository.ts`. Pick letters
+from it that are unlikely to appear in that order anywhere else.
+--
+`:Files ordrep` gets you there. Then it is an ordinary edit and an
+ordinary `:wq`.
+--
+`:Files ordrep` `Enter`, `/take` `Enter`, `f2` `r5`, `:wq` `Enter`.
+
+@solution
+    :Files ordrep<Enter>  /take<Enter>  f2  r5  :wq<Enter>
+
+Twenty-eight keystrokes, of which six were the file name.
+
+Read the plugin. The interesting half is one line:
+
+    return a:pat ==# '' ? all : matchfuzzy(all, a:pat)
+
+and the rest is housekeeping: list the files, drop the directories, strip
+the leading `./`, skip the package directory so the finder does not offer
+you its own source. A real finder skips `.git`, `node_modules` and
+`dist` the same way, usually by asking `git ls-files` for the list
+instead of walking the disk — which is faster on a big repo and respects
+`.gitignore` for free.
+
+What you now have is a fair comparison. Chapter 18 gave you `:find` with
+`set path=.,**`, which is vim's own answer and completes on a prefix.
+This is the other answer: match anywhere, rank by closeness. The second
+one is nicer to type and the first one needs no plugin at all. Try both
+for a week before you decide you need fzf.
+
+One warning that applies to every finder you will install: they are the
+plugins most likely to fight your muscle memory, because they take over
+`Ctrl-P`, `Ctrl-N` and often `Ctrl-J`/`Ctrl-K` inside their own window.
+Read the mapping section of the help before you install one, not after.
+
+@start pack/dojo/start/files/plugin/files.vim
+" dojo-files.vim - a fuzzy file finder in thirty lines.
+" Shipped inside this lesson. You did not install it; the dojo did.
+"
+"   :Files {pattern}   open the file whose path best matches {pattern}
+"   :Files <Tab>       cycle the candidates on the command line
+"
+" The ranking is matchfuzzy(), which vim has had built in since 8.2. The
+" letters you type have to appear in the path in order, and nothing else.
+" `opr` finds order.provider.ts. That is the whole trick fzf sells.
+
+if exists('g:loaded_dojo_files')
+  finish
+endif
+let g:loaded_dojo_files = 1
+
+function! s:index() abort
+  let all = split(globpath('.', '**/*'), "\n")
+  call filter(all, 'filereadable(v:val)')
+  call map(all, 'substitute(v:val, "^\\./", "", "")')
+  " A real finder skips .git, node_modules and build output. This one skips
+  " the package directory, so the list is the project and nothing else.
+  return filter(all, 'v:val !~# "^pack/"')
+endfunction
+
+function! s:matches(pat) abort
+  let all = s:index()
+  return a:pat ==# '' ? all : matchfuzzy(all, a:pat)
+endfunction
+
+function! s:complete(lead, line, pos) abort
+  return s:matches(a:lead)
+endfunction
+
+function! s:files(pat) abort
+  let hits = s:matches(a:pat)
+  if empty(hits)
+    echohl ErrorMsg
+    echo 'Files: nothing matches ' . a:pat
+    echohl NONE
+    return
+  endif
+  execute 'edit ' . fnameescape(hits[0])
+endfunction
+
+command! -nargs=? -complete=customlist,s:complete Files call s:files(<q-args>)
+
+@start notes.md
+# ORD-503
+
+The order list endpoint pages twenty at a time. Support are paging
+through refund queues by hand and twenty is too few.
+
+Change the page size in the order repository from 20 to 50. Nothing else
+changes; the customer repository keeps its own default.
+
+@start src/domain/order/order.provider.ts
+export class OrderProvider {
+  constructor(protected orderRepository: OrderRepository) {}
+
+  public async list(customerId: string) {
+    return this.orderRepository.findMany({ where: { customerId } });
+  }
+}
+
+@start src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  totalMinor: number;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start src/domain/customer/customer.repository.ts
+export class CustomerRepository {
+  public async findMany(args: FindManyArgs) {
+    return this.prisma.customer.findMany({ ...args, take: 20 });
+  }
+}
+
+@start src/infrastructure/services/payment.service.ts
+export class PaymentService {
+  public async refund(orderId: string) {
+    return this.client.post('/refunds', { orderId });
+  }
+}
+
+@start src/domain/order/order.repository.ts
+export class OrderRepository {
+  public async findMany(args: FindManyArgs) {
+    return this.prisma.order.findMany({ ...args, take: 20 });
+  }
+
+  public async findOne(args: FindOneArgs) {
+    return this.prisma.order.findFirst(args);
+  }
+}
+
+@expected src/domain/order/order.repository.ts
+export class OrderRepository {
+  public async findMany(args: FindManyArgs) {
+    return this.prisma.order.findMany({ ...args, take: 50 });
+  }
+
+  public async findOne(args: FindOneArgs) {
+    return this.prisma.order.findFirst(args);
+  }
+}

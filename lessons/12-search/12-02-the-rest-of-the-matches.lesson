@@ -1,0 +1,188 @@
+@meta
+id: 12-02
+title: One search, every match
+chapter: 12
+type: lesson
+skills: search-slash, search-next
+par: 32
+minutes: 4
+vscode: Enter again in the find box, or F3
+open: order.provider.test.ts
+
+@brief
+Somebody copied a test block and forgot to change the assertion. The
+`ship` test sets the order up as submitted, ships it, and then asserts it
+is still `PENDING`. It should assert `SHIPPED`.
+
+The word `PENDING` appears five times in this file and four of them are
+correct. You want the last one.
+
+The point of the lesson is that a search is not one jump. Having typed a
+pattern once, you own it: one key walks forward through every match in
+the file, another walks back. Typing the same search again is a beginner
+tell.
+
+@keys
+| `/text` `Enter` | forward to the next match |
+| `n` | the next match of the same pattern |
+| `N` | the previous match of the same pattern |
+
+@hints
+Search once for the word, then step through the matches until you are on
+the one inside the `ship` test. Do not type the search a second time, and
+do not count the matches before you start — just walk until you arrive.
+--
+`n` repeats the last search forward. `N` repeats it backward, which is
+how you recover when you press `n` once too often.
+--
+`/PENDING` `Enter` puts you on the first one. Four presses of `n` put you
+on the last. The cursor is then on the `P` of a word inside quotes, so
+`ciw` and the right status finishes it.
+
+@solution
+/PENDING<Enter>  n n  ciwSHIPPED<Esc>  :wq<Enter>
+
+`n` and `N` are the whole lesson. The search prompt is a cost you pay
+once; after that, moving to the next occurrence is one keystroke, and it
+costs the same whether the next occurrence is two lines away or nine
+hundred.
+
+Watch the bottom-right of the screen as you press `n`. Vim tells you
+`search hit BOTTOM, continuing at TOP` when it wraps around the end of
+the file. That message is useful: if you see it, you have been round the
+whole file and every match has been visited.
+
+The habit to build is *pattern first, refine with `n`*. Beginners type a
+long precise search trying to land on exactly the right match. Fluent
+users type a short sloppy one and press `n` a couple of times, because
+`n` is cheaper than precision.
+
+@start order.provider.test.ts
+import { OrderProvider } from './order.provider';
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { orderFactory } from '../../../test/factories/order.factory';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const provider = new OrderProvider(orderRepository, paymentService);
+
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
+  describe('create', () => {
+    it('starts a new order as pending', async () => {
+      const order = orderFactory({ status: 'PENDING' });
+      reveal(orderRepository).create.mockResolvedValue(order);
+
+      const result = await provider.create({ customerId: order.customerId, total: 500 });
+
+      expect(result.status).toBe('PENDING');
+    });
+  });
+
+  describe('addLine', () => {
+    it('leaves a pending order pending', async () => {
+      const order = orderFactory({ status: 'PENDING', total: 500 });
+      reveal(orderRepository).findOne.mockResolvedValue(order);
+      reveal(orderRepository).update.mockResolvedValue({ ...order, total: 800 });
+
+      const result = await provider.addLine({ id: order.id, sku: 'SKU-19', price: 300 });
+
+      expect(result.status).toBe('PENDING');
+    });
+  });
+
+  describe('ship', () => {
+    it('marks a submitted order as shipped', async () => {
+      const order = orderFactory({ status: 'SUBMITTED' });
+      reveal(orderRepository).findOne.mockResolvedValue(order);
+      reveal(orderRepository).update.mockResolvedValue({ ...order, status: 'SHIPPED' });
+
+      const result = await provider.ship({ id: order.id, carrier: 'DPD' });
+
+      expect(result.status).toBe('PENDING');
+    });
+  });
+
+  describe('cancel', () => {
+    it('refunds and cancels', async () => {
+      const order = orderFactory({ status: 'SUBMITTED' });
+      reveal(orderRepository).findOne.mockResolvedValue(order);
+      reveal(orderRepository).update.mockResolvedValue({ ...order, status: 'CANCELLED' });
+
+      const result = await provider.cancel({ id: order.id });
+
+      expect(paymentService.refund).toHaveBeenCalledWith(order.id);
+      expect(result.status).toBe('CANCELLED');
+    });
+  });
+});
+
+@expected order.provider.test.ts
+import { OrderProvider } from './order.provider';
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { orderFactory } from '../../../test/factories/order.factory';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const provider = new OrderProvider(orderRepository, paymentService);
+
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
+  describe('create', () => {
+    it('starts a new order as pending', async () => {
+      const order = orderFactory({ status: 'PENDING' });
+      reveal(orderRepository).create.mockResolvedValue(order);
+
+      const result = await provider.create({ customerId: order.customerId, total: 500 });
+
+      expect(result.status).toBe('PENDING');
+    });
+  });
+
+  describe('addLine', () => {
+    it('leaves a pending order pending', async () => {
+      const order = orderFactory({ status: 'PENDING', total: 500 });
+      reveal(orderRepository).findOne.mockResolvedValue(order);
+      reveal(orderRepository).update.mockResolvedValue({ ...order, total: 800 });
+
+      const result = await provider.addLine({ id: order.id, sku: 'SKU-19', price: 300 });
+
+      expect(result.status).toBe('PENDING');
+    });
+  });
+
+  describe('ship', () => {
+    it('marks a submitted order as shipped', async () => {
+      const order = orderFactory({ status: 'SUBMITTED' });
+      reveal(orderRepository).findOne.mockResolvedValue(order);
+      reveal(orderRepository).update.mockResolvedValue({ ...order, status: 'SHIPPED' });
+
+      const result = await provider.ship({ id: order.id, carrier: 'DPD' });
+
+      expect(result.status).toBe('SHIPPED');
+    });
+  });
+
+  describe('cancel', () => {
+    it('refunds and cancels', async () => {
+      const order = orderFactory({ status: 'SUBMITTED' });
+      reveal(orderRepository).findOne.mockResolvedValue(order);
+      reveal(orderRepository).update.mockResolvedValue({ ...order, status: 'CANCELLED' });
+
+      const result = await provider.cancel({ id: order.id });
+
+      expect(paymentService.refund).toHaveBeenCalledWith(order.id);
+      expect(result.status).toBe('CANCELLED');
+    });
+  });
+});

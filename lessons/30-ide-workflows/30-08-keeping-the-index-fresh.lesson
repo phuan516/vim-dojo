@@ -1,0 +1,88 @@
+@meta
+id: 30-08
+title: Keeping the index fresh
+chapter: 30
+type: lesson
+skills: ctags
+par: 112
+minutes: 7
+vscode: nothing — the extension reindexes and you never think about it
+open: .vimrc .gitignore
+
+@brief
+A tags file is a snapshot. Rename a method and the index still points at
+the old line until something rebuilds it. Nobody does that by hand twice.
+
+Two small pieces of setup, and you never think about it again.
+
+  1. In `.vimrc`, after the existing settings, two lines:
+
+         set tags=./tags;,tags
+         nnoremap <F5> :!ctags -R --exclude=node_modules src<CR>
+
+  2. In `.gitignore`, a third entry: `tags`. It is generated, it is
+     large, and it changes on every commit.
+
+Type them exactly as written. `ctags` is not installed in the dojo, so
+this lesson is the configuration rather than the run — but the two lines
+are the ones you would put in a real `.vimrc` tonight.
+
+@keys
+| `set tags=./tags;,tags` | look for `tags` beside the file, then upward to the root |
+| `:!cmd` | run a shell command without leaving vim |
+| `nnoremap` | a normal-mode mapping that does not expand other mappings |
+| `:wn` | write this file and move to the next one in the argument list |
+
+@hints
+Two files are open. `:wn` writes the first and moves to the second;
+`:wqa` at the end writes and quits everything.
+--
+`G` then `o` opens a line under the last one. Autoindent has nothing to
+copy here, so what you type is what you get.
+--
+`G o` the two lines `Esc` `:wn` `G o tags Esc :wqa`.
+
+@solution
+    G o set tags=./tags;,tags<Enter>nnoremap <F5> :!ctags -R --exclude=node_modules src<CR> <Esc>
+    :wn<Enter>  G o tags <Esc>  :wqa<Enter>
+
+The semicolon in `./tags;` is the part worth understanding. `./tags`
+means "a tags file in the same directory as the file being edited".
+The `;` means "and if it is not there, keep looking upward until you hit
+the root". So one tags file at the top of the repo serves every file in
+it, and a per-package one closer to the file wins when it exists. That
+single option is what makes the whole scheme usable in a monorepo.
+
+The mapping is the crude version. The next step up is rebuilding on
+save:
+
+    autocmd BufWritePost *.ts silent! !ctags -R --exclude=node_modules src &
+
+with the `&` to background it, and `silent!` so a missing `ctags` never
+interrupts you. Bigger repos usually run it from a git hook instead —
+`post-merge` and `post-checkout` are the two that matter, because that
+is when a lot of code changes underneath you at once.
+
+Committing the tags file is the classic mistake. It is derived, it is
+often megabytes, and it conflicts on every merge. Generate it; ignore it.
+
+@start .vimrc
+set number
+set ignorecase smartcase
+set hidden
+
+@expected .vimrc
+set number
+set ignorecase smartcase
+set hidden
+set tags=./tags;,tags
+nnoremap <F5> :!ctags -R --exclude=node_modules src<CR>
+
+@start .gitignore
+node_modules/
+dist/
+
+@expected .gitignore
+node_modules/
+dist/
+tags

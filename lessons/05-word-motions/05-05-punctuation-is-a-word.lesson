@@ -1,0 +1,75 @@
+@meta
+id: 05-05
+title: In code, a dot is a word
+chapter: 05
+type: lesson
+skills: word-w
+par: 25
+minutes: 5
+vscode: double-click, which selects only part of the expression
+open: order.provider.ts
+
+@brief
+Prose is kind to `w`. Code is not.
+
+Vim's idea of a word is a run of letters, digits and underscores — or a
+run of punctuation. Which means `order.subtotal` is not one word. It is
+three: `order`, `.`, `subtotal`. Press `w` along a line of TypeScript and
+watch it stop on every dot, bracket and comma.
+
+That is not a bug and you should not fight it. It is precise, and
+precision is what you want when you are aiming at one piece of a chained
+expression.
+
+Prices moved under a `pricing` namespace. The subtotal now comes from
+`order.pricing.subtotal`. Fix the one reference on line three.
+
+@keys
+| `w` | forward to the start of the next word |
+| `a` | insert after the cursor |
+| `2j` | down two lines |
+
+@hints
+You need the cursor sitting on the dot in `order.subtotal`, and then to
+type after it.
+--
+Count the stops: from the start of the line, `w` visits `const`, `total`,
+`=`, `order`, and then the dot itself. Punctuation gets its own stop.
+--
+`2j` then five `w` presses lands on the dot. `a` starts typing just after
+it — type `pricing.` and press `Esc`.
+
+@solution
+    2j  wwwww  a pricing. <Esc>  :wq<Enter>
+
+Five stops to cross `const total = order.` — in prose that would have been
+four words' worth of ground. This is the tax `w` charges on code, and it
+is why the next lesson exists.
+
+Before you decide it is a nuisance, notice what it bought you. You landed
+exactly on the dot, and the dot is a real boundary in the expression. No
+other editor's word jump is that surgical: VS Code's double-click grabs
+`subtotal` or the whole dotted chain depending on settings, and neither is
+what you asked for.
+
+The rule, once and for all: a word is letters, digits and underscores; or
+a run of punctuation; and whitespace is never part of one. `camelCase`
+and `snake_case` are each a single word. `findOne(` is two.
+
+@start order.provider.ts
+export class OrderProvider {
+  public async total(order: Order) {
+    const total = order.subtotal + order.shipping;
+
+    return total;
+  }
+}
+
+@expected order.provider.ts
+export class OrderProvider {
+  public async total(order: Order) {
+    const total = order.pricing.subtotal + order.shipping;
+
+    return total;
+  }
+}

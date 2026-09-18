@@ -1,0 +1,121 @@
+@meta
+id: 17-16
+title: Drill — register the code, come back
+chapter: 17
+type: drill
+skills: marks-set, marks-jump, mark-backtick
+par: 88
+minutes: 6
+reps: 8
+vscode: two tabs, Ctrl+Tab, scroll, click
+open: order.provider.ts error.codes.ts
+vimrc: set hidden
+
+@brief
+Eight times: `ship` throws a placeholder code, `TODO`. The real code is
+`ORDER_NOT_PENDING`, and it has to be registered before it is used.
+
+Find the `TODO`, mark it globally, switch to the codes file, add
+`ORDER_NOT_PENDING: 409,` under `ORDER_NOT_FOUND`, and jump back to
+the mark to replace the placeholder.
+
+@keys
+| `mA` | global mark |
+| `` `A `` | back to it, across files |
+| `:bn` | next buffer |
+| `ciw` | change the word |
+| `:wqa` | write all, quit |
+
+@hints
+The search leaves you on the `T` of `TODO`. Mark there, and the
+return puts you there, and `ciw` does the rest.
+--
+`/TODO` Enter, `mA`, `:bn`, `/NOT_FOUND` Enter, `o` and the line, Esc,
+`` `A ``, `ciwORDER_NOT_PENDING` Esc, `:wqa`.
+
+@solution
+    /TODO<Enter> mA :bn<Enter> /NOT_FOUND<Enter>
+    oORDER_NOT_PENDING: 409,<Esc>
+    `A ciwORDER_NOT_PENDING<Esc> :wqa<Enter>
+
+Register the code, then use it, is the order this codebase insists on,
+and it is the order that sends you to another file and back every
+time. Mark, go, return. By the eighth rep the `mA` should happen
+before you have consciously decided to leave.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+@injectable()
+export class OrderProvider {
+  constructor(@inject(OrderRepository) protected orderRepository: OrderRepository) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('TODO');
+    }
+
+    return this.orderRepository.update({ where: { id }, values: { status: 'SHIPPED' } });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+@injectable()
+export class OrderProvider {
+  constructor(@inject(OrderRepository) protected orderRepository: OrderRepository) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_NOT_PENDING');
+    }
+
+    return this.orderRepository.update({ where: { id }, values: { status: 'SHIPPED' } });
+  }
+}
+
+@start error.codes.ts
+export const ERROR_CODES = {
+  ORDER_NOT_FOUND: 404,
+  ORDER_ALREADY_SHIPPED: 409,
+  CUSTOMER_NOT_FOUND: 404,
+  REFUND_FAILED: 502,
+};
+
+@expected error.codes.ts
+export const ERROR_CODES = {
+  ORDER_NOT_FOUND: 404,
+  ORDER_NOT_PENDING: 409,
+  ORDER_ALREADY_SHIPPED: 409,
+  CUSTOMER_NOT_FOUND: 404,
+  REFUND_FAILED: 502,
+};

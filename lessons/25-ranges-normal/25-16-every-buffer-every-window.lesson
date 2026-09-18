@@ -1,0 +1,167 @@
+@meta
+id: 25-16
+title: Every buffer, every window, every tab
+chapter: 25
+type: lesson
+skills: bufdo, argdo, ex-normal
+par: 63
+minutes: 8
+vscode: Find in Files, Replace All, hope the fixture did not match
+open: order.provider.ts refund.provider.ts payment.service.ts payments.fixture.ts
+vimrc: set hidden
+
+@brief
+The gateway client is being renamed. Every use of the identifier
+`legacyGateway` becomes `paymentGateway`, in all three source files.
+
+The fourth buffer, `payments.fixture.ts`, holds recorded gateway
+responses. It contains the *string* `'legacy-gateway'`, which is what the
+old provider actually sent on the wire and is not being renamed. Touch it
+and the check fails.
+
+A range addresses lines in one buffer. `:bufdo` is the next size up: it
+runs an Ex command in every buffer on the buffer list, one after another.
+`:%s/…/…/g` is an Ex command. So is `:normal`. So is a `|`-separated pair
+of them, which is how the write gets done: `| update` writes each buffer
+before moving to the next, and only if that buffer actually changed.
+
+@keys
+| `:bufdo %s/old/new/ge | update` | substitute in every buffer, write the ones that changed |
+| `:argdo` | the same, over the argument list |
+| `:windo` `:tabdo` | over every window in this tab, or every tab |
+| `:update` | write, but only if the buffer is modified |
+| `/ge` | `g` every match on the line, `e` do not stop on buffers with no match |
+
+@hints
+One command, in front of a substitute you already know how to write.
+The identifier is a whole word and the fixture's string is hyphenated, so
+a plain `legacyGateway` matches nothing in the fixture.
+--
+Without the `e` flag the run stops at the first buffer that has no match,
+and half the job is done. Without `| update` nothing is written at all.
+--
+`:bufdo %s/legacyGateway/paymentGateway/ge | update` Enter, then `:qa`.
+
+@solution
+    :bufdo %s/legacyGateway/paymentGateway/ge | update<Enter>  :qa<Enter>
+
+Fifty-five keystrokes for three files, and the same command for thirty.
+
+Four commands, one shape. They differ only in which list they walk:
+
+| `:argdo` | the argument list — the files you named on the command line, or set with `:args` |
+| `:bufdo` | the buffer list — everything vim has loaded, including files you opened to glance at |
+| `:windo` | the windows in the current tab |
+| `:tabdo` | the tabs |
+
+And from chapter 19, `:cdo` and `:cfdo` walk the quickfix list. Pick by
+asking which list already contains exactly the files you mean. `:bufdo`
+is the loose one: a buffer you opened an hour ago to check something is
+still on the list, and `:bufdo %s/…/g` will edit it. `:argdo` after
+`:args src/**/*.ts` is the precise one, because you said what the list
+was.
+
+Three details that bite:
+
+**`| update`, not `| w`.** `update` writes only modified buffers, so the
+timestamps of untouched files do not change and your build does not
+rebuild the world. Here it is also what keeps the fixture honest.
+
+**The `e` flag.** `%s` with no match raises `E486`, and an error inside
+`:bufdo` stops the whole run part-way. `/ge` says "carry on".
+
+**Where you end up.** The commands leave you in the last buffer of the
+list, not the one you started in. `` `` `` or `Ctrl-O` gets you back.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { legacyGateway } from '../../infrastructure/gateways';
+
+@injectable()
+export class OrderProvider {
+  public async authorise(orderId: string, amount: number) {
+    return legacyGateway.authorise(orderId, amount);
+  }
+
+  public async capture(orderId: string) {
+    return legacyGateway.capture(orderId);
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { paymentGateway } from '../../infrastructure/gateways';
+
+@injectable()
+export class OrderProvider {
+  public async authorise(orderId: string, amount: number) {
+    return paymentGateway.authorise(orderId, amount);
+  }
+
+  public async capture(orderId: string) {
+    return paymentGateway.capture(orderId);
+  }
+}
+
+@start refund.provider.ts
+import { injectable } from 'tsyringe';
+import { legacyGateway } from '../../infrastructure/gateways';
+
+@injectable()
+export class RefundProvider {
+  public async refund(orderId: string, amount: number) {
+    const receipt = await legacyGateway.refund(orderId, amount);
+
+    return receipt;
+  }
+}
+
+@expected refund.provider.ts
+import { injectable } from 'tsyringe';
+import { paymentGateway } from '../../infrastructure/gateways';
+
+@injectable()
+export class RefundProvider {
+  public async refund(orderId: string, amount: number) {
+    const receipt = await paymentGateway.refund(orderId, amount);
+
+    return receipt;
+  }
+}
+
+@start payment.service.ts
+import { injectable } from 'tsyringe';
+import { legacyGateway } from '../gateways';
+
+@injectable()
+export class PaymentService {
+  public async status() {
+    return legacyGateway.status();
+  }
+
+  public async settle(paymentId: string) {
+    return legacyGateway.settle(paymentId);
+  }
+}
+
+@expected payment.service.ts
+import { injectable } from 'tsyringe';
+import { paymentGateway } from '../gateways';
+
+@injectable()
+export class PaymentService {
+  public async status() {
+    return paymentGateway.status();
+  }
+
+  public async settle(paymentId: string) {
+    return paymentGateway.settle(paymentId);
+  }
+}
+
+@start payments.fixture.ts
+export const gatewayResponses = [
+  { provider: 'legacy-gateway', status: 'AUTHORISED', reference: 'pay_9001' },
+  { provider: 'legacy-gateway', status: 'TIMEOUT', reference: 'pay_9002' },
+  { provider: 'legacy-gateway', status: 'REFUNDED', reference: 'pay_9003' },
+];

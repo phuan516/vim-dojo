@@ -1,0 +1,126 @@
+@meta
+id: 05-18
+title: Four edits, no arrow keys
+chapter: 05
+type: lesson
+skills: word-counts, WORD-motions, word-e, word-b, word-w
+par: 83
+minutes: 10
+vscode: eight clicks and a double-click, in one file
+open: order.provider.ts
+
+@brief
+The whole chapter, on one real provider, with a ticket attached.
+
+    ORD-503  Refunds are recorded without a reason and without the
+             amount, so finance cannot reconcile them. The repository
+             call is also using the wrong finder.
+
+Four changes, all in `order.provider.ts`:
+
+  1. `refund` takes a third parameter, `reason: string`.
+  2. The lookup uses `findOne`, not `findFirst`. Change the name only.
+  3. The payment call passes the reason through:
+     `this.paymentService.refund(order.id, amount, reason)`.
+  4. The update writes the amount too:
+     `values: { amount, status: 'REFUNDED' }`.
+
+Nothing else in the file moves. The imports, the constructor and the
+decorators are already correct — if your diff touches them, you missed.
+
+Par assumes word motions and counted line jumps, and nothing else. It is
+comfortable if you pick well and impossible if you walk there.
+
+@keys
+| `11j` | eleven lines down |
+| `$` `0` | the ends of a line |
+| `ge` | back to the end of the previous word |
+| `9e` | nine word-ends forward |
+| `3W` | three WORDs forward |
+| `Ctrl-W` | insert mode: delete the word behind the cursor |
+
+@hints
+Work top to bottom. Every target is on a line below the last one, so you
+never move upwards, and each jump is a counted `j` plus one word motion.
+--
+The signature and the payment call have the same shape: the insertion
+point is the last real thing before a closing paren. `$ge` finds it in
+both. The finder rename is the `ea` plus `Ctrl-W` move from lesson
+fifteen. The update needs a start-of-token landing in a brace-heavy line,
+which is `W` territory.
+--
+In order: `11j$ge` `i, reason: string` `Esc`; `j0` `9e` `a` `Ctrl-W`
+`findOne` `Esc`; `2j$ge` `a, reason` `Esc`; `4j0` `3W` `i` `amount, `
+`Esc`; `:wq`.
+
+@solution
+    11j $ ge   i, reason: string<Esc>
+    j 0 9e     a <Ctrl-W> findOne<Esc>
+    2j $ ge    a, reason<Esc>
+    4j 0 3W    iamount, <Esc>
+    :wq<Enter>
+
+Seventy-two keystrokes, forty of which are the text the ticket asked for.
+The navigation cost for four edits scattered over eight lines of a real
+file was about thirty keys, and you never left the home row except for
+the digits.
+
+Look at the second column of that solution. `$ge`, `0` and a count, `$ge`
+again, `0` and a count. Two patterns, used twice each. That is what
+fluency looks like from the inside — not a large vocabulary, but a very
+small one that you reach for without deliberating.
+
+What is still missing is obvious by now: you cannot delete, you cannot
+copy, and `Ctrl-W` is a poor substitute for both. Every motion you have
+learned here becomes an argument to an operator in chapter eight, and
+`d3w`, `cW` and `ge` as a target are the same keys you just used. Motions
+first, operators second — this was the half that has to be automatic
+before the other half is worth anything.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async refund(id: string, amount: number) {
+    const order = await this.orderRepository.findFirst({ where: { id } });
+
+    await this.paymentService.refund(order.id, amount);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'REFUNDED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async refund(id: string, amount: number, reason: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    await this.paymentService.refund(order.id, amount, reason);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { amount, status: 'REFUNDED' },
+    });
+  }
+}

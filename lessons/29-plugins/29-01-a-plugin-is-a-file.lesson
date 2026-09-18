@@ -1,0 +1,155 @@
+@meta
+id: 29-01
+title: A plugin is a file in a directory
+chapter: 29
+type: lesson
+skills: packadd
+par: 22
+minutes: 5
+vscode: install an extension, restart, hope it does not eat 400MB
+open: order.provider.ts
+vimrc: set packpath^=. | packloadall!
+
+@brief
+There is a plugin in this lesson's directory. Nothing was downloaded and
+you did not install it — the dojo shipped it as one of the lesson's files,
+the same way it ships `order.provider.ts`. Look:
+
+    pack/dojo/start/sortimports/plugin/sortimports.vim
+
+Twenty-odd lines of vimscript. Vim read it at startup because of where it
+sits, and because it was read, this vim has a command it would not
+otherwise have: `:SortImports`. That is all a plugin is. Not a bundle, not
+a marketplace listing, not a background process. A file of vimscript in a
+directory vim knows to look in.
+
+The import block at the top of `order.provider.ts` has drifted out of
+order. Sort it, using the command the plugin gave you. Read the plugin
+first if you want to know what it is going to do — it sorts on the module
+path, the text after `from `.
+
+@keys
+| `:SortImports` | the command this lesson's plugin defines |
+| `:command` | list every command defined, plugins included |
+| `:scriptnames` | every file vim has sourced, in the order it sourced them |
+
+@hints
+The command is already there. You do not have to load anything, require
+anything or restart. Type a colon and the name.
+--
+`:SortImports` then Enter. If you want to see where it came from first,
+`:scriptnames` lists every file vim sourced and the plugin will be near
+the bottom.
+
+@solution
+    :SortImports<Enter>  :wq<Enter>
+
+Seventeen keystrokes, and the interesting part is the ones you did not
+have to press.
+
+The directory layout is the whole mechanism, so it is worth reading once,
+slowly:
+
+    pack / dojo / start / sortimports / plugin / sortimports.vim
+      |      |      |         |           |
+      |      |      |         |           `-- sourced at startup
+      |      |      |         `-- one plugin
+      |      |      `-- "start" means load it automatically
+      |      `-- a group name you choose; it means nothing to vim
+      `-- a directory named pack/ on the 'packpath'
+
+Your own plugins go in `~/.vim/pack/<anything>/start/<plugin>/`, because
+`~/.vim` is on the default `packpath`. This lesson cheats by one option —
+`set packpath^=.` adds the current directory too, which is why a package
+sitting next to your files works at all. Run `:set packpath?` and you will
+see it.
+
+This is vim's built-in package system. It landed in vim 8, in 2016, and
+from that day onward installing a plugin has been `git clone` into a
+directory. Chapter 29 spends four lessons on the machinery and then twelve
+on the three plugins that actually change your day.
+
+@start pack/dojo/start/sortimports/plugin/sortimports.vim
+" dojo-sortimports.vim - sort an ES module import block by module path.
+" Shipped inside this lesson. You did not install it; the dojo did.
+
+if exists('g:loaded_dojo_sortimports')
+  finish
+endif
+let g:loaded_dojo_sortimports = 1
+
+function! s:sort_imports() abort
+  let first = 0
+  let last = 0
+  for n in range(1, line('$'))
+    if getline(n) =~# '^import '
+      let first = first == 0 ? n : first
+      let last = n
+    endif
+  endfor
+  if first == 0
+    echo 'SortImports: no import block found'
+    return
+  endif
+  " :sort /pat/ sorts on what comes AFTER the match, so this sorts on the
+  " module path rather than on the names being imported.
+  execute first . ',' . last . 'sort /from /'
+endfunction
+
+command! SortImports call s:sort_imports()
+
+@start order.provider.ts
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { injectable, inject } from 'tsyringe';
+import { OrderRepository } from './order.repository';
+import { exception } from '../../configuration/errors';
+
+export class OrderProvider {
+  constructor(
+    protected orderRepository: OrderRepository,
+    protected paymentService: PaymentService,
+  ) {}
+
+  public async cancel(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { exception } from '../../configuration/errors';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { OrderRepository } from './order.repository';
+import { injectable, inject } from 'tsyringe';
+
+export class OrderProvider {
+  constructor(
+    protected orderRepository: OrderRepository,
+    protected paymentService: PaymentService,
+  ) {}
+
+  public async cancel(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}

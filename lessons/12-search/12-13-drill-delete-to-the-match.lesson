@@ -1,0 +1,52 @@
+@meta
+id: 12-13
+title: Drill — delete up to the match
+chapter: 12
+type: drill
+skills: search-motion
+par: 18
+minutes: 5
+reps: 8
+vscode: click, shift-click, Delete
+open: summarise.ts
+
+@brief
+Eight times: the four debug lines between the opening brace and the
+`return` go. One operator, one search, no counting.
+
+@keys
+| `d/text` `Enter` | delete from the cursor up to the next match |
+| `^` | first non-blank character of the line |
+
+@hints
+Get onto the first line of the junk — first non-blank character, not
+column zero — and delete up to the `return`.
+--
+`j^` puts you there. Then `d/return` `Enter`. Starting at the first
+non-blank means the indentation in front of the cursor survives and the
+`return` keeps its two spaces.
+
+@solution
+j  ^  d/return<Enter>  :wq<Enter>
+
+Fifteen keystrokes. Four of the eight reps should be enough for the
+sequence to stop feeling like three decisions and start feeling like one.
+
+The `^` is not a detail you can skip. Deleting from column zero would
+take the indentation with it and leave the `return` jammed against the
+margin. `d` starts where the cursor is, so where the cursor is *within*
+the line matters as much as which line it is on.
+
+@start summarise.ts
+export function summarise(orders: Order[]) {
+  const started = Date.now();
+  console.log('[summarise] orders in', orders.length);
+  console.table(orders.map((order) => order.status));
+  console.log('[summarise] elapsed ms', Date.now() - started);
+  return orders.filter((order) => order.status === 'PENDING');
+}
+
+@expected summarise.ts
+export function summarise(orders: Order[]) {
+  return orders.filter((order) => order.status === 'PENDING');
+}

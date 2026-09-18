@@ -1,0 +1,95 @@
+@meta
+id: 30-07
+title: Read it without leaving
+chapter: 30
+type: lesson
+skills: ctags
+par: 44
+minutes: 5
+vscode: hovering the name, or Alt-F12 to peek
+open: src/domain/order/order.resolver.ts
+
+@brief
+Half the time you do not want to *go* to the definition. You want to see
+its first line, check the arguments, and keep typing where you are.
+
+The resolver hands `cancel` one argument. The provider wants two. Look
+up what the second one is without losing the line you are editing, then
+pass `args.reason`.
+
+The provider and the tags file are provided and neither changes.
+
+@keys
+| `Ctrl-W }` | open the definition of the word under the cursor in the preview window |
+| `:ptag name` | the same, by name |
+| `Ctrl-W z` | close the preview window |
+| `Ctrl-W ]` | open the definition in a normal split instead |
+| `:pclose` | the long form of `Ctrl-W z` |
+
+@hints
+Get the cursor onto `cancel` at the call site, then `Ctrl-W }`. A small
+window opens at the top with the definition in it; your cursor never
+moves.
+--
+`Ctrl-W z` closes it again. Everything in between is ordinary editing in
+the window you were already in.
+--
+`/cancel(args` `Enter`, `Ctrl-W }`, read the signature, `Ctrl-W z`,
+`f)`, `i, args.reason`, `Esc`, `:wq`.
+
+@solution
+    /cancel(args<Enter>  Ctrl-W }   Ctrl-W z
+    f) i , args.reason <Esc>  :wq<Enter>
+
+The preview window is the original hover. It is a real window holding a
+real buffer, so you can `Ctrl-W P` into it and scroll if one line was
+not enough, and `Ctrl-W z` closes it from anywhere.
+
+`Ctrl-W ]` is the other half of the pair: a normal split, for when you
+are going to work in both files for the next ten minutes rather than
+glance at one line. The split keeps its own cursor, which makes
+"implement the interface" a pleasant job — definition on top, your file
+below, `Ctrl-W w` between them.
+
+Both take the same tags file you already have. Nothing new is running.
+
+@start tags
+!_TAG_FILE_FORMAT	2	//
+!_TAG_FILE_SORTED	1	//
+OrderProvider	src/domain/order/order.provider.ts	/^export class OrderProvider {$/;"	c
+OrderResolver	src/domain/order/order.resolver.ts	/^export class OrderResolver {$/;"	c
+cancel	src/domain/order/order.provider.ts	/^  public async cancel(id: string, reason: string) {$/;"	m	class:OrderProvider
+
+@start src/domain/order/order.resolver.ts
+import { OrderProvider } from './order.provider';
+
+export class OrderResolver {
+  constructor(protected orderProvider: OrderProvider) {}
+
+  public async cancelOrder(_: unknown, args: { id: string; reason: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@expected src/domain/order/order.resolver.ts
+import { OrderProvider } from './order.provider';
+
+export class OrderResolver {
+  constructor(protected orderProvider: OrderProvider) {}
+
+  public async cancelOrder(_: unknown, args: { id: string; reason: string }) {
+    return this.orderProvider.cancel(args.id, args.reason);
+  }
+}
+
+@start src/domain/order/order.provider.ts
+export class OrderProvider {
+  public async cancel(id: string, reason: string) {
+    const order = await this.findOne(id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED', cancellationReason: reason },
+    });
+  }
+}

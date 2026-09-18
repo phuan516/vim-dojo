@@ -1,0 +1,128 @@
+@meta
+id: 21-18
+title: Every file on the list
+chapter: 21
+type: lesson
+skills: macro-across-files, macro-recursive
+par: 92
+minutes: 9
+vscode: open three files, multi-cursor each one separately
+open: products.eu.txt products.uk.txt products.us.txt
+vimrc: set hidden
+
+@brief
+Three regional product exports, one product per line, fields separated
+by semicolons. Every line in every file becomes a record ready to paste
+into a fixture:
+
+    sku_101;Blue mug;12.50    →    { sku: 'sku_101', name: 'Blue mug', price: 12.50 },
+
+Vim was opened with all three files, so they are the argument list
+from chapter 18. Record a recursive macro in the first file and finish
+that file with it. Then run the same macro once in each file on the
+list, from the top, and let the recursion do the rest.
+
+@keys
+| `:argdo normal gg@a` | in every file on the argument list, go to the top and play `a` |
+| `:bufdo` | the same, over every buffer instead of the argument list |
+| `:wqa` | write everything, quit |
+
+@hints
+The guard is `0f;`. On a line already converted there is no semicolon,
+and on the last line the trailing `j` fails, so the recursion ends in
+both files that need it and does nothing in the one that is done.
+--
+`qaq`, then `qa0f;s', name: '<Esc>f;s', price: <Esc>0i{ sku: '<Esc>A },<Esc>j@aq`,
+then `@a` to finish the first file.
+--
+`:argdo normal gg@a` and Enter. Then `:wqa`. The `gg` matters: a
+freshly loaded file starts at line 1, but the file you are in does
+not, and the macro has to start where the data starts.
+
+@solution
+    qaq   qa 0f; s', name: ' <Esc> f; s', price:  <Esc> 0i{ sku: ' <Esc> A }, <Esc> j @a q   @a
+    :argdo normal gg@a<Enter>   :wqa<Enter>
+
+Eighty keystrokes for twenty-four lines in three files.
+
+`:argdo` runs an Ex command in every file on the argument list, and
+`normal gg@a` is an Ex command. `:bufdo` does the same over every
+loaded buffer, and `:cfdo` from chapter 19 over every file with a
+quickfix hit. Which one you reach for depends only on which list
+already has the right files on it. Here vim was started with the three
+files, so the argument list is that list already.
+
+The recursive macro is doing the per-file work. `:argdo` runs it once
+per file; the `@a` at the end of the macro keeps it going down that
+file until the guard fails. So one `gg@a` per file converts the whole
+file, whatever length it is, and the files do not have to be the same
+length.
+
+The first file was already finished by hand, and `:argdo` visits it
+anyway. That is fine because of the guard: line one has no semicolon
+any more, so `0f;` fails before anything is changed. A macro that is
+safe to replay on its own output is a macro you can run over a list
+without checking which files are done. Worth designing for.
+
+Chapter 25 comes back to `:argdo`, `:bufdo` and `:windo` in general.
+Here you only need the one shape: list command, `normal`, macro.
+
+@start products.eu.txt
+sku_101;Blue mug;12.50
+sku_102;Grey mug;12.50
+sku_103;Enamel pin;4.00
+sku_104;Canvas tote;18.00
+sku_105;Sticker pack;3.50
+sku_106;Notebook A5;9.00
+sku_107;Notebook A4;12.00
+sku_108;Desk mat;24.00
+
+@expected products.eu.txt
+{ sku: 'sku_101', name: 'Blue mug', price: 12.50 },
+{ sku: 'sku_102', name: 'Grey mug', price: 12.50 },
+{ sku: 'sku_103', name: 'Enamel pin', price: 4.00 },
+{ sku: 'sku_104', name: 'Canvas tote', price: 18.00 },
+{ sku: 'sku_105', name: 'Sticker pack', price: 3.50 },
+{ sku: 'sku_106', name: 'Notebook A5', price: 9.00 },
+{ sku: 'sku_107', name: 'Notebook A4', price: 12.00 },
+{ sku: 'sku_108', name: 'Desk mat', price: 24.00 },
+
+@start products.uk.txt
+sku_101;Blue mug;10.00
+sku_102;Grey mug;10.00
+sku_103;Enamel pin;3.50
+sku_104;Canvas tote;15.00
+sku_105;Sticker pack;3.00
+sku_106;Notebook A5;8.00
+sku_107;Notebook A4;10.00
+sku_108;Desk mat;20.00
+sku_109;Gift card;25.00
+sku_110;Postcard set;5.00
+
+@expected products.uk.txt
+{ sku: 'sku_101', name: 'Blue mug', price: 10.00 },
+{ sku: 'sku_102', name: 'Grey mug', price: 10.00 },
+{ sku: 'sku_103', name: 'Enamel pin', price: 3.50 },
+{ sku: 'sku_104', name: 'Canvas tote', price: 15.00 },
+{ sku: 'sku_105', name: 'Sticker pack', price: 3.00 },
+{ sku: 'sku_106', name: 'Notebook A5', price: 8.00 },
+{ sku: 'sku_107', name: 'Notebook A4', price: 10.00 },
+{ sku: 'sku_108', name: 'Desk mat', price: 20.00 },
+{ sku: 'sku_109', name: 'Gift card', price: 25.00 },
+{ sku: 'sku_110', name: 'Postcard set', price: 5.00 },
+
+@start products.us.txt
+sku_101;Blue mug;14.00
+sku_102;Grey mug;14.00
+sku_104;Canvas tote;21.00
+sku_106;Notebook A5;11.00
+sku_107;Notebook A4;14.00
+sku_108;Desk mat;28.00
+
+@expected products.us.txt
+{ sku: 'sku_101', name: 'Blue mug', price: 14.00 },
+{ sku: 'sku_102', name: 'Grey mug', price: 14.00 },
+{ sku: 'sku_104', name: 'Canvas tote', price: 21.00 },
+{ sku: 'sku_106', name: 'Notebook A5', price: 11.00 },
+{ sku: 'sku_107', name: 'Notebook A4', price: 14.00 },
+{ sku: 'sku_108', name: 'Desk mat', price: 28.00 },

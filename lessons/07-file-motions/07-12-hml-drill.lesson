@@ -1,0 +1,73 @@
+@meta
+id: 07-12
+title: Drill — high, middle, low
+chapter: 07
+type: drill
+skills: screen-HML, line-end
+par: 20
+minutes: 4
+reps: 10
+vscode: three clicks and three End presses
+open: index.ts
+
+@brief
+Thirteen exports on one screen. The top one, the middle one and the bottom
+one have lost their semicolons. Put them back.
+
+Nothing to work out. The dojo will hand you the file ten times.
+
+@keys
+| `H` `M` `L` | high, middle and low on the screen |
+| `A` | append at the end of the line |
+
+@hints
+Four keys per line: the screen motion, `A`, the semicolon, `Esc`.
+--
+Go `H`, `M`, `L` in that order and do not look between them. The three keys
+sit under your right hand and should end up costing no more thought than
+`j` does.
+
+@solution
+    H A ; <Esc>  M A ; <Esc>  L A ; <Esc>  :wq<Enter>
+
+Sixteen keystrokes.
+
+The reason to drill these three specifically is that they are the motions
+people forget they have. `gg`, `G` and `}` all get used daily because they
+answer questions you ask out loud. `H` and `L` answer a question you ask
+with your eyes, and so they stay unlearned unless you deliberately put them
+in your fingers.
+
+They also pair up later. Once you have operators, `L` stops being only a
+way to move and starts being a way to say "to the bottom of the screen",
+and that turns out to be how you deal with a wall of output.
+
+@start index.ts
+export * from './order.entity'
+export * from './order.repository';
+export * from './order.provider';
+export * from './order.resolver';
+export * from './customer.entity';
+export * from './customer.repository';
+export * from './customer.provider'
+export * from './customer.resolver';
+export * from './refund.entity';
+export * from './refund.repository';
+export * from './refund.provider';
+export * from './payment.service';
+export * from './email.service'
+
+@expected index.ts
+export * from './order.entity';
+export * from './order.repository';
+export * from './order.provider';
+export * from './order.resolver';
+export * from './customer.entity';
+export * from './customer.repository';
+export * from './customer.provider';
+export * from './customer.resolver';
+export * from './refund.entity';
+export * from './refund.repository';
+export * from './refund.provider';
+export * from './payment.service';
+export * from './email.service';

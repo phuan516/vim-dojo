@@ -1,0 +1,142 @@
+@meta
+id: 22-16
+title: Ragged lines, one append
+chapter: 22
+type: lesson
+skills: visual-block, block-append
+par: 34
+minutes: 5
+vscode: Alt+click at the end of forty lines, or a regex replace
+open: orders.csv
+
+@brief
+The last lesson's block worked because the column was aligned. Most
+lines are not aligned, and `A` on a block that stops short of a line's
+end will pad the line with spaces to reach the block. For "append to
+the end of every line" there is a special case: `$` inside a block
+selection extends the block to the end of *each* line, whatever its
+length, and `A` then appends after each one's own last character.
+
+Forty rows in the export need a currency. Append `,GBP` to every data
+row and `,currency` to the header line.
+
+Forty lines is too many to count `j` for. Build the block from the
+first data row to the last with `G`, or with a search for the last
+order id; a block can be extended by any motion, the same as the other
+two visual modes.
+
+@keys
+| `$` | in block mode, extend the block to the end of every line |
+| `A` | append after the end of each line |
+| `G` | extend the block to the last line |
+| `/pattern` | extend the block to a match |
+
+@hints
+Skip the header with `j`. `Ctrl-V`, then `G` takes the block to the
+last row without a count.
+--
+Now `$`. Watch the highlight change from a rectangle to a ragged right
+edge. `A`, `,GBP`, `Esc`.
+--
+`j`, `Ctrl-V`, `G`, `$`, `A,GBP`, `Esc`. Then `gg`, `A,currency`, `Esc`
+for the header.
+
+@solution
+    j Ctrl-V G $ A ,GBP <Esc> g g A ,currency <Esc> :wq<Enter>
+
+Twenty-seven keystrokes. The order matters: `$` after the block has
+its height. `$` sets a flag on the block rather than a column, and a
+`G` pressed after it puts a column back, so the flag is lost and `A`
+pads to that column instead. Height first, then `$`, then `A`.
+
+`:'<,'>s/$/,GBP/` and `:'<,'>normal A,GBP` are both honest alternatives
+and both longer. Block `$A` is the shortest way vim has to say "at the
+end of each of these lines", and it comes up constantly: trailing
+commas, semicolons, closing tags, a `\` at the end of every line of a
+shell command.
+
+@start orders.csv
+order_id,customer,total
+ord_1040,aisha,79.00
+ord_1041,ben,84.00
+ord_1042,lena,7.00
+ord_1043,quinn,88.00
+ord_1044,marco,76.00
+ord_1045,george,216.24
+ord_1046,pilar,272.93
+ord_1047,hana,24.00
+ord_1048,george,36.00
+ord_1049,ben,222.06
+ord_1050,kofi,37.00
+ord_1051,jun,73.00
+ord_1052,jun,39.00
+ord_1053,nadia,12.00
+ord_1054,ivan,100.00
+ord_1055,marco,31.00
+ord_1056,priya,50.58
+ord_1057,ben,49.00
+ord_1058,ben,169.45
+ord_1059,leila,19.08
+ord_1060,chloe,25.00
+ord_1061,tomasz,76.75
+ord_1062,tomasz,256.90
+ord_1063,pilar,96.00
+ord_1064,mateo,92.00
+ord_1065,tomasz,133.15
+ord_1066,nadia,9.00
+ord_1067,tomasz,89.00
+ord_1068,fatima,91.05
+ord_1069,ivan,69.00
+ord_1070,mateo,3.00
+ord_1071,tomasz,298.60
+ord_1072,jun,177.15
+ord_1073,marco,122.48
+ord_1074,chloe,63.00
+ord_1075,marco,215.59
+ord_1076,dmitri,58.34
+ord_1077,pilar,114.00
+ord_1078,marco,21.00
+ord_1079,marco,4.00
+
+@expected orders.csv
+order_id,customer,total,currency
+ord_1040,aisha,79.00,GBP
+ord_1041,ben,84.00,GBP
+ord_1042,lena,7.00,GBP
+ord_1043,quinn,88.00,GBP
+ord_1044,marco,76.00,GBP
+ord_1045,george,216.24,GBP
+ord_1046,pilar,272.93,GBP
+ord_1047,hana,24.00,GBP
+ord_1048,george,36.00,GBP
+ord_1049,ben,222.06,GBP
+ord_1050,kofi,37.00,GBP
+ord_1051,jun,73.00,GBP
+ord_1052,jun,39.00,GBP
+ord_1053,nadia,12.00,GBP
+ord_1054,ivan,100.00,GBP
+ord_1055,marco,31.00,GBP
+ord_1056,priya,50.58,GBP
+ord_1057,ben,49.00,GBP
+ord_1058,ben,169.45,GBP
+ord_1059,leila,19.08,GBP
+ord_1060,chloe,25.00,GBP
+ord_1061,tomasz,76.75,GBP
+ord_1062,tomasz,256.90,GBP
+ord_1063,pilar,96.00,GBP
+ord_1064,mateo,92.00,GBP
+ord_1065,tomasz,133.15,GBP
+ord_1066,nadia,9.00,GBP
+ord_1067,tomasz,89.00,GBP
+ord_1068,fatima,91.05,GBP
+ord_1069,ivan,69.00,GBP
+ord_1070,mateo,3.00,GBP
+ord_1071,tomasz,298.60,GBP
+ord_1072,jun,177.15,GBP
+ord_1073,marco,122.48,GBP
+ord_1074,chloe,63.00,GBP
+ord_1075,marco,215.59,GBP
+ord_1076,dmitri,58.34,GBP
+ord_1077,pilar,114.00,GBP
+ord_1078,marco,21.00,GBP
+ord_1079,marco,4.00,GBP

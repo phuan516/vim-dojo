@@ -1,0 +1,65 @@
+@meta
+id: 06-09
+title: Stopping just short with t
+chapter: 06
+type: lesson
+skills: find-t
+par: 24
+minutes: 4
+vscode: click in the gap before the closing brace
+open: payment.service.ts
+
+@brief
+The refund call posts only the order id. Support cannot tell refunds apart
+in the payment provider's dashboard, so the reason goes in the body too:
+
+    { orderId, reason }
+
+The gap you are typing into is between `orderId` and the space that precedes
+the closing brace. Aim at the brace — it is the only one on the line — but
+you need to arrive one character short of it, not on it. Land on the brace
+itself and your text ends up on the wrong side of the space.
+
+@keys
+| `f}` | forward onto the next `}` |
+| `t}` | forward until just before the next `}` |
+| `i` | insert to the left of the cursor |
+
+@hints
+`f}` puts you on the brace, and inserting there would give you
+`{ orderId , reason}`. You want to stop one character earlier.
+--
+`t` is `f` that stops short: `t}` leaves the cursor on the character
+immediately before the brace, which here is the space.
+--
+`2j` to the post call, then `t}`, `i`, type `, reason`, `Esc`.
+
+@solution
+    2j t } i , reason <Esc> :wq<Enter>
+
+Think of it as touch versus reach. `f}` touches the brace. `t}` reaches up
+to it and stops — the `t` is for till.
+
+The one-character difference decides which side of the surrounding
+whitespace your text lands on, and in formatted code that is the difference
+between a clean diff and a prettier complaint. Here `t}i` writes into the
+gap after `orderId`; `f}i` would write into the gap before the brace.
+
+`T` does the same thing backwards, which is the next lesson. And from
+chapter 8 the pair earns its real keep with operators — `dt,` deletes up to
+but not including the next comma, which is how you cut one argument out of a
+call without touching the punctuation around it.
+
+@start payment.service.ts
+export class PaymentService {
+  public async refund(orderId: string, reason: string) {
+    return this.http.post('/refunds', { orderId });
+  }
+}
+
+@expected payment.service.ts
+export class PaymentService {
+  public async refund(orderId: string, reason: string) {
+    return this.http.post('/refunds', { orderId, reason });
+  }
+}

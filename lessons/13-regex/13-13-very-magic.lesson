@@ -1,0 +1,110 @@
+@meta
+id: 13-13
+title: Very magic
+chapter: 13
+type: lesson
+skills: regex-verymagic
+par: 30
+minutes: 6
+vscode: Ctrl+F with the regex toggle on — this is the dialect it uses
+open: versions.yaml
+
+@brief
+Every service in this file is pinned to a full `major.minor.patch`
+version. Two of them are not — they stop at `major.minor` — and the
+deploy script rejects them. Append `.0` to each of the two-part
+versions. The `tooling` block is out of scope and is not pinned the
+same way.
+
+You know how to write this pattern now: a colon, a space, some digits,
+a dot, some digits, and then the end of the line.
+
+    /: \d\+\.\d\+$
+
+Four backslashes in ten characters, three of them on quantifiers. You
+have been typing patterns like this for three lessons. There is a
+switch that makes vim's dialect look like everyone else's, and this
+lesson is where you turn it on.
+
+@keys
+| `\v` | very magic — from here on, every punctuation character is special |
+| `/\v: \d+\.\d+$` | the same pattern, one backslash instead of four |
+| `+` `?` `{` `(` `\|` `<` `>` | bare, under `\v`, they all mean what they mean elsewhere |
+| `\.` `\(` `\+` | under `\v`, a backslash makes a special character literal |
+| `A` then `n.` | append, next, repeat |
+
+@hints
+Write the pattern you already know, then take the backslashes off the
+quantifiers and put two characters at the front.
+--
+`\v` at the start of a pattern switches to very magic. Under it, `+`
+is one-or-more without a backslash, and so are `?`, `{}`, `()` and
+`|`. The dot still needs `\.` to be literal.
+--
+`/\v: \d+\.\d+$` `Enter`, then `A.0`, `Esc`, and `n.` for the second.
+
+@solution
+/\v: \d+\.\d+$<Enter>  A.0<Esc>  n.  :wq<Enter>
+
+Twenty-five keystrokes, and the pattern reads the way it would in
+JavaScript, in `grep -E`, in the VS Code find box with regex on.
+
+Vim has four magic levels, set by a prefix at the start of a pattern.
+Two matter:
+
+    magic        the default   `\+ \? \{ \( \| \<`   escaped to be special
+    very magic   `\v`          `+ ? { ( | <`         special on their own
+
+The other two, `\M` and `\V`, go the other way — `\V` "very nomagic"
+makes *everything* literal except the backslash, which is the right
+tool when you want to search for a path or a chunk of code full of
+dots and brackets and do not want to escape any of it.
+
+Under `\v` the rule is simple: every ASCII character except letters,
+digits and underscore is special. That is the same rule as most regex
+engines, give or take, so a pattern you would write anywhere else can be
+pasted in after `\v` and will usually work. The cost is the reverse
+one: a literal `(`, `+`, `|`, `=`, `@` or `<` now needs its backslash.
+`\v\(` is a literal bracket. `\v\=` is a literal equals sign — and that
+one bites, because `=` is a quantifier under very magic, the same as
+`?`.
+
+Should you use it? Most people who write a lot of patterns do, and
+start every non-trivial search with `\v` by reflex. The escaped
+dialect is still worth knowing because you will read it constantly in
+other people's config and in every answer online. Know both; type
+`\v`. From here on, this chapter does.
+
+@start versions.yaml
+services:
+  order-api: 2.4.1
+  order-worker: 2.4.1
+  gateway: 1.14.2
+  ledger: 0.9.12
+  notifier: 1.2
+  reconciler: 3.0.0
+  scheduler: 1.7.4
+  mysql: 8.4
+  rabbitmq: 3.13.7
+
+tooling:
+  node: 22
+  pnpm: 9
+  prisma: 5.14.0
+
+@expected versions.yaml
+services:
+  order-api: 2.4.1
+  order-worker: 2.4.1
+  gateway: 1.14.2
+  ledger: 0.9.12
+  notifier: 1.2.0
+  reconciler: 3.0.0
+  scheduler: 1.7.4
+  mysql: 8.4.0
+  rabbitmq: 3.13.7
+
+tooling:
+  node: 22
+  pnpm: 9
+  prisma: 5.14.0

@@ -1,0 +1,47 @@
+@meta
+id: 02-10
+title: Drill — u and Ctrl-R ping pong
+chapter: 02
+type: drill
+skills: undo, redo, write
+par: 32
+minutes: 5
+reps: 8
+vscode: Ctrl+Z, Ctrl+Y, Ctrl+Z
+open: ledger.md
+
+@brief
+Eight times: append ` TODO`, undo it, redo it, undo it again, then append
+` reconciled` and save.
+
+The pointless middle is the drill. You are teaching your hands that `u`
+and `Ctrl-R` are a pair you can rock back and forth on without fear, and
+that neither of them loses anything.
+
+@keys
+| `u` | back one change |
+| `Ctrl-R` | forward one change |
+| `ZZ` | write and quit |
+
+@hints
+Watch the line as you press them. The text disappears, comes back,
+disappears. Nothing is destroyed by going in either direction.
+--
+Both keys are normal mode. `Esc` out of insert before the first `u`.
+
+@solution
+    $ a  TODO <Esc> u <Ctrl-R> u $ a  reconciled <Esc> ZZ
+
+Twenty-seven keystrokes, most of them the two words.
+
+What you should end the drill believing is that undo and redo are free
+navigation, not a dangerous last resort. Gone too far? Come back. Came
+back too far? Go again. The only thing that closes a door is making a new
+change while you are in the past — and even then, only until chapter's
+end.
+
+@start ledger.md
+Refund batch 4471 pending finance sign off
+
+@expected ledger.md
+Refund batch 4471 pending finance sign off reconciled

@@ -1,0 +1,96 @@
+@meta
+id: 18-06
+title: Find the file, wherever it is
+chapter: 18
+type: lesson
+skills: find-path
+par: 37
+minutes: 5
+vscode: Ctrl+P "default.json"
+vimrc: set path=.,**
+open: src/domain/order/order.resolver.ts
+
+@brief
+`CUSTOMER_NOT_FOUND` is coming back as a 400. The error table says 400.
+It should say 404. The table is a file called `default.json`, and you
+know the name but not the directory.
+
+`:find` takes a file name, not a path, and searches for it in every
+directory listed in the `path` option. This lesson sets
+`path=.,**` for you: `.` is the directory of the current file, and `**`
+is everything under the working directory, recursively. With that,
+`:find default.json` finds the file wherever it lives. Chapter 28 shows
+you how to set it permanently.
+
+Fix the status code and save. The resolver stays as it is.
+
+@keys
+| `:find name` | search `path` for a file called `name` and edit it |
+| `:set path=.,**` | current file's directory, then everything below cwd |
+| `:set path?` | see what it is now |
+| `:sfind name` | the same, in a split |
+
+@hints
+`:find default.json` and Enter. No directory.
+--
+Once you are in the file, `/400` puts you on the bad code. Two of the
+three characters are right.
+--
+`:find default.json`, `/400`, `ll`, `r4`, `:wq`.
+
+@solution
+    :find default.json<Enter> /400<Enter> ll r4 :wq<Enter>
+
+`path` is the one option that turns vim's `:find` from a curiosity into
+Ctrl+P. Without `**`, `:find` looks only in the current file's directory
+and a couple of system include paths, and it feels broken. With `**`, it
+walks the whole tree.
+
+Two things worth knowing. `**` is recursive but bounded to 30 levels,
+which is plenty. And it is slow on enormous trees, because it walks the
+directories every time; on a normal service it is instant. If your
+project has a `node_modules`, add it to `wildignore` so `:find` does not
+wander into it — chapter 27.
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@start src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 400, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@expected src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@start src/configuration/registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderResolver } from '../domain/order/order.resolver';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('OrderResolver', { useClass: OrderResolver });

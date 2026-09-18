@@ -1,0 +1,428 @@
+@meta
+id: 19-03
+title: Next hit, previous hit
+chapter: 19
+type: lesson
+skills: quickfix-nav
+par: 105
+minutes: 6
+vscode: click each result in turn
+vimrc: set hidden
+open: README.md
+
+@brief
+Every provider throws the same generic `NOT_FOUND` code. Support want to
+know which thing was not found, so each provider gets its own:
+`CUSTOMER_NOT_FOUND` in the customer provider, `ORDER_NOT_FOUND` in the
+order provider, `PAYMENT_NOT_FOUND` in the payment provider. The order
+provider's test asserts on the code and changes to `ORDER_NOT_FOUND`
+with it.
+
+Four hits, each needing a different edit, so no single replace will do.
+This is what stepping through the list is for. `:cn` goes to the next
+hit and `:cp` to the previous, without opening the list at all.
+`:cfirst` and `:clast` go to the ends, and `:cc 3` goes straight to hit
+number three. The message line tells you where you are: `(2 of 4)`.
+
+Write each file before you leave it. `:w` then `:cn` is the rhythm.
+
+@keys
+| `:cn` `:cnext` | next hit |
+| `:cp` `:cprev` | previous hit |
+| `:cfirst` `:clast` | first and last hit |
+| `:cc N` | hit number N |
+| `:cc` | show the current hit again |
+
+@hints
+`:vimgrep /NOT_FOUND/ **/*.ts` lands you on the first hit, in the
+customer provider, with the cursor on the N.
+--
+`i`, the prefix, `Esc`, `:w`, `:cn`. Four times, with a different prefix
+each time. The hits come in file order: customer, then the order test,
+then the order provider, then payment.
+--
+When the message says `(4 of 4)` you are on the last one. `:wq` after
+that edit.
+
+@solution
+    :vimgrep /NOT_FOUND/ **/*.ts<Enter>
+    i CUSTOMER_ <Esc> :w<Enter> :cn<Enter>
+    i ORDER_ <Esc> :w<Enter> :cn<Enter>
+    i ORDER_ <Esc> :w<Enter> :cn<Enter>
+    i PAYMENT_ <Esc> :wq<Enter>
+
+`:cn` is the workhorse. It moves to the next entry, loads the file if
+it has to, and puts the cursor on the exact column of the match, which
+is why each edit here is a bare `i`: the cursor is already where the
+prefix goes. You did not navigate at all; the search did.
+
+`:cp` goes back when you overshoot. `:cc 3` is for when you have read
+the list and know which entry you want. `:cc` on its own re-shows the
+current entry, useful after wandering off. `:cfirst` and `:clast` are
+the ends. All of them work whether or not the quickfix window is open.
+
+Uppercase in the pattern matters here. Your vimrc sets `smartcase`, so
+`/NOT_FOUND/` is a case-sensitive search and would not also match a
+lowercase `not_found` somewhere. That was chapter 12; it applies to
+`:vimgrep` exactly as it does to `/`.
+
+@start README.md
+# Orders service
+
+Cancelling an order refunds it through `PaymentService.sendRefund`, which
+is named after the gateway's `/sendRefund` endpoint. A refund the gateway
+rejects raises `REFUND_FAILED`. Refund events go out on the
+`payment.sendRefund` routing key, which the ledger service consumes.
+
+@start src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  placedAt: Date;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.sendRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.sendRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start src/domain/order/order.provider.test.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { orderFactory } from '../../../test/factories/order.factory';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const provider = new OrderProvider(orderRepository, paymentService);
+
+  afterEach(() => jest.resetAllMocks());
+
+  it('refunds a pending order when it is cancelled', async () => {
+    const order = orderFactory({ status: 'PENDING' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    reveal(paymentService).sendRefund.mockResolvedValue(undefined);
+
+    await provider.cancel(order.id);
+
+    expect(paymentService.sendRefund).toHaveBeenCalledWith(order.id);
+  });
+
+  it('refuses to cancel a shipped order', async () => {
+    const order = orderFactory({ status: 'SHIPPED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+
+    await expect(provider.cancel(order.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+    expect(paymentService.sendRefund).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unknown order', async () => {
+    reveal(orderRepository).findOne.mockResolvedValue(undefined);
+
+    await expect(provider.cancel('ord_404')).rejects.toThrow('NOT_FOUND');
+  });
+});
+
+@expected src/domain/order/order.provider.test.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { orderFactory } from '../../../test/factories/order.factory';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const provider = new OrderProvider(orderRepository, paymentService);
+
+  afterEach(() => jest.resetAllMocks());
+
+  it('refunds a pending order when it is cancelled', async () => {
+    const order = orderFactory({ status: 'PENDING' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    reveal(paymentService).sendRefund.mockResolvedValue(undefined);
+
+    await provider.cancel(order.id);
+
+    expect(paymentService.sendRefund).toHaveBeenCalledWith(order.id);
+  });
+
+  it('refuses to cancel a shipped order', async () => {
+    const order = orderFactory({ status: 'SHIPPED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+
+    await expect(provider.cancel(order.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+    expect(paymentService.sendRefund).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unknown order', async () => {
+    reveal(orderRepository).findOne.mockResolvedValue(undefined);
+
+    await expect(provider.cancel('ord_404')).rejects.toThrow('ORDER_NOT_FOUND');
+  });
+});
+
+@start src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      placedAt: record.placedAt,
+    };
+  }
+}
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@start src/domain/payment/payment.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { PaymentRepository } from './payment.repository';
+import { PaymentProducer } from './payment.producer';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class PaymentProvider {
+  constructor(
+    @inject(PaymentRepository) protected paymentRepository: PaymentRepository,
+    @inject(PaymentProducer) protected paymentProducer: PaymentProducer,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async reverse(id: string) {
+    const payment = await this.paymentRepository.findOne({ where: { id } });
+
+    if (!payment) {
+      throw exception('NOT_FOUND');
+    }
+
+    const receipt = await this.paymentService.sendRefund(payment.orderId);
+
+    await this.paymentProducer.refundIssued({ paymentId: id, receipt });
+
+    return receipt;
+  }
+}
+
+@expected src/domain/payment/payment.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { PaymentRepository } from './payment.repository';
+import { PaymentProducer } from './payment.producer';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class PaymentProvider {
+  constructor(
+    @inject(PaymentRepository) protected paymentRepository: PaymentRepository,
+    @inject(PaymentProducer) protected paymentProducer: PaymentProducer,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async reverse(id: string) {
+    const payment = await this.paymentRepository.findOne({ where: { id } });
+
+    if (!payment) {
+      throw exception('PAYMENT_NOT_FOUND');
+    }
+
+    const receipt = await this.paymentService.sendRefund(payment.orderId);
+
+    await this.paymentProducer.refundIssued({ paymentId: id, receipt });
+
+    return receipt;
+  }
+}
+
+@start src/domain/payment/payment.producer.ts
+import { injectable, inject } from 'tsyringe';
+import { Channel } from '../../infrastructure/rabbit/channel';
+
+type RefundIssuedEvent = {
+  paymentId: string;
+  receipt: string;
+};
+
+@injectable()
+export class PaymentProducer {
+  constructor(@inject(Channel) protected channel: Channel) {}
+
+  public async refundIssued(event: RefundIssuedEvent) {
+    await this.channel.publish('payments', 'payment.sendRefund', event);
+  }
+}
+
+@start src/infrastructure/services/payment.service.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { HttpClient } from '../http/http.client';
+
+@injectable()
+export class PaymentService {
+  constructor(@inject(HttpClient) protected http: HttpClient) {}
+
+  public async sendRefund(orderId: string) {
+    const response = await this.http.post('/sendRefund', { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@start src/domain/customer/customer.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { CustomerRepository } from './customer.repository';
+
+@injectable()
+export class CustomerProvider {
+  constructor(
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      throw exception('NOT_FOUND');
+    }
+
+    return customer;
+  }
+}
+
+@expected src/domain/customer/customer.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { CustomerRepository } from './customer.repository';
+
+@injectable()
+export class CustomerProvider {
+  constructor(
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return customer;
+  }
+}

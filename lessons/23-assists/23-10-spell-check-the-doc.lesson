@@ -1,0 +1,82 @@
+@meta
+id: 23-10
+title: Jump between misspellings
+chapter: 23
+type: lesson
+skills: spell
+par: 28
+minutes: 4
+vscode: red squiggles from the Code Spell Checker extension, if installed
+open: refunds.md
+vimrc: set spell
+
+@brief
+Four words in this doc are misspelled. Spell checking is on for this
+lesson, so they are underlined. Fix all four, in order, without typing
+any of the corrections yourself: for each one, vim's first suggestion
+is the right word.
+
+@keys
+| `]s` `[s` | next, previous misspelled word |
+| `z=` | list the suggestions and pick one by number |
+| `1z=` | take the first suggestion without looking |
+| `:set spell` / `:set nospell` | switch it on and off yourself |
+
+@hints
+`]s` jumps straight to the first misspelled word. You do not need to
+find it by eye.
+--
+`z=` on the word shows a numbered list; `1z=` takes entry one without
+showing the list.
+--
+`]s1z=` four times.
+
+@solution
+    ]s1z= ]s1z= ]s1z= ]s1z= :wq<Enter>
+
+Twenty-four keystrokes for four corrections.
+
+`]s` and `[s` treat misspellings the way `n` and `N` treat search
+matches, so you never scan for the red underline yourself. `z=` shows
+a numbered menu of suggestions; the number you type picks one. A count
+in front skips the menu, and `1z=` — take the first suggestion — is
+right often enough to be a reflex for the everyday typos: transposed
+letters, a doubled consonant, a missing vowel. Look at the menu when
+the word is unusual.
+
+Spell checking in a code file is syntax-aware: only comments and
+strings are checked, so identifiers do not light up. In markdown the
+whole text is checked, except for code blocks. `spelllang` defaults to
+English; `set spelllang=en_gb` narrows it.
+
+`set spell` is a good line for your vimrc, restricted to the file
+types where prose lives: markdown, git commit messages, plain text.
+Chapter 28 covers doing that per filetype.
+
+@start refunds.md
+# Refunds
+
+A refund is proccessed by the payment provider, not by us. We record the
+request, hand it to the provider, and store the reciept id on the order
+when the provider calls back.
+
+Orders are cancelled immediatly. The refund itself can take up to five
+working days, and the customer is told this seperately in the email that
+confirms the cancellation.
+
+If the provider rejects the refund the order stays cancelled and the
+reason is recorded for finance.
+
+@expected refunds.md
+# Refunds
+
+A refund is processed by the payment provider, not by us. We record the
+request, hand it to the provider, and store the receipt id on the order
+when the provider calls back.
+
+Orders are cancelled immediately. The refund itself can take up to five
+working days, and the customer is told this separately in the email that
+confirms the cancellation.
+
+If the provider rejects the refund the order stays cancelled and the
+reason is recorded for finance.

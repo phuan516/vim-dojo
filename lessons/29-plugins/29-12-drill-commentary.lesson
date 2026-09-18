@@ -1,0 +1,122 @@
+@meta
+id: 29-12
+title: Drill — comment it out
+chapter: 29
+type: drill
+skills: commentary
+par: 11
+minutes: 4
+reps: 8
+vscode: Ctrl-/, which is genuinely fine, and then you still have to get to the line
+open: total.ts
+vimrc: set packpath^=. | packloadall!
+
+@brief
+Eight times: comment out the `console.log`, save, quit. The commentary
+plugin ships with the lesson, in `pack/dojo/start/commentary/`.
+
+The edit is one keystroke sequence. What is being drilled is that it is
+one — that you stop thinking of "comment this out" as a selection
+followed by a command.
+
+@keys
+| `gcc` | toggle the comment on this line |
+| `j` | the debug line is the second one |
+
+@hints
+Get to the line, then three keys.
+--
+`j` `gcc`. Then save.
+
+@solution
+    j  gcc  :wq<Enter>
+
+Eight keystrokes.
+
+By rep eight, notice you are not looking at the comment marker any more.
+You did not choose `//`; the buffer's `commentstring` did. The same eight
+keystrokes in a `.sql` file would have written `--`, and you would not
+have had to think about that either.
+
+Commenting a debug line out rather than deleting it is a habit worth
+having when the edit is this cheap. Deleting it means retyping it
+tomorrow; commenting it means `gcc` again.
+
+@start pack/dojo/start/commentary/plugin/commentary.vim
+" dojo-commentary.vim - a small, honest commenting plugin.
+" Shipped inside this lesson. You did not install it; the dojo did.
+"
+"   gcc          toggle the comment on this line
+"   gc{motion}   toggle the comment on every line the motion covers
+"   {Visual}gc   toggle the comment on the selection
+"
+" It never guesses the comment syntax. It reads 'commentstring', which the
+" filetype plugin already set: // %s for typescript, -- %s for sql,
+" <!-- %s --> for markdown, # %s for yaml.
+
+if exists('g:loaded_dojo_commentary')
+  finish
+endif
+let g:loaded_dojo_commentary = 1
+
+function! s:parts() abort
+  let cms = &commentstring =~# '%s' ? &commentstring : '# %s'
+  let at = stridx(cms, '%s')
+  return [substitute(strpart(cms, 0, at), '\s*$', '', ''),
+        \ substitute(strpart(cms, at + 2), '^\s*', '', '')]
+endfunction
+
+function! s:rx(text) abort
+  return escape(a:text, '\.*$^~[]/')
+endfunction
+
+function! s:toggle(first, last) abort
+  let [open, close] = s:parts()
+  let head = '^\(\s*\)' . s:rx(open) . ' \?'
+  let tail = ' \?' . s:rx(close) . '\s*$'
+  let lines = getline(a:first, a:last)
+  let code = filter(copy(lines), 'v:val =~# "\\S"')
+  if empty(code)
+    return
+  endif
+  " Uncomment only when every non-blank line is already commented.
+  " Otherwise a half-commented block would flip into a mess.
+  let strip = 1
+  let indent = 999
+  for line in code
+    let strip = strip && line =~# head
+    let indent = min([indent, match(line, '\S')])
+  endfor
+  let n = a:first
+  for line in lines
+    if line =~# '\S'
+      if strip
+        let out = substitute(line, head, '\1', '')
+        let out = close ==# '' ? out : substitute(out, tail, '', '')
+      else
+        let body = open . ' ' . strpart(line, indent)
+        let out = strpart(line, 0, indent) . (close ==# '' ? body : body . ' ' . close)
+      endif
+      call setline(n, out)
+    endif
+    let n += 1
+  endfor
+endfunction
+
+function! s:opfunc(type) abort
+  call s:toggle(line("'["), line("']"))
+endfunction
+
+nnoremap <silent> gcc :<C-u>call <SID>toggle(line('.'), line('.'))<CR>
+nnoremap <silent> gc :<C-u>set operatorfunc=<SID>opfunc<CR>g@
+xnoremap <silent> gc :<C-u>call <SID>toggle(line("'<"), line("'>"))<CR>
+
+@start total.ts
+const total = order.items.reduce((sum, item) => sum + item.priceMinor, 0);
+console.log('total', order.id, total);
+return total;
+
+@expected total.ts
+const total = order.items.reduce((sum, item) => sum + item.priceMinor, 0);
+// console.log('total', order.id, total);
+return total;

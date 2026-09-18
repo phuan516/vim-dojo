@@ -1,0 +1,74 @@
+@meta
+id: 10-23
+title: Capstone — sniping inside one line
+chapter: 10
+type: scenario
+skills: obj-quote, inner-vs-around, find-f, find-t, op-motion
+par: 62
+minutes: 6
+vscode: clicking exactly where you want
+open: query.ts
+
+@brief
+w and b move by word, which is often too coarse. To land on an exact
+character, use f (find). fx puts the cursor on the next x on this
+line. It is the single biggest speed-up available on a long line.
+
+f and t combine with operators, so  dt"  means "delete up to the
+next quote" and  ct,  means "change up to the next comma".
+
+In query.ts:
+
+  1. "PENDING"  ->  "SHIPPED"
+  2. limit: 50  ->  limit: 25
+  3. delete the  phone,  field from the csv string
+  4. "Order #1042 - awaiting payment - do not ship"
+       ->  "Order #1042 - ready to ship"
+
+No arrow keys. Aim with f.
+
+@keys
+fx      jump forward to the next x on this line  (F = backwards)
+tx      jump forward to just BEFORE the next x   (T = backwards)
+;  ,    repeat that jump forwards / backwards
+3fx     jump to the third x
+dfx     delete up to and including x
+dtx     delete up to but not including x
+ctx     change up to but not including x
+ci"     change inside quotes - still the fastest way for step 1
+
+@hints
+Step 1 is a text object job: put the cursor before PENDING, then
+f" to land on its opening quote, then ci" .
+--
+Step 2: f5 lands on the 5 of 50. Then  r2  replaces just that one
+character with a 2. r is "replace one character and stay put".
+--
+Step 3: get to the p of phone, then  df,  deletes through the comma
+that follows it - field and separator gone in one move.
+--
+Step 4: land on the a of "awaiting", then  ct"  changes everything up
+to the closing quote. Type  ready to ship  and Esc.
+
+@solution
+Line 1:  f" ;  ci" SHIPPED Esc        ( ; repeats the f jump )
+         f5 r2
+
+Line 2:  j  fp  df,
+
+Line 3:  j  fa  ct" ready to ship Esc
+
+:wq
+
+f then ; is the rhythm to build. "Next quote... no, the one after
+that" is f" ; and not a single arrow press.
+
+@start query.ts
+const url = buildUrl(host, port, "/orders", { status: "PENDING", limit: 50, cursor: null });
+const csv = "id,name,email,phone,country,created";
+const label = "Order #1042 - awaiting payment - do not ship";
+
+@expected query.ts
+const url = buildUrl(host, port, "/orders", { status: "SHIPPED", limit: 25, cursor: null });
+const csv = "id,name,email,country,created";
+const label = "Order #1042 - ready to ship";

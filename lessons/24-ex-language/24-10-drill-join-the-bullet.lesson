@@ -1,0 +1,48 @@
+@meta
+id: 24-10
+title: Drill — join the wrapped bullet
+chapter: 24
+type: drill
+skills: ex-join
+par: 12
+minutes: 3
+reps: 8
+vscode: End, Delete, Space, End, Delete, Space
+open: NOTES.md
+
+@brief
+Eight times: the bullet on line 4 has been wrapped onto lines 5 and 6.
+Make it one line. Do not move the cursor.
+
+@keys
+| `:4,6j` | join lines 4 to 6 into one |
+
+@hints
+Range, then `j`. Plain `j`, not `j!`: the continuation lines are
+indented and you want that indent gone and a space in its place.
+--
+`:4,6j` and Enter, `:wq`.
+
+@solution
+    :4,6j<Enter>  :wq<Enter>
+
+Ten keystrokes. `4G3J` is eight, and `4G` is a jump you then have to jump
+back from. This is a drill in reading the gutter and typing the numbers
+without thinking about it, because the next three lessons all depend on
+that being cheap.
+
+@start NOTES.md
+# Sprint notes
+
+- Refund window shipped to staging
+- Duplicate charge fix is blocked on
+  the gateway team confirming the
+  idempotency key format
+- Customer tiers in review
+
+@expected NOTES.md
+# Sprint notes
+
+- Refund window shipped to staging
+- Duplicate charge fix is blocked on the gateway team confirming the idempotency key format
+- Customer tiers in review

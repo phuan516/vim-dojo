@@ -1,0 +1,270 @@
+@meta
+id: 07-06
+title: Climbing back up a block at a time
+chapter: 07
+type: lesson
+skills: paragraph-motion, goto-line
+par: 68
+minutes: 6
+vscode: scroll to the bottom, then five careful clicks on the way back up
+open: INCIDENT-2026-08-14.md
+
+@brief
+Someone pasted the tail of the incident timeline out of the on-call channel
+and the leading timestamps were eaten. The last five entries in this 97 line
+document each need their time putting back at the front of the entry.
+
+From the bottom of the file upwards, they are:
+
+    11:12    the note to support
+    10:30    incident closed
+    10:15    finance confirmed no negative balances
+    10:07    all duplicates reversed
+    09:41    first batch reconciled
+
+Every other entry already has its time and must not be touched.
+
+Start at the end of the file and work upwards. Going down and counting would
+mean knowing which entry is the seventeenth, and you do not.
+
+@keys
+| `G` | last line of the file |
+| `{` | back to the previous blank line |
+| `j` | down a line |
+| `I` | insert at the first non-blank of the line |
+
+@hints
+`}` went forward a paragraph at a time. Its opposite is on the neighbouring
+key and does the same thing in reverse.
+--
+`{` moves back to the previous blank line. From a line in the middle of an
+entry that is the gap above it — so one `{` puts you above the entry you are
+in, and a second `{` puts you above the entry before that.
+--
+The rep is `{` `{` `j` `I`, the time, `Esc`. The first one is different
+because `G` has already left you inside the last entry, so it only needs a
+single `{`.
+
+@solution
+    G { j I 11:12  <Esc>
+    { { j I 10:30  <Esc>
+    { { j I 10:15  <Esc>
+    { { j I 10:07  <Esc>
+    { { j I 09:41  <Esc>
+    :wq<Enter>
+
+Fifty-nine keystrokes, thirty of them the times themselves.
+
+`{` and `}` are a pair and they are worth learning as one thing: the block
+you are in has a top and a bottom, and these two keys are how you leave by
+either end. Neither cares how long the block is.
+
+The doubled `{` in the rep is the part worth understanding rather than
+memorising. `{` means "the blank line before this one", and after the first
+press you are standing on a blank line — so the second press is what moves
+you over an entire entry. Going forwards the same thing happens with `}`.
+Once you have noticed it you stop being surprised by it, and `2{` starts to
+look like the obvious way to say it. That is the next lesson.
+
+Working bottom to top also solved a problem you have already met: inserting
+text does not move anything you have not visited yet. Here the inserts do
+not change the line count at all, but the habit is the same one that saved
+you in the resolver — when in doubt, edit from the end backwards.
+
+@start INCIDENT-2026-08-14.md
+# Incident 2026-08-14 — duplicate refunds
+
+Severity 2. Customer impact lasted 47 minutes. Two hundred and eleven
+orders were refunded twice; all duplicate refunds were reversed the same
+evening and no customer was left out of pocket.
+
+This document is the timeline as reconstructed from the payment service
+logs and the on-call channel. Times are UTC. The remediation items at the
+bottom are tracked in ORD-418 and are not repeated here.
+
+## What went well
+
+The rollback was clean and took four minutes from decision to completion.
+Nobody argued about fixing forward under pressure.
+
+## What did not
+
+The counter that would have caught this at 08:02 has no alert attached to
+it, so the incident was found by a customer rather than by us. That is
+the single item worth fixing.
+
+## Timeline
+
+07:58 A routine deploy of the payments service went out. The release
+contained the idempotency key change and nothing else of consequence.
+
+08:02 The refund_failed_total counter began climbing. Nobody was paged;
+the counter has no alert on it and never has.
+
+08:11 A support agent reported that a customer had been credited twice
+for the same cancelled order. The agent raised it in the support channel
+rather than the incident channel, and it sat there for six minutes.
+
+08:17 A second and third report arrived. The support lead moved all three
+into the incident channel and paged the on-call engineer.
+
+08:19 On-call acknowledged. First hypothesis was a webhook replay from
+the payment provider, which has caused something similar before.
+
+08:21 The on-call engineer pulled the last four deploys and put them in
+the channel alongside the counter graph.
+
+08:24 A customer posted a screenshot of two identical refund emails
+thirty seconds apart, which pinned the behaviour to the refund path.
+
+08:26 The provider dashboard showed no unusual webhook volume. The
+hypothesis was dropped.
+
+08:31 On-call noticed that the deploy at 07:58 lined up with the start of
+the counter climbing, and pulled the diff.
+
+08:34 The idempotency key was being derived from the order id alone. Two
+refunds against the same order within the retry window therefore shared a
+key, and the provider treated the second as a new request rather than a
+repeat, because the key was being sent on the wrong header.
+
+08:40 Decision to roll back rather than fix forward. The rollback was
+started immediately.
+
+08:45 Rollback completed. The refund_failed_total counter flattened
+within ninety seconds.
+
+08:49 Incident declared contained. Work moved to identifying every
+duplicate refund issued during the window.
+
+08:52 The payments team joined the incident channel and began drafting
+the forward fix while finance waited on the duplicate list.
+
+08:57 A first attempt at the query missed refunds issued through the
+admin tool, because those rows carry a different source value.
+
+09:04 A query against the refunds table found 211 duplicates across 197
+customers. The list was handed to finance.
+
+09:12 Support was given a holding line to use with any customer who
+called in about a double credit.
+
+09:22 Finance began reversing the duplicates in batches of fifty. Each
+batch was reconciled against the provider before the next one started.
+
+09:33 The provider rate limited the second batch. Batch size was dropped
+to twenty five for the rest of the run.
+
+The first batch was reversed and reconciled cleanly. The remaining
+three batches were queued behind it.
+
+All 211 duplicate refunds had been reversed. Reconciliation against
+the provider showed no remaining discrepancy.
+
+Finance confirmed that no customer balance was left negative and
+that no chargeback had been opened in the window.
+
+The incident was closed. On-call handed over to the payments team
+with the rollback still in place and the fix scheduled for the morning.
+
+A note went out to support with wording for any customer who asks
+why they saw two refunds and then one reversal on their statement.
+
+@expected INCIDENT-2026-08-14.md
+# Incident 2026-08-14 — duplicate refunds
+
+Severity 2. Customer impact lasted 47 minutes. Two hundred and eleven
+orders were refunded twice; all duplicate refunds were reversed the same
+evening and no customer was left out of pocket.
+
+This document is the timeline as reconstructed from the payment service
+logs and the on-call channel. Times are UTC. The remediation items at the
+bottom are tracked in ORD-418 and are not repeated here.
+
+## What went well
+
+The rollback was clean and took four minutes from decision to completion.
+Nobody argued about fixing forward under pressure.
+
+## What did not
+
+The counter that would have caught this at 08:02 has no alert attached to
+it, so the incident was found by a customer rather than by us. That is
+the single item worth fixing.
+
+## Timeline
+
+07:58 A routine deploy of the payments service went out. The release
+contained the idempotency key change and nothing else of consequence.
+
+08:02 The refund_failed_total counter began climbing. Nobody was paged;
+the counter has no alert on it and never has.
+
+08:11 A support agent reported that a customer had been credited twice
+for the same cancelled order. The agent raised it in the support channel
+rather than the incident channel, and it sat there for six minutes.
+
+08:17 A second and third report arrived. The support lead moved all three
+into the incident channel and paged the on-call engineer.
+
+08:19 On-call acknowledged. First hypothesis was a webhook replay from
+the payment provider, which has caused something similar before.
+
+08:21 The on-call engineer pulled the last four deploys and put them in
+the channel alongside the counter graph.
+
+08:24 A customer posted a screenshot of two identical refund emails
+thirty seconds apart, which pinned the behaviour to the refund path.
+
+08:26 The provider dashboard showed no unusual webhook volume. The
+hypothesis was dropped.
+
+08:31 On-call noticed that the deploy at 07:58 lined up with the start of
+the counter climbing, and pulled the diff.
+
+08:34 The idempotency key was being derived from the order id alone. Two
+refunds against the same order within the retry window therefore shared a
+key, and the provider treated the second as a new request rather than a
+repeat, because the key was being sent on the wrong header.
+
+08:40 Decision to roll back rather than fix forward. The rollback was
+started immediately.
+
+08:45 Rollback completed. The refund_failed_total counter flattened
+within ninety seconds.
+
+08:49 Incident declared contained. Work moved to identifying every
+duplicate refund issued during the window.
+
+08:52 The payments team joined the incident channel and began drafting
+the forward fix while finance waited on the duplicate list.
+
+08:57 A first attempt at the query missed refunds issued through the
+admin tool, because those rows carry a different source value.
+
+09:04 A query against the refunds table found 211 duplicates across 197
+customers. The list was handed to finance.
+
+09:12 Support was given a holding line to use with any customer who
+called in about a double credit.
+
+09:22 Finance began reversing the duplicates in batches of fifty. Each
+batch was reconciled against the provider before the next one started.
+
+09:33 The provider rate limited the second batch. Batch size was dropped
+to twenty five for the rest of the run.
+
+09:41 The first batch was reversed and reconciled cleanly. The remaining
+three batches were queued behind it.
+
+10:07 All 211 duplicate refunds had been reversed. Reconciliation against
+the provider showed no remaining discrepancy.
+
+10:15 Finance confirmed that no customer balance was left negative and
+that no chargeback had been opened in the window.
+
+10:30 The incident was closed. On-call handed over to the payments team
+with the rollback still in place and the fix scheduled for the morning.
+
+11:12 A note went out to support with wording for any customer who asks
+why they saw two refunds and then one reversal on their statement.

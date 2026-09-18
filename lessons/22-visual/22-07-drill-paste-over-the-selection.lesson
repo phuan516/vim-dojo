@@ -1,0 +1,52 @@
+@meta
+id: 22-07
+title: Drill — paste over the selection
+chapter: 22
+type: drill
+skills: visual-char
+par: 24
+minutes: 5
+reps: 8
+vscode: double-click, Ctrl+C, double-click, Ctrl+V
+open: order.spec.ts
+
+@brief
+Eight times: copy the word `CANCELLED` from the first line and paste it
+over `PENDING` on the second, so both lines carry the same status.
+
+A selection can be pasted over. `p` with a region highlighted replaces
+the region with the register, and no `d` is needed first.
+
+@keys
+| `yiw` | yank the word under the cursor |
+| `vi'` | select what is inside the quotes |
+| `p` | replace the selection with the register |
+
+@hints
+`f'l` puts the cursor on the `C` of `CANCELLED`. `yiw` takes the word.
+A search gets you to `PENDING`.
+--
+`vi'` selects the seven characters. `p` swaps them for the yanked word.
+No delete, no insert mode, no `Esc`.
+
+@solution
+    f ' l y i w /PEND<Enter> v i ' p :wq<Enter>
+
+Twenty keystrokes. `ciw` then typing the word is about the same length
+for a nine-letter word and longer for a longer one, and it involves
+typing a name you might mistype. Paste-over is the visual-mode idiom
+that is genuinely hard to replace: select the wrong thing, `p` the
+right thing on top.
+
+One detail worth knowing. After a paste-over, the unnamed register
+holds the text that was replaced — `PENDING` here, not `CANCELLED`. If
+you want to paste the same word over several places, use `"0p` for the
+second and later ones; chapter 20's yank register is exactly for this.
+
+@start order.spec.ts
+const target: OrderStatus = 'CANCELLED';
+const order = { id: 'ord_1042', status: 'PENDING' };
+
+@expected order.spec.ts
+const target: OrderStatus = 'CANCELLED';
+const order = { id: 'ord_1042', status: 'CANCELLED' };

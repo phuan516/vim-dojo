@@ -1,0 +1,127 @@
+@meta
+id: 17-07
+title: Drill — two files, one key home
+chapter: 17
+type: drill
+skills: jumplist
+par: 78
+minutes: 6
+reps: 8
+vscode: Ctrl+Tab back to the other editor, then scroll to find the line again
+open: order.repository.ts order.entity.ts
+vimrc: set hidden
+
+@brief
+Eight times: the `Order` entity gets a `placedAt: Date;` field under
+`total`, and `toEntity` in the repository gets `placedAt: record.placedAt,`
+under its `total` line.
+
+Start in the repository. Find the `total` line, switch to the entity,
+find its `total` line, add the field. Then come back to the repository
+line you were on without searching for it again.
+
+@keys
+| `:bn` | next buffer |
+| `Ctrl-O` | back one jump; twice here, because the search in the entity was one |
+| `o` | open a line below and type |
+| `:wqa` | write both, quit |
+
+@hints
+Search, switch buffer, search, edit. That is three jumps out, and the
+first of the three is the one you want to land on.
+--
+`Ctrl-O` `Ctrl-O`: the first one undoes the entity search and lands at
+the top of the entity, the second crosses back into the repository on
+the `total` line.
+
+@solution
+    /total<Enter> :bn<Enter> /total<Enter> oplacedAt: Date;<Esc>
+    Ctrl-O Ctrl-O oplacedAt: record.placedAt,<Esc> :wqa<Enter>
+
+The pattern to make automatic: search, switch, search, edit, `Ctrl-O`
+`Ctrl-O`, edit. Adding a field to an entity and its mapper is something
+you will do hundreds of times in a service like this, and it is always
+the same two-file hop.
+
+If the double `Ctrl-O` bothers you, notice why it is double: the search
+inside the entity was a jump. Had you moved to `total` with `4j`
+instead, one `Ctrl-O` would have done it. Either is fine. What is not
+fine is `:bp` followed by scrolling to find your line again.
+
+@start order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}
+
+@expected order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      placedAt: record.placedAt,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}
+
+@start order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@expected order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  placedAt: Date;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';

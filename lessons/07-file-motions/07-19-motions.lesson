@@ -1,0 +1,123 @@
+@meta
+id: 07-19
+title: Capstone — moving without arrow keys
+chapter: 07
+type: scenario
+skills: goto-line, paragraph-motion, scroll-half, word-w, line-start
+par: 120
+minutes: 8
+vscode: arrow keys, Ctrl+Home/End, Ctrl+G
+open: order.provider.ts answers.txt
+vimrc: set number
+
+@brief
+Arrow keys work in vim. They are also a trap: they keep your hand
+off home row and they only ever move one character. Vim's real
+motions move by word, line, paragraph, screen and file.
+
+Two files are open. Read order.provider.ts, answer the five
+questions in answers.txt, save both.
+
+Rule of this level: no arrow keys, no mouse. The checker can tell.
+
+Switch between the two open files with  :bn  (buffer next) - you
+will learn that properly in chapter 16.
+
+@keys
+h j k l        left, down, up, right
+w  b           forward / back one word      e = end of word
+0  ^  $        start of line / first non-blank / end of line
+gg  G          top of file / bottom of file
+25G            jump to line 25       (or  :25  )
+Ctrl-D Ctrl-U  half a screen down / up
+{  }           previous / next blank line - moves by paragraph
+Ctrl-G         say which line I am on
+:set number    show line numbers down the side
+
+@hints
+G goes to the very last line. With :set number on, that answers
+total_lines in one keystroke.
+--
+26G jumps straight to line 26. ^ then takes you to the first
+non-blank character on it, so you can read the word.
+--
+To find CANCELLED without reading the file: type /CANCELLED and
+Enter. Searching is a motion too - that is chapter 12.
+--
+:bn switches to the other open file. :wa writes all of them.
+
+@solution
+:set number
+G             -> 37    total_lines
+4G            -> import { exception ... }    last import
+26G ^         -> if
+30G ^         -> await
+/CANCELLED    -> line 34
+
+:bn           hop to answers.txt
+... fill it in ...
+:wa           write every open file
+
+Habit to build: think in units. "three words forward" is 3w, not
+fifteen presses of the right arrow.
+
+@start answers.txt
+# Navigate order.provider.ts and fill in the blanks.
+# Line numbers are on for you.
+# Put your answer right after the = with no spaces.
+
+total_lines=
+line_number_of_the_last_import=
+first_word_on_line_26=
+first_word_on_line_30=
+line_number_of_the_word_CANCELLED=
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderRepository } from '../repositories/order.repository';
+import { PaymentService } from '../services/payment.service';
+import { exception } from '../exceptions';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string, reason: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.paymentId);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED', cancellationReason: reason },
+    });
+  }
+}
+
+@expected answers.txt
+# Navigate order.provider.ts and fill in the blanks.
+# Line numbers are on for you.
+# Put your answer right after the = with no spaces.
+
+total_lines=37
+line_number_of_the_last_import=4
+first_word_on_line_26=if
+first_word_on_line_30=await
+line_number_of_the_word_CANCELLED=34

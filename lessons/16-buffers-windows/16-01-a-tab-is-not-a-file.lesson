@@ -1,0 +1,142 @@
+@meta
+id: 16-01
+title: A tab is not a file
+chapter: 16
+type: lesson
+skills: buffer-list, buffer-switch
+par: 50
+minutes: 5
+vscode: three tabs along the top; click the third one
+open: order.entity.ts errors.json order.repository.ts
+
+@brief
+Three files open, and the screen shows one of them. In VS Code the other
+two would be tabs along the top. Here they are buffers: files vim has
+loaded, whether or not any of them is on screen. What you are looking at
+is a window, a viewport onto one buffer. The buffer is the real thing.
+The window is a view of it. A tab, when we get there, is a layout of
+windows. This chapter is about keeping those three apart, and it starts
+with the list.
+
+`:ls` prints every buffer vim has: a number, some flags, the name, and
+the line the cursor was on last. Something like
+
+    1 %a   "order.entity.ts"       line 1
+    2      "errors.json"           line 0
+    3      "order.repository.ts"   line 0
+
+`%` marks the buffer in the current window and `a` says it is active,
+meaning shown somewhere. `line 0` means vim has not even read the file
+yet; it opens them lazily. The number on the left is the buffer's
+address for the rest of the chapter.
+
+The job is in `order.repository.ts`. `toEntity` copies every field of
+the record except `total`. Add `total: record.total,` directly under
+the `status` line. The other two files are open for context only, and
+the check fails if either of them changes.
+
+@keys
+| `:ls` | list the buffers (`:buffers` and `:files` do the same) |
+| `:b 3` | go to buffer 3 |
+| `:bn` `:bp` | next and previous buffer in the list |
+| `:wqa` | write every changed buffer and quit |
+
+@hints
+List first. The repository is buffer 3, not 2, because it was opened
+third. Nothing about the order on screen tells you that; the list does.
+--
+`:b 3` goes straight to it. `:bn` twice also works and is the long way
+round.
+--
+In the repository, `/status` lands on the line, `o` opens one below it,
+type the field, `Esc`, then `:wqa`.
+
+@solution
+    :ls<Enter>  :b 3<Enter>  /status<Enter>  o total: record.total, <Esc>  :wqa<Enter>
+
+Around forty keystrokes, and the only new ones are `:ls` and `:b 3`.
+
+The model to carry through the chapter: a buffer is a loaded file, a
+window is a view of a buffer, and a tab is an arrangement of windows.
+VS Code fuses the first two into "a tab", which is why it feels natural
+to have thirty of them open and to click along the row looking for the
+right one. Vim never asks you to look. `:ls` tells you the number, `:b`
+takes the number, and the screen does not need to change until you say
+so.
+
+`:wqa` has been in every multi-file lesson so far and you were told to
+use it without explanation. Now you can read it: write all changed
+buffers, on screen or not, then quit all windows. Its two halves, `:wa`
+and `:qa`, turn up again in 16-06.
+
+@start order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@start order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}
+
+@expected order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}

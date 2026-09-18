@@ -1,0 +1,154 @@
+@meta
+id: 11-12
+title: cgn — what Ctrl+D was really for
+chapter: 11
+type: lesson
+skills: cgn, dot-repeat
+par: 37
+minutes: 8
+vscode: put the cursor on custId and hit Ctrl+D twelve times
+open: refund.ts
+
+@brief
+`custId` was always meant to be `customerId`. It appears twelve times in
+this file — in a type, in arguments, as a shorthand property, in log
+calls. Rename every one of them.
+
+This is the job you would have used multiple cursors for. Cursor on the
+word, Ctrl+D, Ctrl+D, Ctrl+D until the whole file is bristling with
+carets, then type once and hope you did not pick up a match you did not
+want.
+
+Vim's answer is smaller and, once you have it, better. One key puts the
+word you are standing on into the search register. One command changes the
+next match of that search. And then the key you have spent this whole
+chapter on repeats it — find and change, find and change — for as long as
+you keep pressing it.
+
+Nothing about it depends on the matches being visible on screen, or on
+there being twelve of them rather than two hundred.
+
+@keys
+| `*` | search for the word under the cursor, whole word only |
+| `gn` | select the next match of the last search |
+| `cgn` | change the next match — a normal, ordinary, repeatable change |
+| `.` | find the next match and change it too |
+| `u` | undo one of them if you go too far |
+
+@hints
+Get the cursor onto any `custId` and let vim work out the pattern. You
+should not be typing the old name into a search.
+--
+`*` searches for the word under the cursor. `cgn` then changes the next
+match of that search, which makes the rename an ordinary change — and
+ordinary changes repeat.
+--
+`jw` to reach the first `custId`, `*`, then `cgncustomerId` and `Esc`.
+From there it is eleven presses of `.` and the file is done.
+
+@solution
+    jw  *  cgn customerId <Esc>   then  .  eleven times
+
+Thirty-two keystrokes, ten of which are the new name, and the only thought
+you had was "rename this".
+
+Take the three parts separately, because each is useful on its own.
+
+**`*`** searches for the word under the cursor. It wraps it in word
+boundaries first, so `custId` will not match inside `custIdList` or
+`legacyCustIdMap`. That is usually what you want for a rename and it is
+worth knowing it is happening, because it is the difference between this
+and a blind find-and-replace. `*` also moves you to the next match, so the
+one you were standing on is the last one you will change — the wrap comes
+back round to it at the end.
+
+**`gn`** selects the next match of the last search — or the match you are
+sitting on, if you are sitting on one. It is a motion-like thing that an
+operator can take, so `dgn` deletes the next match, `ygn` yanks it, `gUgn`
+upper-cases it.
+
+**`cgn`** is that combination: change the next match. It is one command,
+so it is one change, so `.` holds all of it — the jump to the next match,
+the delete, and the ten characters you typed. Every `.` from then on finds
+the next match on its own. You are not pressing `n` between them; the `gn`
+inside the change does the searching.
+
+And the reason this beats multiple cursors is not the keystroke count. It
+is that nothing is committed until you commit it. With twelve carets on
+screen every match is already selected, and if one of them is wrong you
+find out after you type. With `cgn` and `.` you change them one at a time,
+each one visible, each one undoable on its own, and if a match should be
+left alone you press `n` to step over it instead of `.`. That is the next
+lesson but one.
+
+@start refund.ts
+export type RefundAllArgs = {
+  custId: string;
+  reason: string;
+};
+
+export async function refundAll(args: RefundAllArgs) {
+  const customer = await customerRepository.findOne({ where: { id: args.custId } });
+
+  if (!customer) {
+    throw exception('CUSTOMER_NOT_FOUND');
+  }
+
+  const orders = await orderRepository.findByCustomer({ customerId: args.custId });
+
+  for (const order of orders) {
+    await refundOne(order.id, args.custId);
+  }
+
+  logger.info('refund batch done', { custId: args.custId, count: orders.length });
+
+  return { custId: args.custId, refunded: orders.length };
+}
+
+export async function refundOne(orderId: string, custId: string) {
+  const refund = await paymentService.refund(orderId, custId);
+
+  logger.info('refund issued', { orderId, custId });
+
+  if (!refund.ok) {
+    throw exception('REFUND_FAILED');
+  }
+
+  return auditRepository.create({ orderId, custId, at: new Date() });
+}
+
+@expected refund.ts
+export type RefundAllArgs = {
+  customerId: string;
+  reason: string;
+};
+
+export async function refundAll(args: RefundAllArgs) {
+  const customer = await customerRepository.findOne({ where: { id: args.customerId } });
+
+  if (!customer) {
+    throw exception('CUSTOMER_NOT_FOUND');
+  }
+
+  const orders = await orderRepository.findByCustomer({ customerId: args.customerId });
+
+  for (const order of orders) {
+    await refundOne(order.id, args.customerId);
+  }
+
+  logger.info('refund batch done', { customerId: args.customerId, count: orders.length });
+
+  return { customerId: args.customerId, refunded: orders.length };
+}
+
+export async function refundOne(orderId: string, customerId: string) {
+  const refund = await paymentService.refund(orderId, customerId);
+
+  logger.info('refund issued', { orderId, customerId });
+
+  if (!refund.ok) {
+    throw exception('REFUND_FAILED');
+  }
+
+  return auditRepository.create({ orderId, customerId, at: new Date() });
+}

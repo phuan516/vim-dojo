@@ -1,0 +1,152 @@
+@meta
+id: 15-08
+title: The cursor starts at the left edge
+chapter: 15
+type: lesson
+skills: global-normal
+par: 33
+minutes: 6
+vscode: find "should ", replace with nothing, hope it only hits test names
+open: refund.spec.ts
+
+@brief
+The lint rule `jest/valid-title` has been switched on and it rejects
+test names that begin with `should`. Every `it('should ...` in the spec
+loses the word `should` and the space after it. Eight tests. Nothing
+else in the file changes, including the `describe` and the comment that
+happens to contain the same word.
+
+This is a job for `:g//normal` with a motion in front of the edit,
+because of one fact you need to know about how `:g` places the cursor.
+On each marked line it puts the cursor in column one, the very left
+edge, not on the first non-blank character. A `dw` there would eat the
+indentation. Move first, then edit.
+
+@keys
+| `:g/pattern/normal keys` | replay `keys` on every matching line |
+| `f'` | to the next single quote on the line |
+| `l` | one character right |
+| `dw` | delete the word under the cursor and the space after it |
+
+@hints
+The pattern should say more than `should`. The comment contains that
+word too, and so does nothing you want to change. Include the quote
+that comes before it.
+--
+On a matching line the cursor is at the left edge. `f'` gets it to the
+opening quote, `l` steps onto the `s`, and `dw` takes `should ` in one
+go.
+--
+`:g/'should /normal f'ldw` and Enter.
+
+@solution
+    :g/'should /normal f'ldw<Enter>  :wq<Enter>
+
+Twenty-nine keystrokes. Every one of the motion keys is from chapter 5
+and chapter 8; the only new thing is knowing where the cursor starts.
+
+Column one is a deliberate choice by vim, and it makes sense once you
+see why: `:normal` is meant to behave the same on every line, and the
+first column is the only position every line is guaranteed to have.
+So a `:g//normal` sequence nearly always begins with a motion. `^` for
+the first non-blank, `f` or `t` for a character, `$` for the end, `/`
+for a pattern. Think of it as the address line of the edit.
+
+The pattern is doing quiet work here too. `'should ` with the quote
+matches the eight test names and nothing else; `should` alone would also
+mark the comment on the `describe`, and on that line `f'ldw` would take
+a bite out of the description. Pattern and keys are one design: the
+pattern picks the lines, and the keys must be safe on every line it
+picks.
+
+@start refund.spec.ts
+import { RefundProvider } from './refund.provider';
+
+// These tests should run against the stubbed gateway only.
+describe('RefundProvider', () => {
+  it('should refund a shipped order in full', async () => {
+    const result = await provider.refund('ord_4001');
+    expect(result.amount).toBe(4999);
+  });
+
+  it('should refuse a refund on a cancelled order', async () => {
+    await expect(provider.refund('ord_4004')).rejects.toThrow('ORDER_CANCELLED');
+  });
+
+  it('should refuse a second refund', async () => {
+    await provider.refund('ord_4001');
+    await expect(provider.refund('ord_4001')).rejects.toThrow('ALREADY_REFUNDED');
+  });
+
+  it('should record the reason when the window has expired', async () => {
+    const result = await provider.refund('ord_3001');
+    expect(result.reason).toBe('REFUND_WINDOW_EXPIRED');
+  });
+
+  it('should not call the gateway when the window has expired', async () => {
+    await provider.refund('ord_3001');
+    expect(gateway.refund).not.toHaveBeenCalled();
+  });
+
+  it('should call the gateway once for a valid refund', async () => {
+    await provider.refund('ord_4002');
+    expect(gateway.refund).toHaveBeenCalledTimes(1);
+  });
+
+  it('should throw REFUND_FAILED when the gateway returns 502', async () => {
+    gateway.refund.mockRejectedValue(new Error('502'));
+    await expect(provider.refund('ord_4002')).rejects.toThrow('REFUND_FAILED');
+  });
+
+  it('should leave the order status alone on failure', async () => {
+    gateway.refund.mockRejectedValue(new Error('502'));
+    await provider.refund('ord_4002').catch(() => undefined);
+    expect(orderRepository.update).not.toHaveBeenCalled();
+  });
+});
+
+@expected refund.spec.ts
+import { RefundProvider } from './refund.provider';
+
+// These tests should run against the stubbed gateway only.
+describe('RefundProvider', () => {
+  it('refund a shipped order in full', async () => {
+    const result = await provider.refund('ord_4001');
+    expect(result.amount).toBe(4999);
+  });
+
+  it('refuse a refund on a cancelled order', async () => {
+    await expect(provider.refund('ord_4004')).rejects.toThrow('ORDER_CANCELLED');
+  });
+
+  it('refuse a second refund', async () => {
+    await provider.refund('ord_4001');
+    await expect(provider.refund('ord_4001')).rejects.toThrow('ALREADY_REFUNDED');
+  });
+
+  it('record the reason when the window has expired', async () => {
+    const result = await provider.refund('ord_3001');
+    expect(result.reason).toBe('REFUND_WINDOW_EXPIRED');
+  });
+
+  it('not call the gateway when the window has expired', async () => {
+    await provider.refund('ord_3001');
+    expect(gateway.refund).not.toHaveBeenCalled();
+  });
+
+  it('call the gateway once for a valid refund', async () => {
+    await provider.refund('ord_4002');
+    expect(gateway.refund).toHaveBeenCalledTimes(1);
+  });
+
+  it('throw REFUND_FAILED when the gateway returns 502', async () => {
+    gateway.refund.mockRejectedValue(new Error('502'));
+    await expect(provider.refund('ord_4002')).rejects.toThrow('REFUND_FAILED');
+  });
+
+  it('leave the order status alone on failure', async () => {
+    gateway.refund.mockRejectedValue(new Error('502'));
+    await provider.refund('ord_4002').catch(() => undefined);
+    expect(orderRepository.update).not.toHaveBeenCalled();
+  });
+});

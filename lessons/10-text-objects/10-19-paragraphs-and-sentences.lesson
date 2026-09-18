@@ -1,0 +1,104 @@
+@meta
+id: 10-19
+title: Paragraphs and sentences
+chapter: 10
+type: lesson
+skills: obj-paragraph, inner-vs-around
+par: 30
+minutes: 6
+vscode: click at the start, scroll, shift-click at the end, delete, tidy the blank lines
+open: refunds.md
+
+@brief
+Prose has objects too. `ip` is a paragraph — a run of lines with no blank
+line in it — and `ap` is that paragraph plus the blank line that follows
+it, which is what keeps a document's spacing correct when you remove
+something from the middle of it.
+
+`is` and `as` are the same idea one level down: a sentence, ending at a
+`.`, `!` or `?`. A sentence happily spans a line break, which is the whole
+reason to have the object. Deleting a sentence that starts in the middle
+of one line and ends in the middle of the next is a genuinely annoying
+edit by hand.
+
+This doc went stale when the nightly batch job was switched off. Three
+things have to go:
+
+  - the sentence in the opening paragraph about the batch job having
+    handled refunds
+  - the entire `## Legacy batch job` section, heading and paragraph both
+  - the last paragraph, about the error code that no longer exists
+
+What is left should read normally: one space between sentences, one blank
+line between sections, no gap left at the end.
+
+@keys
+| `dap` | delete a paragraph and the blank line after it |
+| `dip` | the paragraph only, blank line left behind |
+| `d2ap` | two paragraphs — a heading counts as one |
+| `das` | delete a sentence, wherever it starts and ends |
+| `yip` | yank a paragraph |
+
+@hints
+A markdown heading with a blank line under it is a paragraph in vim's
+sense: one run of non-blank lines. The section is therefore two of them.
+--
+`das` for the sentence, `dap` for a paragraph. Objects take counts, so the
+heading and its paragraph can go in one command.
+--
+`fR` puts you on the start of the stale sentence. For the section, put
+the cursor on the heading and use a count of two with `ap`.
+
+@solution
+    3j fR das
+    2j d2ap
+    4j dap
+    :wq<Enter>
+
+Twenty-two keystrokes to remove a sentence, a section and a paragraph
+from a document, with the blank lines coming out right on their own.
+
+`as` is the object that surprises people, because vim's idea of a sentence
+predates markdown by decades and is purely mechanical: it ends at `.`, `!`
+or `?` followed by a space, a tab or the end of the line. It does not know
+that `e.g.` is not the end of a sentence, and it does not care that your
+paragraph is hard-wrapped at 80 columns. Within those limits it is exact,
+and it saves you from the worst kind of manual selection — the one that
+crosses a line break.
+
+`ap` versus `ip` is the same trailing-whitespace rule as `aw` and `a"`,
+scaled up: `ap` takes the blank line after the paragraph, or the one
+before it if the paragraph is the last thing in the file. That fallback is
+why the end of this document came out with no trailing gap.
+
+`yip` is the other half you will use constantly — yank a paragraph, put it
+somewhere else. Reordering a document is `yip`, move, `p`.
+
+@start refunds.md
+# Refunds
+
+Refunds are processed by the payment service. A refund is only attempted
+when the order is inside the 30 day window. Refunds were previously handled
+by the legacy batch job. Outside the window the order is still cancelled.
+
+## Legacy batch job
+
+The nightly batch job reconciled refunds against the provider statement.
+It was switched off in March and the cron entry has been removed with it.
+
+## Errors
+
+A failed refund raises REFUND_FAILED and is reported to Sentry.
+
+Refunds queued by the batch job raised BATCH_REFUND_FAILED instead. That
+code was removed from the error registry in the same release.
+
+@expected refunds.md
+# Refunds
+
+Refunds are processed by the payment service. A refund is only attempted
+when the order is inside the 30 day window. Outside the window the order is still cancelled.
+
+## Errors
+
+A failed refund raises REFUND_FAILED and is reported to Sentry.

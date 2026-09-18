@@ -1,0 +1,193 @@
+@meta
+id: 08-19
+title: Scenario — the legacy refund path
+chapter: 08
+type: scenario
+skills: delete-d, change-c, put-p, substitute-s, find-f
+par: 112
+minutes: 12
+vscode: two tabs, a dozen double-clicks and a lot of retyping
+open: order.provider.ts order.provider.test.ts default.json
+vimrc: set hidden
+
+@brief
+A ticket, not an exercise.
+
+    ORD-527  cancel() still goes through the retired refundLegacy call,
+             logs the whole order on every request, and writes a status
+             the enum does not have. The test has a copy-pasted
+             assertion that was meant to check the cancellation email.
+
+Three files are open. `:bn` moves to the next one and `:bp` back — that is
+chapter 16's material and you are borrowing it early, so do not go
+hunting for more. Finish the whole job with `:wqa`, which writes every
+buffer and quits.
+
+  1. order.provider.ts
+
+     - The imports are the wrong way round. Local modules come before
+       infrastructure ones here.
+     - `findFirst` is `findOne`. The rest of the chain is correct.
+     - The `console.log` line goes.
+     - The refund call is now `refund(order.id)` — the gateway works out
+       the amount itself. Only the tail of that line changes.
+     - The status is `CANCELLED`.
+     - `legacyRefund` has no callers left. Remove the method and the
+       blank line that separates it from `cancel`.
+
+  2. order.provider.test.ts
+
+     - The second `payment.refund` assertion is a copy-paste. It should
+       be checking `email.cancelled`, with the same argument.
+     - The expected status is wrong here too.
+
+  3. default.json — open for reference, so you can see the codes exist.
+     Change it and the check fails.
+
+Nothing in either file needs retyping wholesale. If you find yourself
+typing an import path or a whole line that already exists, stop and use
+the register.
+
+@keys
+| `ddp` | move this line below the next one |
+| `cw` | change to the end of the word |
+| `C` | change from the cursor to the end of the line |
+| `s` | substitute one character, then insert |
+| `6dd` | delete six lines |
+| `0` then `fD` | column zero, then forward to the `D` |
+| `:bn` `:bp` | next buffer, previous buffer |
+| `:wqa` | write every buffer and quit |
+
+@hints
+Take the provider top to bottom in one pass. Every edit in it is a verb
+you learned in this chapter, and none of them needs more than four keys
+of aiming.
+--
+The refund line is the only one where you retype anything, and only the
+part after `refundLegacy`. Land on the `L` and change to the end of the
+line.
+--
+`CANCELLD` is missing one letter in the middle. `r` cannot add a
+character, but `s` on the final `D` lets you type `ED` in its place. The
+same fix works in the test. `j` keeps whatever column you were in, so
+press `0` before you go hunting along a line with `f`.
+--
+In the test, the duplicate line is not rubbish — it is the shape of the
+assertion you need. Change `payment` to `email` and `refund` to
+`cancelled` and it is the line the ticket asked for.
+
+@solution
+**order.provider.ts**
+
+    ddp                          imports the right way round
+    4j f.;l cwfindOne<Esc>       findFirst becomes findOne
+    j dd                         the debug log
+    j fL C(order.id);<Esc>       the tail of the refund call
+    4j 0fD sED<Esc>             CANCELLD becomes CANCELLED
+    3j 6dd                       the dead method and its blank line
+
+**order.provider.test.ts** — `:bn`
+
+    5j f(l cwemail<Esc>          payment becomes email
+    2l cwcancelled<Esc>          refund becomes cancelled
+    3j 0fD sED<Esc>             the status again
+
+Then `:wqa`.
+
+Around ninety keystrokes for eleven separate corrections across two
+files, and the only text you typed that was not already in the repository
+was `findOne`, `(order.id);`, `email`, `cancelled` and two `ED`s.
+
+Three things this scenario is really testing.
+
+Whether you reach for the register instead of the keyboard. The duplicate
+assertion was a gift: the line you needed was already there, one word
+away. People who have not internalised that still delete it and type a
+new one.
+
+Whether you pick the verb that fits the shape of the problem — `cw` for a
+word, `C` for a tail, `s` for one character becoming two, `dd` with a
+count for a block. Every one of those could be done with `x` and a lot of
+patience, and the difference between the two is about a minute per file,
+which is an hour a week.
+
+And whether you go top to bottom. Every edit here was below the last one,
+so the cursor only ever travelled forwards. Reordering your own work so
+the cursor moves in one direction is a real habit, and it is most of what
+separates a fast vim user from a fluent one.
+
+@start order.provider.ts
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { OrderRepository } from './order.repository';
+
+export class OrderProvider {
+  public async cancel(id: string) {
+    const order = await this.orderRepository.findFirst({ where: { id } });
+    console.log('cancel', order);
+
+    await this.paymentService.refundLegacy(order.id, order.total);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLD' },
+    });
+  }
+
+  public async legacyRefund(id: string) {
+    const order = await this.orderRepository.findFirst({ where: { id } });
+
+    return this.paymentService.refundLegacy(order.id, order.total);
+  }
+}
+
+@expected order.provider.ts
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+export class OrderProvider {
+  public async cancel(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start order.provider.test.ts
+describe('OrderProvider', () => {
+  it('cancels an order', async () => {
+    await provider.cancel('ord_1042');
+
+    expect(payment.refund).toHaveBeenCalledWith('ord_1042');
+    expect(payment.refund).toHaveBeenCalledWith('ord_1042');
+    expect(repository.update).toHaveBeenCalledWith({
+      where: { id: 'ord_1042' },
+      values: { status: 'CANCELLD' },
+    });
+  });
+});
+
+@expected order.provider.test.ts
+describe('OrderProvider', () => {
+  it('cancels an order', async () => {
+    await provider.cancel('ord_1042');
+
+    expect(payment.refund).toHaveBeenCalledWith('ord_1042');
+    expect(email.cancelled).toHaveBeenCalledWith('ord_1042');
+    expect(repository.update).toHaveBeenCalledWith({
+      where: { id: 'ord_1042' },
+      values: { status: 'CANCELLED' },
+    });
+  });
+});
+
+@start default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "PAYMENT_REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}

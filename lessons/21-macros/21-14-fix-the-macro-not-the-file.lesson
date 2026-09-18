@@ -1,0 +1,101 @@
+@meta
+id: 21-14
+title: Fix the macro, not the file
+chapter: 21
+type: lesson
+skills: macro-edit, macro-count
+par: 42
+minutes: 8
+vscode: no equivalent; you would re-do the whole multi-cursor dance
+open: orders.fixture.ts
+vimrc: let @a="^i{ id: '\<Esc>f,s', customerId: '\<Esc>f,s', total: \<Esc>f,s, curency: '\<Esc>A' },\<Esc>j"
+
+@brief
+A colleague left the macro for this fixture in register `a`. Look at it
+with `:reg a`. It turns a row into a record:
+
+    ord_101,cus_7,1200,GBP    →    { id: 'ord_101', customerId: 'cus_7', total: 1200, currency: 'GBP' },
+
+It has a typo. Run it once and you will see `curency`. It is a long
+macro and one letter is wrong, so do not re-record it. A macro is
+text in a register: put it in the buffer, fix the letter as you would
+fix any other text, yank it back into the register, and then run it
+on all sixteen rows.
+
+@keys
+| `"ap` | put register `a` into the file as text |
+| `0"ay$` | yank the whole line, without its newline, back into `a` |
+| `:reg a` | show what `a` contains |
+| `dd` | remove the scratch line afterwards |
+
+@hints
+Open a blank line at the bottom with `o`, `Esc`, then `"ap`. The macro
+appears as text; each `^[` is an `Esc`, one character wide.
+--
+Find `curency` and add the missing `r`. Then `0"ay$` yanks the corrected
+line back into `a`. Not `"ayy`: that takes the newline too, and a
+newline inside a macro is an extra `j`.
+--
+`Go<Esc>"ap`, `$Fu` `ar` `Esc`, `0"ay$`, `dd`, `ggj`, `16@a`.
+
+@solution
+    G o <Esc> "ap   $Fu ar <Esc>   0"ay$   dd   ggj   16@a   :wq<Enter>
+
+Thirty keystrokes, against about seventy to record it again.
+
+A macro is a register and a register is text. That is the whole trick.
+`"ap` puts the text where you can see it; the `Esc` keys inside it are
+real characters, shown as `^[`, and they survive being pasted and
+yanked. Fix the text with the same keys you use on any line. `0"ay$`
+puts it back.
+
+The reason for `y$` rather than `yy` is precise. `yy` is linewise and
+includes the line break, and when a macro contains a line break it
+runs it, which moves the cursor down a line. That is one extra `j` on
+every replay, and every second row is skipped. `0"ay$` yanks from
+column one to the end and no further. Then `dd` removes the scratch
+line; that goes into the unnamed register and leaves `a` alone.
+
+You will do this more often than you expect. The macro that nearly
+works is the common case, and re-recording a long one from scratch is
+how a five second fix becomes a two minute one.
+
+@start orders.fixture.ts
+export const orders = [
+  ord_101,cus_7,1200,GBP
+  ord_102,cus_7,450,GBP
+  ord_103,cus_12,9900,EUR
+  ord_104,cus_3,1575,GBP
+  ord_105,cus_21,80,USD
+  ord_106,cus_12,2200,EUR
+  ord_107,cus_8,640,GBP
+  ord_108,cus_8,640,GBP
+  ord_109,cus_30,12000,USD
+  ord_110,cus_3,315,GBP
+  ord_111,cus_17,1999,EUR
+  ord_112,cus_21,4250,USD
+  ord_113,cus_9,75,GBP
+  ord_114,cus_12,3600,EUR
+  ord_115,cus_4,880,GBP
+  ord_116,cus_30,150,USD
+];
+
+@expected orders.fixture.ts
+export const orders = [
+  { id: 'ord_101', customerId: 'cus_7', total: 1200, currency: 'GBP' },
+  { id: 'ord_102', customerId: 'cus_7', total: 450, currency: 'GBP' },
+  { id: 'ord_103', customerId: 'cus_12', total: 9900, currency: 'EUR' },
+  { id: 'ord_104', customerId: 'cus_3', total: 1575, currency: 'GBP' },
+  { id: 'ord_105', customerId: 'cus_21', total: 80, currency: 'USD' },
+  { id: 'ord_106', customerId: 'cus_12', total: 2200, currency: 'EUR' },
+  { id: 'ord_107', customerId: 'cus_8', total: 640, currency: 'GBP' },
+  { id: 'ord_108', customerId: 'cus_8', total: 640, currency: 'GBP' },
+  { id: 'ord_109', customerId: 'cus_30', total: 12000, currency: 'USD' },
+  { id: 'ord_110', customerId: 'cus_3', total: 315, currency: 'GBP' },
+  { id: 'ord_111', customerId: 'cus_17', total: 1999, currency: 'EUR' },
+  { id: 'ord_112', customerId: 'cus_21', total: 4250, currency: 'USD' },
+  { id: 'ord_113', customerId: 'cus_9', total: 75, currency: 'GBP' },
+  { id: 'ord_114', customerId: 'cus_12', total: 3600, currency: 'EUR' },
+  { id: 'ord_115', customerId: 'cus_4', total: 880, currency: 'GBP' },
+  { id: 'ord_116', customerId: 'cus_30', total: 150, currency: 'USD' },
+];

@@ -1,0 +1,46 @@
+@meta
+id: 24-07
+title: Drill — copy the template row
+chapter: 24
+type: drill
+skills: ex-copy
+par: 11
+minutes: 3
+reps: 8
+vscode: click line 2, Home, Shift-End, Ctrl-C, Ctrl-End, Enter, Ctrl-V
+open: customers.csv
+
+@brief
+Eight times: line 2 is the template row. Append a copy of it to the end
+of the file. One command, no cursor movement.
+
+@keys
+| `:2t$` | copy line 2 to the end of the file |
+
+@hints
+Range is the source line, destination is the last line.
+--
+`:2t$` and Enter, then `:wq`.
+
+@solution
+    :2t$<Enter>  :wq<Enter>
+
+Nine keystrokes. `2GyyGp` is the same length and leaves you at the
+bottom of the file holding a copy in the unnamed register. `:2t$` leaves
+you where you were and touches nothing. When the source is at line 2
+and you are at line 400, the difference is a round trip.
+
+@start customers.csv
+id,email,name,tier
+cus_500,template@example.com,Template Customer,standard
+cus_501,ana@example.com,Ana Ruiz,gold
+cus_502,ben@example.com,Ben Okafor,standard
+cus_503,cho@example.com,Cho Min-jun,silver
+
+@expected customers.csv
+id,email,name,tier
+cus_500,template@example.com,Template Customer,standard
+cus_501,ana@example.com,Ana Ruiz,gold
+cus_502,ben@example.com,Ben Okafor,standard
+cus_503,cho@example.com,Cho Min-jun,silver
+cus_500,template@example.com,Template Customer,standard

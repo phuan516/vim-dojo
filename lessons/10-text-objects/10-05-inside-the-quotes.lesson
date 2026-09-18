@@ -1,0 +1,78 @@
+@meta
+id: 10-05
+title: Change what is inside the quotes
+chapter: 10
+type: lesson
+skills: obj-quote, inner-vs-around
+par: 26
+minutes: 4
+vscode: double-click the value, hope it took the whole string, retype
+open: sentry.json
+
+@brief
+A string is a thing with edges, which makes it an object. `i"` is
+everything between the two quote marks on the line; `a"` is that plus the
+quotes themselves.
+
+Nearly every time you want the first one. You are replacing the value, not
+the fact that it is a string.
+
+This service has been deployed to production and is still reporting its
+errors under the staging environment, so nothing shows up in the
+production Sentry project. Point it at production.
+
+The DSN is right. Only the environment is wrong.
+
+@keys
+| `i"` | everything between the quotes |
+| `ci"` | change it — the fastest edit in vim |
+| `a"` | the quotes as well |
+
+@hints
+The string is an object in its own right. You do not have to select it a
+character at a time.
+--
+`ci"` deletes what is between the quotes, leaves the quotes, and puts you
+in insert mode between them.
+--
+Get the cursor onto the value first — `f` onto a letter inside it — then
+`ci"` and type the new value.
+
+@solution
+    4j fs ci" production <Esc>
+    :wq<Enter>
+
+Twenty-two keystrokes, ten of which are the word `production`.
+
+The reason this matters more than it looks: a string is exactly the kind
+of thing a mouse is bad at. Double-clicking inside `"staging"` gets you the
+word, which is fine here and wrong the moment the string has a dot, a
+dash or a space in it. Dragging from quote to quote is a two-handed
+operation and you will take the quote with you about one time in five.
+
+`ci"` cannot take the quote with it. The object is defined by the quotes,
+so they are the one thing it will never touch.
+
+The same pair exists for every kind of quote: `ci'` for single, `` ci` ``
+for a template literal. Vim does not care what the file's language is —
+it just looks at the line.
+
+@start sentry.json
+{
+  "name": "@thrive/orders",
+  "sentry": {
+    "dsn": "https://4504@ingest.sentry.io/orders",
+    "environment": "staging",
+    "tracesSampleRate": 0.1
+  }
+}
+
+@expected sentry.json
+{
+  "name": "@thrive/orders",
+  "sentry": {
+    "dsn": "https://4504@ingest.sentry.io/orders",
+    "environment": "production",
+    "tracesSampleRate": 0.1
+  }
+}

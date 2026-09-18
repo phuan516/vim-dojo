@@ -1,0 +1,75 @@
+@meta
+id: 08-14
+title: Copy a block, put it above
+chapter: 08
+type: lesson
+skills: yank-y, put-p, change-c, replace-r
+par: 30
+minutes: 5
+vscode: select four lines, copy, click above, paste, fix the copy
+open: config.ts
+
+@brief
+Counts work on yank as they do on everything else, and `P` puts the
+register in above the cursor line rather than below it. Those two facts
+turn "duplicate this block and change two things" into a handful of keys.
+
+Staging has no entry in the gateway config, so it is falling through to
+production's. Add one. It takes the same host as production, but only one
+retry, and by convention environments are listed with staging first.
+
+The `production` block stays exactly as it is.
+
+@keys
+| `4yy` | yank four lines |
+| `P` | put the register above the cursor line |
+| `p` | put it below |
+| `cw` | change to the end of the word |
+| `r` | replace one character |
+
+@hints
+The staging block is the production block with two values changed. Copy
+four lines, put them where they belong, then correct them.
+--
+`4yy` yanks the current line and the three below. `P` is the one that
+puts above — think of it as "put before", the opposite of `p`.
+--
+`j` `4yy` `P` gives you the copy in the right place with the cursor on
+its first line. Then `^` `cw` `staging` `Esc`, and the retries line is
+two down.
+
+@solution
+    j 4yy P  ^cwstaging<Esc>  2j $h r1  :wq<Enter>
+
+Twenty-two keystrokes for a four-line block, and the values you did not
+change cannot have drifted, because they were copied rather than retyped.
+
+`p` and `P` are a pair you will use for the rest of your life, so get the
+mnemonic straight early: lower case puts after the cursor, upper case
+puts before it. For a linewise register that means below and above; for
+anything else it means to the right and to the left of the cursor. The
+next lessons are about what "anything else" means.
+
+One habit to build: yank, then move, then put — in that order, and with
+nothing in between. Any delete you sneak in while carrying something in
+the register overwrites it, and `x` counts.
+
+@start config.ts
+export const gateway = {
+  production: {
+    host: 'pay.internal',
+    retries: 3,
+  },
+};
+
+@expected config.ts
+export const gateway = {
+  staging: {
+    host: 'pay.internal',
+    retries: 1,
+  },
+  production: {
+    host: 'pay.internal',
+    retries: 3,
+  },
+};

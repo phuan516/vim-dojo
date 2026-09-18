@@ -1,0 +1,69 @@
+@meta
+id: 03-02
+title: Insert in front of the code, not the indent
+chapter: 03
+type: lesson
+skills: insert-I
+par: 18
+minutes: 4
+vscode: click just before `this`, type `await `
+open: order.provider.ts
+
+@brief
+The refund call is not awaited, so a failed refund is swallowed and the
+order is cancelled anyway. Put `await ` in front of it.
+
+The line is indented four spaces. What you want is the first character of
+the actual code, not column one — those are different places, and only one
+of them is where the word belongs.
+
+This is the mirror image of the last lesson. There, you wanted the far end
+of the line. Here you want the near end, but the useful near end.
+
+@keys
+| `i` | insert to the left of the cursor |
+| `0` | column one, indent and all |
+| `^` | the first character that is not a space |
+| `I` | insert at the first non-blank character |
+| `A` | append at the end of the line |
+
+@hints
+`A` had a partner. If `A` is "append at the end of the line", there is a
+capital that means "insert at the start of the code on this line".
+--
+`I` puts you in insert mode in front of the first non-blank character —
+after the indent, not before it. That is nearly always what you meant.
+--
+Get down to the refund line with `j`, then `I`, type `await ` with its
+trailing space, `Esc`, `:wq`.
+
+@solution
+    j j I await<Space> <Esc> :wq<Enter>
+
+`I` is `^i` in one key, and `^` — first non-blank — is the version of
+"start of line" that a programmer actually wants. `0` would have put you
+before the indent, and `await ` would have landed in the whitespace,
+breaking the indentation for no reason.
+
+`I` and `A` are a pair, and they are the two keys that make "move to where
+I want to type, then type" collapse into one step. Between them they cover
+most single-line edits you will make this year: prefix something, or
+terminate something.
+
+Notice what they save you. Not keystrokes — two or three each time. What
+they save is the decision about *where the cursor is*. You stop thinking in
+columns.
+
+@start order.provider.ts
+export class OrderProvider {
+  public async cancel(id: string) {
+    this.paymentService.refund(id);
+  }
+}
+
+@expected order.provider.ts
+export class OrderProvider {
+  public async cancel(id: string) {
+    await this.paymentService.refund(id);
+  }
+}

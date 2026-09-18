@@ -1,0 +1,114 @@
+@meta
+id: 20-01
+title: The paste that came out wrong
+chapter: 20
+type: lesson
+skills: register-zero
+par: 35
+minutes: 5
+vscode: copy, then cut something else, then paste — and get the cut
+open: order.provider.spec.ts
+
+@brief
+You have been using `y`, `d` and `p` since chapter 8 without being told
+where the text goes. It goes into a register: a named slot vim keeps
+text in. The one `p` reads from is called the unnamed register, and
+here is the catch that has bitten every vim user at least once: both
+yank *and* delete write to it. Copy a line, delete something on the way
+to where you wanted it, press `p`, and you get the deleted thing.
+
+The second test in this spec never mocks the repository. It needs the
+same `reveal(orderRepository)...` line the first test has, directly
+under `order.status = 'SHIPPED';`. The first test also has a leftover
+`console.log(order);` that has to go.
+
+Do it in this order: copy the reveal line, delete the console line,
+then go to the second test and put. Watch what comes out. Then fix it
+with the register that only yanks write to.
+
+@keys
+| `""` | the unnamed register — what plain `p` reads from |
+| `"0` | the yank register — the last thing you *yanked*, never a delete |
+| `"0p` | put from the yank register |
+| `:reg` | show every register and what is in it |
+
+@hints
+Do the yank, then the delete, then plain `p`. It puts the console line.
+`u` to take it back. The reveal line is still in vim; it is just not in
+the register `p` reads.
+--
+Every put can name its register with `"` and one character in front of
+it. `"0` is the register that only yanks write to.
+--
+`/reveal(` Enter, `yy`, `j`, `dd`, `/status =` Enter, `"0p`. (Plain
+`/reveal` finds the import first; the `(` skips it.)
+
+@solution
+    /reveal(<Enter> yy j dd /status =<Enter> "0p :wq<Enter>
+
+Vim keeps the last yank separately in `"0`, so yank-then-delete-then-put
+has always had a clean answer. Most people learn it after the third time
+they paste the wrong thing. Now you know it before the first.
+
+The rule to carry: `p` gives you the most recent *anything*; `"0p` gives
+you the most recent *yank*. When you have yanked something you care
+about and there is any delete between you and the paste, reach for
+`"0p` without thinking about it.
+
+There is a second reason `"0` matters on this machine. Your vimrc has
+`clipboard=unnamedplus`, which routes the unnamed register through the
+system clipboard. That is convenient, and it means anything you copy in
+a browser lands in `""` too. `"0` is untouched by any of that. Lesson
+20-13 goes into the clipboard properly.
+
+@start order.provider.spec.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { buildOrder } from '../../../test/factories/order.factory';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const provider = new OrderProvider(orderRepository, paymentService);
+  const order = buildOrder({ status: 'PENDING' });
+
+  it('cancels a pending order', async () => {
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    console.log(order);
+    await provider.cancel(order.id);
+    expect(reveal(paymentService).refund).toHaveBeenCalledWith(order.id);
+  });
+
+  it('refuses to cancel a shipped order', async () => {
+    order.status = 'SHIPPED';
+    await expect(provider.cancel(order.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+  });
+});
+
+@expected order.provider.spec.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { buildOrder } from '../../../test/factories/order.factory';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const provider = new OrderProvider(orderRepository, paymentService);
+  const order = buildOrder({ status: 'PENDING' });
+
+  it('cancels a pending order', async () => {
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    await provider.cancel(order.id);
+    expect(reveal(paymentService).refund).toHaveBeenCalledWith(order.id);
+  });
+
+  it('refuses to cancel a shipped order', async () => {
+    order.status = 'SHIPPED';
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    await expect(provider.cancel(order.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+  });
+});

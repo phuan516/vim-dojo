@@ -1,0 +1,162 @@
+@meta
+id: 12-09
+title: Look without leaving your place
+chapter: 12
+type: lesson
+skills: search-slash
+par: 58
+minutes: 6
+vscode: Ctrl+F to peek, Escape, scroll back to where you were
+vimrc: set incsearch
+open: refund.sweep.task.ts
+
+@brief
+The publish call in `run` has an empty queue name. The right value is the
+string held in `REFUND_QUEUE`, declared at the bottom of the file, and it
+has to go in literally — the queue name is not imported here.
+
+So this is the one job a find box is genuinely for: go and look at
+something, then come back and carry on. Vim can do that, and the trick is
+that a search you never finish costs you nothing. While you are typing a
+pattern, vim is already showing you the match; if you abandon the search
+instead of confirming it, the cursor has not moved at all.
+
+Put the queue name into the empty quotes and save.
+
+@keys
+| `/text` | with `incsearch` on, the view jumps to the match as you type |
+| `Esc` | abandon the search — the cursor stays exactly where it was |
+| `Ctrl-C` | the same thing, if `Esc` is awkward |
+| `Enter` | confirm the search and actually move there |
+| `ci'` | change what is inside the quotes |
+
+@hints
+Read the constant first, then edit. You do not need to travel to the
+bottom of the file and come back — a search shows you the line while you
+are still typing it.
+--
+Start a search for `REFUND_QUEUE` and watch the screen. With `incsearch`
+on, the match is on screen before you press Enter. Read the value, then
+press `Esc` rather than `Enter`: the search is abandoned and the cursor
+never left the top of the file.
+--
+Then `/queue:` `Enter` to land on the empty pair of quotes, and `ci'`
+with the string you just read.
+
+@solution
+/REFUND_QUEUE<Esc>  /queue:<Enter>  ci'payments.refunds.v2<Esc>  :wq<Enter>
+
+`incsearch` makes vim show you the match while you are still typing the
+pattern. It is worth having on for two reasons. It tells you immediately
+when a pattern is wrong — no match, no jump — and it turns a search into
+a peek: look at the screen, press `Esc`, and nothing moved.
+
+That is the honest answer to "but sometimes I really do just want to
+look". Ctrl+F in VS Code is a looking tool that leaves your cursor behind.
+`/` with `Esc` is the same thing, and `/` with `Enter` is the version that
+takes you there. One key decides which you meant, at the end, once you
+have seen the match.
+
+Two smaller things while a search prompt is open. The command line has a
+history: press the up arrow and your previous searches come back one by
+one, filtered by whatever you have typed so far. Vim's own answer to
+retyping a long pattern is an arrow key, which is funny given everything
+this dojo says about arrow keys — so use `Ctrl-P` and `Ctrl-N` instead.
+They walk the same history without your hand leaving the home row, and
+without the keystroke log noticing.
+
+And an empty pattern reuses the last one: `/` `Enter` searches again for
+whatever you last searched for, which is occasionally clearer than `n`
+when you have been moving around in between.
+
+@start refund.sweep.task.ts
+import { injectable, inject } from 'tsyringe';
+import { Task } from '../../infrastructure/task';
+import { RefundProvider } from '../../domain/refund/refund.provider';
+import { QueueProducer } from '../../infrastructure/queue.producer';
+
+@injectable()
+export class RefundSweepTask extends Task {
+  constructor(
+    @inject(RefundProvider) protected refundProvider: RefundProvider,
+    @inject(QueueProducer) protected queueProducer: QueueProducer,
+  ) {
+    super();
+  }
+
+  public schedule = '0 */2 * * *';
+
+  public async run() {
+    const pending = await this.refundProvider.findAwaitingApproval();
+
+    for (const refund of pending) {
+      await this.queueProducer.publish({
+        queue: '',
+        payload: { refundId: refund.id, orderId: refund.orderId },
+      });
+    }
+
+    return { published: pending.length };
+  }
+
+  public async onFailure(error: Error) {
+    await this.queueProducer.publish({
+      queue: 'payments.deadletter.v1',
+      payload: { task: 'RefundSweepTask', message: error.message },
+    });
+  }
+}
+
+export const REFUND_SWEEP_BATCH = 200;
+
+export const REFUND_SWEEP_LOCK = 'lock:refund-sweep';
+
+export const REFUND_QUEUE = 'payments.refunds.v2';
+
+export const REFUND_QUEUE_DLQ = 'payments.refunds.v2.dead';
+
+@expected refund.sweep.task.ts
+import { injectable, inject } from 'tsyringe';
+import { Task } from '../../infrastructure/task';
+import { RefundProvider } from '../../domain/refund/refund.provider';
+import { QueueProducer } from '../../infrastructure/queue.producer';
+
+@injectable()
+export class RefundSweepTask extends Task {
+  constructor(
+    @inject(RefundProvider) protected refundProvider: RefundProvider,
+    @inject(QueueProducer) protected queueProducer: QueueProducer,
+  ) {
+    super();
+  }
+
+  public schedule = '0 */2 * * *';
+
+  public async run() {
+    const pending = await this.refundProvider.findAwaitingApproval();
+
+    for (const refund of pending) {
+      await this.queueProducer.publish({
+        queue: 'payments.refunds.v2',
+        payload: { refundId: refund.id, orderId: refund.orderId },
+      });
+    }
+
+    return { published: pending.length };
+  }
+
+  public async onFailure(error: Error) {
+    await this.queueProducer.publish({
+      queue: 'payments.deadletter.v1',
+      payload: { task: 'RefundSweepTask', message: error.message },
+    });
+  }
+}
+
+export const REFUND_SWEEP_BATCH = 200;
+
+export const REFUND_SWEEP_LOCK = 'lock:refund-sweep';
+
+export const REFUND_QUEUE = 'payments.refunds.v2';
+
+export const REFUND_QUEUE_DLQ = 'payments.refunds.v2.dead';

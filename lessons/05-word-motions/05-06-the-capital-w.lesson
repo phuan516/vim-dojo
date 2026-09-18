@@ -1,0 +1,76 @@
+@meta
+id: 05-06
+title: The WORD, and why capitals matter
+chapter: 05
+type: lesson
+skills: WORD-motions, word-w
+par: 36
+minutes: 6
+vscode: no equivalent — nothing there jumps by whitespace
+open: order.provider.ts
+
+@brief
+Lesson five left you with a problem: `w` stops at every dot and bracket,
+so crossing `this.emailService.send(customer.email,` costs eight presses.
+
+The capital does the other thing. `W` moves by *WORD* — a run of
+non-blank characters, whatever is in it. Whitespace is the only boundary
+it recognises. `this.emailService.send(customer.email,` is one `W` press.
+
+It is the same distinction for every one of these motions. Lower case
+respects punctuation; upper case only sees spaces.
+
+The refund email should include the amount. Add `amount: order.total, `
+to the payload object so it reads:
+
+    { amount: order.total, orderId: order.id }
+
+Get there with `W`, not `w`. Par assumes you do.
+
+@keys
+| `W` | forward to the start of the next WORD (whitespace separated) |
+| `w` | forward to the start of the next word (punctuation counts) |
+| `i` | insert before the cursor |
+
+@hints
+Say the line out loud with spaces as the only breaks. How many jumps is
+it really to `orderId:`?
+--
+`W` stops at: `await`, the whole `this.emailService.send(customer.email,`
+chunk, `'order.refunded',`, the `{`, and then `orderId:`. Five.
+--
+`2j` gets you to the line, `5W` gets you to `orderId:`, then `i`, type
+`amount: order.total, ` and `Esc`.
+
+@solution
+    2j  5W  i amount: order.total,  <Esc>  :wq<Enter>
+
+Five `W` presses. The same trip with `w` is nineteen, because `w` stops
+at every dot, paren, quote and comma along the way.
+
+The way to hold it in your head: `w` is for moving *within* an expression
+and `W` is for moving *past* one. When you are aiming at a piece of
+`order.pricing.subtotal`, `w` is the tool. When that whole thing is just
+scenery between you and the argument you care about, `W` is.
+
+This is the single biggest lever in the chapter. A VS Code user has no
+whitespace-level jump at all — Ctrl-Right behaves roughly like `w` and
+there is nothing coarser, which is exactly why crossing a long chained
+call there feels like it needs the mouse.
+
+Both keep working the same way you already learned: `W` lands on the
+first character of the WORD, so `W` then `i` inserts in front of it.
+
+@start order.provider.ts
+export class OrderProvider {
+  public async notifyRefund(order: Order, customer: Customer) {
+    await this.emailService.send(customer.email, 'order.refunded', { orderId: order.id });
+  }
+}
+
+@expected order.provider.ts
+export class OrderProvider {
+  public async notifyRefund(order: Order, customer: Customer) {
+    await this.emailService.send(customer.email, 'order.refunded', { amount: order.total, orderId: order.id });
+  }
+}

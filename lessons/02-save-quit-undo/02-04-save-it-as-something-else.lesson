@@ -1,0 +1,79 @@
+@meta
+id: 02-04
+title: Writing to a different filename
+chapter: 02
+type: lesson
+skills: write, quit
+par: 36
+minutes: 4
+vscode: File > Save As
+open: runbook.md
+
+@brief
+`:w` takes an argument. Give it a filename and the buffer is written
+there instead of to the file you opened. The file you opened is not
+touched, and the buffer keeps its original name — you have taken a copy,
+not moved house.
+
+The payments runbook needs a version for the 2.14 deploy. The title line
+should read:
+
+    # Payments runbook 2.14
+
+Make that change and write it to `runbook-2.14.md`. `runbook.md` itself is
+the live document for the team and must come out of this byte for byte
+unchanged. Change it and the check fails.
+
+@keys
+| `:w name` | write the buffer to `name`, leaving the current file alone |
+| `:saveas name` | write to `name` and make it the buffer's new name |
+| `:q!` | quit without writing |
+
+@hints
+Edit the title in the buffer first. Nothing has touched `runbook.md` yet
+— an unwritten buffer is just memory.
+--
+`:w` on its own writes to `runbook.md`, which is the one thing you must
+not do. Give `:w` the new name instead.
+--
+After `:w runbook-2.14.md` the buffer still belongs to `runbook.md` and
+still counts as modified, so `:q` refuses. You do not want that write.
+`:q!`.
+
+@solution
+    $ a  2.14 <Esc> :w runbook-2.14.md<Enter> :q!<Enter>
+
+Two things are worth pulling out of that.
+
+First, `:w name` is how you fork a file mid-edit. Reworking a config and
+not sure the rework is better? `:w config.new.ts`, keep editing, compare
+them outside vim later.
+
+Second, the `:q!` at the end is not a failure. The buffer was still
+`runbook.md` and still modified, so vim was right to refuse a plain `:q`.
+If you want the buffer to *become* the new file, `:saveas runbook-2.14.md`
+renames it as it writes, and then `ZZ` does what you would expect.
+
+@start runbook.md
+# Payments runbook
+
+Owner: payments team
+Pager: #payments-oncall
+
+## Rollback
+
+1. Flip the feature flag off
+2. Redeploy the previous image
+3. Tell the oncall channel
+
+@expected runbook-2.14.md
+# Payments runbook 2.14
+
+Owner: payments team
+Pager: #payments-oncall
+
+## Rollback
+
+1. Flip the feature flag off
+2. Redeploy the previous image
+3. Tell the oncall channel

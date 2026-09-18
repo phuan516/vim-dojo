@@ -1,0 +1,73 @@
+@meta
+id: 28-04
+title: Drill — one line, one reason
+chapter: 28
+type: drill
+skills: vimrc-structure
+par: 82
+minutes: 5
+reps: 8
+vscode: nothing — settings.json has no room for why
+open: .vimrc
+
+@brief
+Eight times: add `set scrolloff=5` to the end of the Looks section, with
+the reason written beside it, and save.
+
+    set scrolloff=5           " keep 5 lines visible above and below
+
+The reason is the point of the drill. A bare option name is a thing you
+will Google again in a year; the line above tells you, in the half
+second you have while scrolling past, why you wanted it.
+
+@keys
+| `G` | last line |
+| `o` | open a line below |
+| `:wq` | save and quit |
+
+@hints
+The section only has three lines, so `G` and `o` is the whole route.
+--
+Type the setting, then spaces, then `"` and the reason. Everything after
+an unmatched `"` on a vimrc line is a comment.
+
+@solution
+    G o set scrolloff=5           " keep 5 lines visible above and below <Esc> :wq<Enter>
+
+`scrolloff` is the single most common first addition to a vimrc, and a
+good example of the rule this chapter keeps repeating: you add it the
+day you notice you keep pressing `zz` after every search, not the day
+you read someone's dotfiles.
+
+One caution about comments in a vimrc, since you are now writing them.
+An inline `"` comment is illegal after a few commands — `:map`, `:normal`
+and `:execute` among them — because they treat the quote as part of their
+argument. `nnoremap <leader>w :w<CR>   " save` looks fine and silently
+maps a `w` that types a stray comment. Put the comment on its own line
+above the mapping instead. That trap is one of the four bugs waiting for
+you at the end of this chapter.
+
+@start .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Looks ---
+set number
+set ruler
+set showcmd
+
+@expected .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Looks ---
+set number
+set ruler
+set showcmd
+set scrolloff=5           " keep 5 lines visible above and below

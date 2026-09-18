@@ -1,0 +1,107 @@
+@meta
+id: 12-15
+title: Delete the match as well
+chapter: 12
+type: lesson
+skills: search-offset, search-motion
+par: 40
+minutes: 6
+vscode: select the two columns and their commas, carefully, and delete
+open: export.columns.ts
+
+@brief
+The order export still carries two columns from the system that was
+retired last year. `legacyRef` and `legacySource` come out of the header,
+along with the commas that separate them, and nothing else changes.
+
+    before: id,customerId,legacyRef,legacySource,status,total,...
+    after:  id,customerId,status,total,...
+
+A plain search motion stops *before* what it found, which was the right
+behaviour in the last few lessons and is the wrong behaviour here: the
+comma after `legacySource` has to go too, and it is the last character of
+the thing you would naturally search for.
+
+An offset fixes it, and it fixes it by changing the kind of motion the
+search is.
+
+@keys
+| `d/text/e` `Enter` | delete up to **and including** the match |
+| `d/text` `Enter` | delete up to but not including it |
+| `d/text/e+1` `Enter` | and one character further |
+
+@hints
+One delete, not two. Start at the first character that should disappear
+and describe the last one.
+--
+`d/pattern` would stop just before the match. Adding the `/e` offset
+makes the motion inclusive, so the match itself is deleted as well.
+--
+`/legacyRef` `Enter` to get to the start of the doomed text, then
+`d/legacySource,/e` `Enter` — the pattern ends with the comma, and `/e`
+means that comma is the last thing deleted.
+
+@solution
+/legacyRef<Enter>  d/legacySource,/e<Enter>  :wq<Enter>
+
+Thirty-three keystrokes, and the two ends of the deletion were described
+rather than aimed at.
+
+The rule underneath is worth memorising because it is not obvious: a
+search motion is exclusive, but a search motion *with an `e` offset* is
+inclusive. `d/foo` deletes up to `foo`; `d/foo/e` deletes up to and
+through `foo`. That single letter is the difference between leaving a
+stray comma behind and not.
+
+This is the most useful pairing in the chapter. Real deletions rarely
+stop neatly at a word boundary — they stop after a closing tag, after a
+semicolon, after the end of a marker comment. `d/marker/e` covers all of
+those, and `d/marker/e+1` covers the one where you want the character
+after it too.
+
+Worth trying once, on your own time: `d/pattern/-1` and `d/pattern/+1`.
+An offset with a bare number counts *lines*, not characters, and it turns
+the motion linewise — `d/pattern/+1` deletes whole lines, from this one
+down to the line after the match. That is the shape you want when you are
+cutting a block out of a config file, and it is the last thing this
+chapter has to give you.
+
+@start export.columns.ts
+export const ORDER_EXPORT_HEADER =
+  'id,customerId,legacyRef,legacySource,status,total,currency,placedAt,shippedAt';
+
+export const CUSTOMER_EXPORT_HEADER =
+  'id,email,name,country,createdAt,marketingOptIn';
+
+export const PAYOUT_EXPORT_HEADER =
+  'id,batch,orderId,amount,fee,net,scheduledAt,sentAt';
+
+export const REFUND_EXPORT_HEADER =
+  'id,orderId,amount,reason,approvedBy,approvedAt';
+
+export const exportHeaders = {
+  orders: ORDER_EXPORT_HEADER,
+  customers: CUSTOMER_EXPORT_HEADER,
+  payouts: PAYOUT_EXPORT_HEADER,
+  refunds: REFUND_EXPORT_HEADER,
+};
+
+@expected export.columns.ts
+export const ORDER_EXPORT_HEADER =
+  'id,customerId,status,total,currency,placedAt,shippedAt';
+
+export const CUSTOMER_EXPORT_HEADER =
+  'id,email,name,country,createdAt,marketingOptIn';
+
+export const PAYOUT_EXPORT_HEADER =
+  'id,batch,orderId,amount,fee,net,scheduledAt,sentAt';
+
+export const REFUND_EXPORT_HEADER =
+  'id,orderId,amount,reason,approvedBy,approvedAt';
+
+export const exportHeaders = {
+  orders: ORDER_EXPORT_HEADER,
+  customers: CUSTOMER_EXPORT_HEADER,
+  payouts: PAYOUT_EXPORT_HEADER,
+  refunds: REFUND_EXPORT_HEADER,
+};

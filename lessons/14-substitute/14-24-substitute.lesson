@@ -1,0 +1,106 @@
+@meta
+id: 14-24
+title: Capstone — find and replace, with judgement
+chapter: 14
+type: scenario
+skills: sub-basic, sub-range, sub-confirm, sub-case
+par: 64
+minutes: 6
+vscode: Ctrl+H
+open: cart.resolver.ts
+
+@brief
+The product is being renamed from "basket" to "cart".
+
+Rename every identifier in cart.resolver.ts:
+  basket -> cart      basketId -> cartId
+  basketProvider -> cartProvider     BasketResolver -> CartResolver
+
+EXCEPT the message shown to the customer:
+  'Your basket is empty'    must stay exactly as it is.
+
+That exception is the whole lesson. A blind replace-all breaks it.
+You have two honest ways out: replace with confirmation and skip
+that one, or write a pattern precise enough not to match it.
+
+Notice also that replacing "basket" does not touch "Basket" -
+substitution is case sensitive unless you say otherwise.
+
+@keys
+:s/old/new/          replace the FIRST match on this line
+:s/old/new/g         every match on this line
+:%s/old/new/g        every match in the whole file    ( % = all lines )
+:%s/old/new/gc       ...and ask me about each one  (y n a q l)
+:10,20s/old/new/g    only lines 10 to 20
+:'<,'>s/old/new/g    only the lines I just visually selected
+:%s/\<old\>/new/g    whole word only - not "oldest", not "goldold"
+:%s/old/new/gi       ignore case when matching
+&                    repeat the last :s on this line
+u                    undo the whole substitution in one go
+
+@hints
+Start with  :%s/basket/cart/gc  - the c means confirm. Vim highlights
+each match and waits. Press y to replace, n to skip, a to do all the
+rest, q to stop. Skip the one inside the quotes.
+--
+Capital B is a separate job:  :%s/Basket/Cart/g
+--
+If you replaced the string by accident, u undoes the ENTIRE
+substitution in one press, not one match at a time.
+--
+The pattern-precision route instead of confirming: the bad match is
+the only one followed by a space and the word "is". Everything you
+DO want is followed by a letter, a dot, an ampersand or a bracket.
+For example  :%s/basket\([A-Z.,)( ]\)\@=/cart/g  works, but honestly
+gc is the tool a working engineer reaches for. Precision patterns are
+for when there are two hundred matches, not eleven.
+
+@solution
+:%s/Basket/Cart/g          the class name
+:%s/basket/cart/gc         then: y y y n y y y y y  (n on the string)
+:wq
+
+Reading a substitute command out loud helps:
+" : (over) % all lines  s substitute  / basket / for cart /
+  g every one on the line, c and ask me first "
+
+The pattern half of :s is a regex, so \d, \s, \(groups\) and \1
+backreferences all work. :h pattern when you need them.
+
+@start cart.resolver.ts
+import { Resolver, Query } from '../types';
+
+export class BasketResolver {
+  public async basket(_: unknown, args: { basketId: string }) {
+    const basket = await this.basketProvider.findOne(args.basketId);
+
+    if (!basket) {
+      return { error: 'Your basket is empty' };
+    }
+
+    return {
+      id: basket.id,
+      items: basket.items,
+      total: basket.total,
+    };
+  }
+}
+
+@expected cart.resolver.ts
+import { Resolver, Query } from '../types';
+
+export class CartResolver {
+  public async cart(_: unknown, args: { cartId: string }) {
+    const cart = await this.cartProvider.findOne(args.cartId);
+
+    if (!cart) {
+      return { error: 'Your basket is empty' };
+    }
+
+    return {
+      id: cart.id,
+      items: cart.items,
+      total: cart.total,
+    };
+  }
+}

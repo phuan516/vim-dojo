@@ -1,0 +1,141 @@
+@meta
+id: 22-08
+title: The range writes itself
+chapter: 22
+type: lesson
+skills: visual-line
+par: 52
+minutes: 5
+vscode: select the method, Ctrl+H, tick "Find in selection", Replace All
+open: order.provider.ts
+
+@brief
+Press `:` with a selection active and the command line does not start
+empty. It starts with `:'<,'>` — a range from the mark at the start of
+the selection to the mark at its end. Whatever Ex command you type next
+runs on exactly those lines. `:s`, `:g`, `:normal`, `:sort`: all
+of them, scoped to the region you can see.
+
+In `cancel`, the variable `order` is being renamed to `existing`, to
+make it obvious it is the record on disk and not the incoming payload.
+Every `order` in `cancel` becomes `existing`. `findOne` and
+`markShipped` also use `order`, and they are not changing.
+
+Mind `orderRepository`: it is not the word `order`.
+
+@keys
+| `V` then `:` | the command line opens with `:'<,'>` already typed |
+| `:'<,'>s/old/new/g` | substitute on the selected lines only |
+| `\<` `\>` | word boundaries, so `order` does not match `orderRepository` |
+
+@hints
+`cancel` has no blank lines inside it, so it is one paragraph. `Vip`
+from any of its lines selects the whole method.
+--
+Press `:`. Do not delete the `'<,'>` that appears — that is the range.
+Type the substitute after it.
+--
+`/async cancel` `Enter`, `Vip`, then `:s/\<order\>/existing/g` and
+`Enter`.
+
+@solution
+    /async cancel<Enter> V i p :s/\<order\>/existing/g<Enter> :wq<Enter>
+
+Forty-five keystrokes, most of them the pattern. `:%s` would have
+renamed `order` in all three methods and broken two of them. Chapter 14
+had you type line numbers for a range; this is the same range with the
+numbers read off the selection instead of off the gutter.
+
+`'<` and `'>` are ordinary marks. They survive after `Esc`, so
+`:'<,'>s/...` typed by hand later still refers to the last selection —
+and lesson 10 shows the key that reselects it outright.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+    await this.paymentService.refund(order.id);
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async markShipped(id: string) {
+    const order = await this.findOne(id);
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const existing = await this.findOne(id);
+    if (existing.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+    await this.paymentService.refund(existing.id);
+    return this.orderRepository.update({
+      where: { id: existing.id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async markShipped(id: string) {
+    const order = await this.findOne(id);
+
+    return this.orderRepository.update({
+      where: { id: order.id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+}

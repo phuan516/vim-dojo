@@ -1,0 +1,199 @@
+@meta
+id: 22-19
+title: Scenario — the currency rollout
+chapter: 22
+type: scenario
+skills: visual-block, block-insert, block-append, open-o, buffer-switch
+par: 96
+minutes: 12
+vimrc: set hidden
+vscode: three tabs, a lot of Alt+clicking, and a regex for the CSV
+open: currency.ts order.entity.ts orders.csv errors.json
+
+@brief
+A ticket, not an exercise.
+
+    CUR-201  Orders settle in more than one currency from next month.
+             The entity, the currency constants and the reconcile
+             fixture all need to know.
+
+Four files, open as four buffers. `:bn` moves to the next; `:wqa`
+writes and quits the lot at the end.
+
+  1. currency.ts — the five currency constants are only used inside
+     the file today. The provider needs them: export all five. The
+     comment and the `type` line stay as they are.
+
+  2. order.entity.ts — `Order` gets a `currency: Currency;` field,
+     directly under `total`.
+
+  3. orders.csv — the reconcile fixture needs a `currency` column at
+     the end. Every one of the thirty data rows gets `,GBP`; the header
+     gets `,currency`.
+
+  4. errors.json — nothing to do. It is open because the ticket
+     mentions it, and to prove you can leave a file alone.
+
+@keys
+| `Ctrl-V` then `I` | insert at the left edge of a block, every line |
+| `Ctrl-V` then `$A` | append at the end of every line in the block |
+| `G` | in block mode, extend the block to the last line |
+| `o` | open a line below and insert |
+| `:bn` `:wqa` | next buffer; write all and quit |
+
+@hints
+The constants are five consecutive lines starting at the same column.
+That is a block: `Ctrl-V`, down four, `I`, the word, `Esc`.
+--
+For the CSV, do not count rows. From the first data row, `Ctrl-V`
+then `G` reaches the last, `$` makes the block ragged, `A` appends.
+The header is one line and gets an ordinary `A`.
+--
+currency.ts: `/const` `Enter`, `Ctrl-V`, `4j`, `Iexport `, `Esc`.
+order.entity.ts: `/total` `Enter`, `o`, type the field, `Esc`.
+orders.csv: `j`, `Ctrl-V`, `G`, `$`, `A,GBP`, `Esc`, `gg`,
+`A,currency`, `Esc`. `:wqa`.
+
+@solution
+A route, buffer by buffer.
+
+**currency.ts** — `/const` `Enter`, `Ctrl-V`, `4j`, `Iexport `, `Esc`.
+`:bn`.
+
+**order.entity.ts** — `/total` `Enter`, `o`, `currency: Currency;`,
+`Esc`. `:bn`.
+
+**orders.csv** — `j` past the header, `Ctrl-V`, `G`, `$`, `A,GBP`,
+`Esc`. Then `gg`, `A,currency`, `Esc`. `:wqa`.
+
+**errors.json** — untouched.
+
+Around eighty-three keystrokes, thirty of them typed text. The two
+block edits are the point: five lines or five hundred, the keys are
+the same, and neither needed a count that could be off by one. The
+`G` in the CSV is the habit to keep — a block is extended by motions,
+and the motion that says "to the end of the file" is always three
+keys shorter than counting.
+
+@start currency.ts
+// Supported settlement currencies. ISO 4217, upper case.
+
+const GBP = 'GBP';
+const EUR = 'EUR';
+const USD = 'USD';
+const CHF = 'CHF';
+const SEK = 'SEK';
+
+export type Currency = typeof GBP | typeof EUR | typeof USD | typeof CHF | typeof SEK;
+
+@expected currency.ts
+// Supported settlement currencies. ISO 4217, upper case.
+
+export const GBP = 'GBP';
+export const EUR = 'EUR';
+export const USD = 'USD';
+export const CHF = 'CHF';
+export const SEK = 'SEK';
+
+export type Currency = typeof GBP | typeof EUR | typeof USD | typeof CHF | typeof SEK;
+
+@start order.entity.ts
+import { Currency } from './currency';
+
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@expected order.entity.ts
+import { Currency } from './currency';
+
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  currency: Currency;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start orders.csv
+order_id,customer,total
+ord_1100,marco,267.15
+ord_1101,chloe,202.44
+ord_1102,george,300.18
+ord_1103,fatima,56.33
+ord_1104,kofi,168.34
+ord_1105,tomasz,167.39
+ord_1106,priya,292.79
+ord_1107,chloe,37.25
+ord_1108,tomasz,278.58
+ord_1109,jun,38.12
+ord_1110,kofi,9.12
+ord_1111,kofi,203.56
+ord_1112,george,293.64
+ord_1113,ben,209.29
+ord_1114,tomasz,107.49
+ord_1115,chloe,71.17
+ord_1116,mateo,54.70
+ord_1117,leila,4.58
+ord_1118,mateo,62.66
+ord_1119,mateo,257.63
+ord_1120,ivan,220.69
+ord_1121,ben,2.31
+ord_1122,lena,14.59
+ord_1123,jun,232.14
+ord_1124,fatima,66.60
+ord_1125,george,231.51
+ord_1126,george,88.59
+ord_1127,leila,155.39
+ord_1128,marco,40.26
+ord_1129,george,216.12
+
+@expected orders.csv
+order_id,customer,total,currency
+ord_1100,marco,267.15,GBP
+ord_1101,chloe,202.44,GBP
+ord_1102,george,300.18,GBP
+ord_1103,fatima,56.33,GBP
+ord_1104,kofi,168.34,GBP
+ord_1105,tomasz,167.39,GBP
+ord_1106,priya,292.79,GBP
+ord_1107,chloe,37.25,GBP
+ord_1108,tomasz,278.58,GBP
+ord_1109,jun,38.12,GBP
+ord_1110,kofi,9.12,GBP
+ord_1111,kofi,203.56,GBP
+ord_1112,george,293.64,GBP
+ord_1113,ben,209.29,GBP
+ord_1114,tomasz,107.49,GBP
+ord_1115,chloe,71.17,GBP
+ord_1116,mateo,54.70,GBP
+ord_1117,leila,4.58,GBP
+ord_1118,mateo,62.66,GBP
+ord_1119,mateo,257.63,GBP
+ord_1120,ivan,220.69,GBP
+ord_1121,ben,2.31,GBP
+ord_1122,lena,14.59,GBP
+ord_1123,jun,232.14,GBP
+ord_1124,fatima,66.60,GBP
+ord_1125,george,231.51,GBP
+ord_1126,george,88.59,GBP
+ord_1127,leila,155.39,GBP
+ord_1128,marco,40.26,GBP
+ord_1129,george,216.12,GBP
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CURRENCY_NOT_SUPPORTED": { "statusCode": 422, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}

@@ -1,0 +1,174 @@
+@meta
+id: 08-20
+title: Scenario — splitting the entity
+chapter: 08
+type: scenario
+skills: delete-d, put-p, replace-r, insert-i
+par: 88
+minutes: 14
+vscode: two tabs, four drags, two paste-into-the-wrong-place mistakes
+open: order.entity.ts refund-runbook.md default.json
+vimrc: set hidden
+
+@brief
+A ticket, not an exercise.
+
+    ORD-533  Order carries two fields that belong to Customer, and a
+             legacy column that has not been written since the importer
+             was deleted. Refunds are now a status in their own right.
+             While you are in here, the runbook steps are in the order
+             somebody thought of them, not the order you do them in.
+
+Three files. `:bn` and `:bp` move between them, `:wqa` writes everything
+and quits. Nothing here needs retyping: every line you need already
+exists somewhere in the file.
+
+  1. order.entity.ts
+
+     - `customerEmail` and `customerName` move to `Customer`, directly
+       under its `id`. Move them together; they are adjacent.
+     - `legacyRef` goes.
+     - `OrderStatus` needs `REFUNDED` as a fourth value, at the end of
+       the union, before the semicolon.
+     - `LegacyOrder` goes entirely, along with the blank line above it.
+
+  2. refund-runbook.md
+
+     The steps must read: check the window, get approval, raise the
+     refund, note the reference, email the customer. Posting in
+     `#payments` by hand is what the runbook is replacing, so that step
+     goes. Renumber what is left so it runs 1 to 5.
+
+  3. default.json — reference only. Change it and the check fails.
+
+One hazard, and it is the whole chapter in one sentence: there is a
+single register and every delete overwrites it. Carry one thing at a
+time.
+
+@keys
+| `2dd` | delete two lines into the register |
+| `p` `P` | put them below, or above |
+| `6dd` | delete six lines |
+| `r` | replace one character |
+| `$` `i` | end of the line, then insert before that character |
+| `:bn` | next buffer |
+| `:wqa` | write everything and quit |
+
+@hints
+In the entity, do the move before anything else. If you delete
+`legacyRef` first, the two customer fields are gone from the register and
+you will be retyping them.
+--
+The union needs `| 'REFUNDED'` inserted before the `;`, not appended
+after it. `$` lands on the semicolon and `i` starts inserting to its
+left.
+--
+In the runbook, move the lines first and renumber afterwards. Trying to
+keep the numbers right while the lines are still moving is how you end up
+with two step threes.
+--
+Renumbering is five `r` presses, bottom to top, with `k` between them.
+The digit is the first character of each line, so the column never
+changes.
+
+@solution
+**order.entity.ts**
+
+    5j 2dd        take customerEmail and customerName
+    6j p          put them under Customer's id
+    7k dd         legacyRef
+    2j $i | 'REFUNDED'<Esc>
+    8j 6dd        the blank line and all of LegacyOrder
+
+**refund-runbook.md** — `:bn`
+
+    3j dd k P     the window check goes to the top
+    3j dd 2k P    approval goes above the refund
+    3j dd         the manual post goes
+    r5 k r4 k r3 k r2 k r1
+
+Then `:wqa`.
+
+The entity half is one long lesson in register discipline. Four edits,
+and exactly one of them is a move — so the move has to happen first,
+undisturbed, before any of the deletes overwrite what it is carrying.
+Experienced vim users do this without thinking about it, and the way they
+learned was getting it wrong on something like this.
+
+The runbook half is the opposite lesson: do the structural work first and
+the cosmetic work last. The numbers are the least important thing on
+those lines and the most tempting to keep tidy as you go. Move all the
+lines, then walk up the list replacing digits — five two-key edits with
+no thinking in them, because the hard part was already finished.
+
+That is the shape of most real editing. Decide what goes where, move it
+in as few operations as you can, then sweep once for the details.
+Chapters 9 and 10 make each of those operations smaller. They do not
+change the order you should do them in.
+
+@start order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  customerEmail: string;
+  customerName: string;
+  legacyRef: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+export type Customer = {
+  id: string;
+  createdAt: Date;
+};
+
+export type LegacyOrder = {
+  id: string;
+  ref: string;
+  total: number;
+};
+
+@expected order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED' | 'REFUNDED';
+
+export type Customer = {
+  id: string;
+  customerEmail: string;
+  customerName: string;
+  createdAt: Date;
+};
+
+@start refund-runbook.md
+# Cancelling an order
+
+1. Raise the refund in the gateway
+2. Check the order is inside the 30 day window
+3. Note the gateway reference on the order
+4. Ask finance to approve anything over £500
+5. Post the refund in #payments by hand
+6. Email the customer
+
+@expected refund-runbook.md
+# Cancelling an order
+
+1. Check the order is inside the 30 day window
+2. Ask finance to approve anything over £500
+3. Raise the refund in the gateway
+4. Note the gateway reference on the order
+5. Email the customer
+
+@start default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "PAYMENT_REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}

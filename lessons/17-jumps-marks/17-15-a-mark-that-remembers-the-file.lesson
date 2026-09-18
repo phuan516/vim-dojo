@@ -1,0 +1,297 @@
+@meta
+id: 17-15
+title: A mark that remembers the file
+chapter: 17
+type: lesson
+skills: marks-set, marks-jump
+par: 145
+minutes: 8
+vscode: three tabs and Ctrl+Tab, then find the line again
+open: order.provider.ts order.entity.ts order.repository.ts
+vimrc: set hidden
+
+@brief
+Orders need a `placedAt` timestamp, which means three files.
+
+Start in the provider. In `create`, the values passed to
+`orderRepository.create` need `placedAt: new Date(), ` inserted just
+before `status: 'PENDING'`. Search for `status: 'PENDING` and you are
+on the `s` where it goes. Do not type it yet. Mark the spot in a way
+that will still work after you have been to two other files.
+
+Then: the entity gets `placedAt: Date;` under `total`, and the
+repository's `toEntity` gets `placedAt: record.placedAt,` under its
+`total` line. Two buffer switches, two searches, two inserts.
+
+Then jump to the mark. It should take you back into the provider, to
+the exact character, in one command. Finish the insert there. All
+three files are graded.
+
+@keys
+| `mA` | set the global mark `A`: position and file |
+| `` `A `` | jump to it, switching buffers if needed |
+| `:b entity` | switch to the buffer whose name contains `entity` |
+| `:marks` | list marks, including the file each uppercase one is in |
+| `:wqa` | write everything, quit |
+
+@hints
+A lowercase mark is local to its file. Set `ma` in the provider and
+`` `a `` from the entity means the entity's own `a`, which is unset.
+--
+Uppercase marks are global: one `A` for the whole session, and it
+remembers which file it was set in. `` `A `` from anywhere goes there.
+--
+`/status: 'PENDING` Enter, `mA`. `:b entity`, `/total`,
+`oplacedAt: Date;` Esc. `:b repo`, `/total`,
+`oplacedAt: record.placedAt,` Esc. `` `A ``, `iplacedAt: new Date(), `
+Esc, `:wqa`.
+
+@solution
+    /status: 'PENDING<Enter> mA
+    :b entity<Enter> /total<Enter> oplacedAt: Date;<Esc>
+    :b repo<Enter> /total<Enter> oplacedAt: record.placedAt,<Esc>
+    `A iplacedAt: new Date(), <Esc> :wqa<Enter>
+
+Twenty-six lowercase marks per file, twenty-six uppercase marks per
+session. The uppercase ones carry a file name with them, and jumping
+to one opens that file if it is not already showing. That is the
+whole difference, and it is exactly the difference you need for "I am
+about to go and touch two other files, and then I want to be back
+here".
+
+`Ctrl-O` would have worked, with four presses, if you counted the two
+searches. `:b provider` would have worked, followed by a search to
+find the line again. The mark was one command and no thinking, which
+is the standard you should hold navigation to.
+
+Uppercase marks are also saved between sessions, so `` `A `` tomorrow
+morning still goes to the provider line, even after you have closed
+vim. People keep `A` on whatever they are working on this week and
+`B` on its test. The catch is the same as the benefit: there is only
+one `A`, and setting it in another project overwrites it. `:marks`
+shows where every mark currently points, with the file name for the
+uppercase ones, when you are not sure.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { CustomerProvider } from '../customer/customer.provider';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerProvider) protected customerProvider: CustomerProvider,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(customerId: string) {
+    await this.customerProvider.findOne(customerId);
+
+    return this.orderRepository.findByCustomer({ customerId });
+  }
+
+  public async create(args: { customerId: string; total: number }) {
+    const customer = await this.customerProvider.findOne(args.customerId);
+
+    const order = await this.orderRepository.create({
+      values: { customerId: customer.id, total: args.total, status: 'PENDING' },
+    });
+
+    await this.emailService.send({ orderId: order.id, template: 'order_confirmation' });
+
+    return order;
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_NOT_PENDING');
+    }
+
+    await this.orderRepository.update({ where: { id }, values: { status: 'SHIPPED' } });
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { CustomerProvider } from '../customer/customer.provider';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerProvider) protected customerProvider: CustomerProvider,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(customerId: string) {
+    await this.customerProvider.findOne(customerId);
+
+    return this.orderRepository.findByCustomer({ customerId });
+  }
+
+  public async create(args: { customerId: string; total: number }) {
+    const customer = await this.customerProvider.findOne(args.customerId);
+
+    const order = await this.orderRepository.create({
+      values: { customerId: customer.id, total: args.total, placedAt: new Date(), status: 'PENDING' },
+    });
+
+    await this.emailService.send({ orderId: order.id, template: 'order_confirmation' });
+
+    return order;
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_NOT_PENDING');
+    }
+
+    await this.orderRepository.update({ where: { id }, values: { status: 'SHIPPED' } });
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@expected order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  placedAt: Date;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}
+
+@expected order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      placedAt: record.placedAt,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}

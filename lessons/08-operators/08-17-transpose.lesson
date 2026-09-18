@@ -1,0 +1,74 @@
+@meta
+id: 08-17
+title: The two-character transpose
+chapter: 08
+type: lesson
+skills: delete-d, put-p
+par: 32
+minutes: 4
+vscode: select the two letters, retype them in the other order
+open: gateway.config.ts
+
+@brief
+`p` has been putting whole lines back so far, because everything you had
+put in the register was a line. Take one character instead and `p` puts
+one character — after the cursor, inside the line, no new line involved.
+
+That gives you a trick worth having in your fingers, because typing
+fingers make this exact mistake all day: two adjacent characters in the
+wrong order. Delete the first one and put it back on the other side of
+its neighbour.
+
+Four transposed pairs in this config. `teh`, `hsot`, `prot`, `timeuot`.
+Fix all four. Nothing else in the file changes.
+
+@keys
+| `x` | delete the character under the cursor, into the register |
+| `p` | put it back after the cursor |
+| `fe` | forward to the next `e` |
+| `0` | back to column zero |
+
+@hints
+Two letters are the wrong way round. You do not need to retype either of
+them — you need to move one of them one place to the right.
+--
+`x` takes the character and leaves the cursor on the one that was next to
+it. `p` drops it back on the far side. `xp` is the whole fix.
+--
+On `hsot`, put the cursor on the `s`: `x` leaves `hot` with the cursor on
+`o`, and `p` gives you `host`. `f` gets you onto each letter in one
+press — but `j` keeps the column you were in, so press `0` after each
+`j` or the `f` will start looking from halfway along the line.
+
+@solution
+    j fe xp  j0 fs xp  j0 fr xp  j0 fu xp  :wq<Enter>
+
+`xp` is the smallest useful sentence in vim: a verb, a register and a
+put, in two keystrokes. It is worth learning as a single gesture rather
+than as two commands, the way `ddp` and `yyp` are.
+
+The bigger idea is the one in the first paragraph. The register does not
+hold "text"; it holds text *and a shape*. `x` put a character in it, so
+`p` produced a character in the middle of a line. `dd` put a line in it,
+so `p` produced a line. Same key, entirely different result, and no
+setting anywhere controls it — it is decided by how the text got into the
+register in the first place.
+
+That is the single most confusing thing about paste in vim, and the next
+lesson is about nothing else.
+
+@start gateway.config.ts
+export const gateway = {
+  // teh gateway gives up after 30s, so keep ours under that
+  hsot: 'pay.internal',
+  prot: 8080,
+  timeuot: 5000,
+};
+
+@expected gateway.config.ts
+export const gateway = {
+  // the gateway gives up after 30s, so keep ours under that
+  host: 'pay.internal',
+  port: 8080,
+  timeout: 5000,
+};

@@ -1,0 +1,128 @@
+@meta
+id: 22-02
+title: Whole lines, two levels deep
+chapter: 22
+type: lesson
+skills: visual-line
+par: 34
+minutes: 4
+vscode: select the five lines, press Tab twice
+open: order.provider.ts
+
+@brief
+`V` is visual mode for whole lines. Where the cursor sits on the line no
+longer matters; `j` and `k` add lines to the selection, and the operator
+you press gets every line in it, start to finish.
+
+The five lines that do the refund in `cancel` were pasted into a new
+`try` block inside a new `if`, and nobody re-indented them. They are two
+levels too shallow. Indent them so the method reads properly:
+
+    if (order.status !== 'SHIPPED') {
+      try {
+        await this.paymentService.refund(order.id);
+        await this.orderRepository.update({
+          where: { id },
+          values: { status: 'CANCELLED' },
+        });
+      } catch (error) {
+
+A count in front of `>` in visual mode is not "how many lines" — the
+selection already says that. It is how many levels.
+
+@keys
+| `V` | start a line-wise selection |
+| `>` `<` | shift the selection right or left by one `shiftwidth` |
+| `2>` | shift it two levels in one go |
+
+@hints
+Land on the first `await` line with a search, then `V` and four `j`
+to take the five lines.
+--
+`>` once is one level. You want two. Do not press `>` twice — put the
+count in front of it.
+--
+`/await this.payment` `Enter`, `V4j`, `2>`.
+
+@solution
+    /await this.payment<Enter> V 4 j 2 > :wq<Enter>
+
+The same five lines could be shifted with `5>>` from normal mode, and
+then `.` for the second level. That is four keys against five, so the
+visual route is not about speed here. It is about the count
+meaning something different: in normal mode `4>>` counts lines, in
+visual mode `2>` counts levels, because the selection has already fixed
+the lines. Once you have a region selected, every count you type is
+about depth or repetition, never about extent.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async cancel(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    if (order.status !== 'SHIPPED') {
+      try {
+    await this.paymentService.refund(order.id);
+    await this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+      } catch (error) {
+        throw exception('REFUND_FAILED');
+      }
+    }
+
+    return order;
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async cancel(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    if (order.status !== 'SHIPPED') {
+      try {
+        await this.paymentService.refund(order.id);
+        await this.orderRepository.update({
+          where: { id },
+          values: { status: 'CANCELLED' },
+        });
+      } catch (error) {
+        throw exception('REFUND_FAILED');
+      }
+    }
+
+    return order;
+  }
+}

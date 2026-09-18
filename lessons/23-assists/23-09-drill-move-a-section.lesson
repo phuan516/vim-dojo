@@ -1,0 +1,97 @@
+@meta
+id: 23-09
+title: Drill — move a whole section
+chapter: 23
+type: drill
+skills: folds
+par: 40
+minutes: 5
+reps: 6
+vscode: select from heading to heading by eye, cut, scroll, paste
+open: runbook.md
+vimrc: let g:markdown_folding=1 | e
+
+@brief
+The runbook lists rollback before deploy. Six times: move the whole
+`## Rollback` section — heading, body and the blank line after it — so
+it comes after `## Deploy` and before `## Verify`.
+
+Markdown heading folds are on: every section is one fold. Never select
+by hand.
+
+@keys
+| `zc` | close the fold the search just opened |
+| `dd` on a closed fold | cut the whole section |
+| `p` on a closed fold | paste after the whole section |
+
+@hints
+`/## Rollback` then `zc` then `dd` cuts the section as one line.
+--
+`/## Deploy` then `zc` then `p` drops it after the whole Deploy
+section, not after its heading.
+
+@solution
+    /## Rollback<Enter> zc dd /## Deploy<Enter> zc p :wq<Enter>
+
+Thirty-five keystrokes to move fourteen lines, and none of them was a
+count. This is the fold trick in its purest form: heading folds give
+you a section as a unit, and a closed unit moves with `dd` and `p`.
+No text object does this.
+
+Vim's markdown filetype builds these folds when `g:markdown_folding`
+is set; the dojo set it for this lesson. In your own vimrc it is one
+line.
+
+@start runbook.md
+# Payments release runbook
+
+Read the whole thing before you start. Every step is reversible until
+the migration runs.
+
+## Rollback
+
+1. Scale the payments service to zero.
+2. Restore the previous image tag in the deployment.
+3. Run `npm run db:migrate:down` once.
+4. Scale back up and watch the error rate for ten minutes.
+
+Rollback takes about four minutes end to end.
+
+## Deploy
+
+1. Merge the release branch.
+2. Wait for the pipeline to publish the image.
+3. Apply the migration with `npm run db:migrate`.
+4. Roll the deployment.
+
+## Verify
+
+Check the refund dashboard. Declined payments should stay flat and
+refund latency should not move.
+
+@expected runbook.md
+# Payments release runbook
+
+Read the whole thing before you start. Every step is reversible until
+the migration runs.
+
+## Deploy
+
+1. Merge the release branch.
+2. Wait for the pipeline to publish the image.
+3. Apply the migration with `npm run db:migrate`.
+4. Roll the deployment.
+
+## Rollback
+
+1. Scale the payments service to zero.
+2. Restore the previous image tag in the deployment.
+3. Run `npm run db:migrate:down` once.
+4. Scale back up and watch the error rate for ten minutes.
+
+Rollback takes about four minutes end to end.
+
+## Verify
+
+Check the refund dashboard. Declined payments should stay flat and
+refund latency should not move.

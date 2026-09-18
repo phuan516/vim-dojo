@@ -1,0 +1,120 @@
+@meta
+id: 24-17
+title: Recall the last command and widen it
+chapter: 24
+type: lesson
+skills: cmdline-edit
+par: 100
+minutes: 6
+vscode: replace one, then replace all
+open: order.repository.ts
+
+@brief
+Every `findMany` in this repository has to return newest first. The
+change on each call is the same: `findMany({ where` becomes
+`findMany({ orderBy: { created: 'desc' }, where`. Three calls.
+
+That substitute is long, and the first time you run a long substitute
+you want to see it work on one line before you trust it with the file.
+So do that. Put the cursor on the first `findMany`, run the substitute
+on that line only, and look. Then bring the command back with `Ctrl-P`,
+jump to the front of it with `Ctrl-B`, put `%` in front of the `s`, and
+run it again on the whole file. You typed the long part once.
+
+@keys
+| `Ctrl-P` | on the command line: previous command from history |
+| `Ctrl-N` | the next one |
+| `Ctrl-B` | cursor to the beginning of the command line |
+| `Ctrl-E` | cursor to the end |
+| `Ctrl-W` | delete the word before the cursor |
+| `Ctrl-U` | delete everything before the cursor |
+
+@hints
+`/findMany` gets you to the first call. `:s/.../.../` on that line
+first, no range. Check the result.
+--
+Press `:` and then `Ctrl-P`. The previous command is back, cursor at
+its end. `Ctrl-B` puts the cursor before the `s`. Type `%`, press
+Enter.
+--
+`:s/findMany({ where/findMany({ orderBy: { created: 'desc' }, where/`
+once, then `:` `Ctrl-P` `Ctrl-B` `%` Enter.
+
+@solution
+    /findMany<Enter>
+    :s/findMany({ where/findMany({ orderBy: { created: 'desc' }, where/<Enter>
+    : <C-p> <C-b> % <Enter>
+    :wq<Enter>
+
+Eighty-seven keystrokes, and sixty-nine of them are the substitute,
+typed once.
+
+The command line is an editable line of text, and these are its editing
+keys. `Ctrl-B` and `Ctrl-E` are the ends. `Ctrl-W` eats a word backward,
+`Ctrl-U` eats everything backward. `Ctrl-P` and `Ctrl-N` walk history,
+and if you have typed a few characters first they walk only the history
+entries that start with those characters, so `:s` `Ctrl-P` finds the
+last substitute and skips the `:w`s in between.
+
+Try-on-one-line-then-widen is the habit. It costs three keystrokes and
+it means you never run a wrong substitute over a whole file, undo it,
+and try to remember what you typed. The command line remembers.
+
+What the command line cannot do is move by a word or change something
+in the middle. Notice that `Ctrl-W` only works backward from the
+cursor. For a fix in the middle of a long command you would have to
+`Ctrl-U` and retype, and the next lesson is the way out of that.
+
+@start order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({ where: { customerId: args.customerId, deleted: null } });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public async findByStatus(args: { status: string }) {
+    const records = await this.prisma.order.findMany({ where: { status: args.status, deleted: null } });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public async findCancelled() {
+    const records = await this.prisma.order.findMany({ where: { status: 'CANCELLED', deleted: null } });
+
+    return records.map((record) => this.toEntity(record));
+  }
+}
+
+@expected order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({ orderBy: { created: 'desc' }, where: { customerId: args.customerId, deleted: null } });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public async findByStatus(args: { status: string }) {
+    const records = await this.prisma.order.findMany({ orderBy: { created: 'desc' }, where: { status: args.status, deleted: null } });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public async findCancelled() {
+    const records = await this.prisma.order.findMany({ orderBy: { created: 'desc' }, where: { status: 'CANCELLED', deleted: null } });
+
+    return records.map((record) => this.toEntity(record));
+  }
+}

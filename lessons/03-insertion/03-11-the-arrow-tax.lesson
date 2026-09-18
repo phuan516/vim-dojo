@@ -1,0 +1,95 @@
+@meta
+id: 03-11
+title: What the arrow keys actually cost
+chapter: 03
+type: lesson
+skills: insert-A
+par: 28
+minutes: 5
+vscode: five clicks, or five End presses, and five commas
+open: timeouts.ts
+
+@brief
+Five entries in this object are missing their trailing commas. Add all
+five.
+
+There is nothing new here. You could have done this after lesson one. The
+reason it is a lesson is that it is the first job in the dojo big enough
+to show you the price of the habit you brought with you from VS Code:
+enter insert mode once, then steer with the arrow keys and Home and End
+until the file is right.
+
+That route finishes the job. The dojo counts your keystrokes, so it will
+also tell you exactly what it cost. Do it the vim way first, then read the
+solution for the numbers.
+
+@keys
+| `A` | append at the end of the line |
+| `j` | down one line |
+| `Esc` | out |
+
+@hints
+One trip into insert mode per line, not one trip for the file. The
+sequence for a line is three keys, and moving to the next line is one
+more.
+--
+`j` `A` `,` `Esc`, five times over. Your fingers should settle into it by
+the third line.
+--
+The cursor starts on line one, so the first thing you press is `j`, not
+`A`.
+
+@solution
+    j A , <Esc>   j A , <Esc>   j A , <Esc>   j A , <Esc>   j A , <Esc>   :wq<Enter>
+
+Twenty-four keystrokes. Par is 28.
+
+Now the same job done by staying in insert mode and arrowing around, which
+is what nearly everyone coming from VS Code does for their first month.
+Press `i` once, then Down to the next line, Right along it to the end,
+type a comma, Down, Right, comma, and so on. Both routes produce a file
+that passes. These are the real measured counts:
+
+| route | keystrokes |
+|---|---|
+| `j A , Esc`, five times | 24 |
+| insert once, Down and End | 41 |
+| insert once, arrows only | 92 |
+
+Ninety-two against a par of 28. More than three times the cost for the
+same five commas, and that is with the arrow route played well — it
+assumes you never overshoot a line and never have to come back.
+
+The arithmetic behind it is worth knowing, because it is not a metaphor.
+Vim records a Down arrow as three bytes, and `j` as one. Every arrow press
+you make is literally three times the keystroke of the normal-mode key
+that does the same thing. A key that is one third the cost, used hundreds
+of times a day, is most of the reason vim users look fast.
+
+And the byte count is the smaller half of the argument. The larger half:
+while you are arrowing around inside insert mode, none of vim exists. No
+counts, no word motions, no operators, no repeat, no undo granularity —
+every chapter after this one is switched off, because all of it lives in
+normal mode. Insert mode is a room with one tool in it.
+
+So: leave insert mode the moment you stop typing. Not when you have
+finished the file — when you have finished the words. `Esc` is free, and
+everything good is on the other side of it.
+
+@start timeouts.ts
+export const TIMEOUTS = {
+  refundRequest: 15000
+  captureRequest: 8000
+  webhookReplay: 3000
+  dispatchRetry: 20000
+  reconcileJob: 60000
+};
+
+@expected timeouts.ts
+export const TIMEOUTS = {
+  refundRequest: 15000,
+  captureRequest: 8000,
+  webhookReplay: 3000,
+  dispatchRetry: 20000,
+  reconcileJob: 60000,
+};

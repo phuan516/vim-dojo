@@ -1,0 +1,57 @@
+@meta
+id: 28-14
+title: Drill — one setlocal for markdown
+chapter: 28
+type: drill
+skills: vimrc-filetype
+par: 54
+minutes: 4
+reps: 8
+vscode: "[markdown]": { "editor.wordWrap": "on" }
+open: after/ftplugin/markdown.vim
+
+@brief
+Eight times: add the wrap settings to the end of the markdown ftplugin
+and save.
+
+    setlocal textwidth=80
+    setlocal linebreak
+
+Nothing new. The drill is the file, not the keys — after eight goes,
+"this is a markdown thing, so it goes in the markdown ftplugin" should
+be a reflex rather than a decision.
+
+@keys
+| `G` `o` | open a line at the bottom |
+| `setlocal` | this buffer only |
+
+@hints
+`G` then `o`, both lines in one insert session, Esc, `:wq`.
+--
+The last line in the file is a `setlocal`, not a comment, so Enter in
+the middle of the insert does not add a `"`.
+
+@solution
+    G o setlocal textwidth=80<Enter> setlocal linebreak <Esc> :wq<Enter>
+
+`textwidth=80` makes vim break the line as you type past column 80, so
+`gq` and `gqap` have something to aim at. `linebreak` is about display
+only: a line too long for the window wraps at a space instead of
+mid-word. They are unrelated settings that happen to be wanted by the
+same person on the same day.
+
+Prose files are where per-filetype settings pay off most obviously,
+because everything you want for prose — spell check, a text width, no
+line numbers — is exactly what you do not want for code.
+
+@start after/ftplugin/markdown.vim
+" Markdown: prose, not code
+setlocal spell
+setlocal spelllang=en_gb
+
+@expected after/ftplugin/markdown.vim
+" Markdown: prose, not code
+setlocal spell
+setlocal spelllang=en_gb
+setlocal textwidth=80
+setlocal linebreak

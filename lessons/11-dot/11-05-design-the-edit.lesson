@@ -1,0 +1,91 @@
+@meta
+id: 11-05
+title: Design the edit so dot can do it
+chapter: 11
+type: lesson
+skills: dot-design
+par: 34
+minutes: 5
+vscode: click at the end of each line, type a semicolon, twelve times
+open: constants.ts
+
+@brief
+A constants file that came out of a converter with every semicolon
+missing. Twelve lines, twelve semicolons to add, and the lines are
+different lengths so there is no straight edge to click down.
+
+Put a semicolon at the end of each of the twelve lines.
+
+The keys for this are all keys you already have. What matters is which
+ones you choose. There is a way to say "add a semicolon to the end of
+this line" that has nothing to do with where the end of the line happens
+to be, and once you have said it once, saying it eleven more times is a
+formality.
+
+@keys
+| `A` | append at the end of the line, wherever the cursor is |
+| `Esc` | back to normal mode — this is what closes the change |
+| `.` | repeat |
+| `$` | end of line — you do not need it here |
+
+@hints
+Do not move to the end of the line first. Ask for an edit that already
+means "at the end of the line".
+--
+`A` puts you in insert mode at the end of the current line from any
+column. The semicolon, then `Esc`, and vim has one complete change to
+remember.
+--
+`A;` then `Esc` on line one. After that, `j.` eleven times.
+
+@solution
+    A ; <Esc>   then  j.  eleven times
+
+Twenty-nine keystrokes for twelve edits.
+
+Compare the route that also works: `$a;` and `Esc`. It produces the same
+file, and `.` repeats it just as happily, because the `$` is not part of
+the change — the change starts at `a`. So you would be pressing `$j.`
+per line, or `j$.`, and paying a key a line for nothing.
+
+That is the shape of dot-design. Ask which of the several correct ways to
+make an edit leaves the smallest, most position-independent change behind:
+
+- `A`, `I`, `o` and `O` carry their own idea of where to go, so a repeat
+  needs no aiming at all.
+- An operator with a text object — `ciw`, `di(`, `ca"` — will find its own
+  boundaries wherever inside them the cursor happens to land.
+- An operator with a plain motion — `cw`, `d3l` — demands that the cursor
+  be exactly right before you press `.`.
+
+The first two repeat cleanly. The third works but you pay for it in
+re-aiming. Reach for the first two by default and your edits become
+repeatable without you thinking about it.
+
+@start constants.ts
+export const ORDER_TIMEOUT_MS = 30_000
+export const REFUND_WINDOW_DAYS = 30
+export const PAYMENT_RETRY_LIMIT = 3
+export const BATCH_SIZE = 250
+export const RECONCILE_HOUR = 2
+export const RECEIPT_TEMPLATE = 'receipt-v4'
+export const CURRENCY = 'GBP'
+export const WEBHOOK_TOLERANCE_SECONDS = 300
+export const CACHE_TTL_SECONDS = 60
+export const MAX_REFUND_PENCE = 500_000
+export const SUPPORT_EMAIL = 'support@example.com'
+export const LEDGER_ACCOUNT = 'acct_orders'
+
+@expected constants.ts
+export const ORDER_TIMEOUT_MS = 30_000;
+export const REFUND_WINDOW_DAYS = 30;
+export const PAYMENT_RETRY_LIMIT = 3;
+export const BATCH_SIZE = 250;
+export const RECONCILE_HOUR = 2;
+export const RECEIPT_TEMPLATE = 'receipt-v4';
+export const CURRENCY = 'GBP';
+export const WEBHOOK_TOLERANCE_SECONDS = 300;
+export const CACHE_TTL_SECONDS = 60;
+export const MAX_REFUND_PENCE = 500_000;
+export const SUPPORT_EMAIL = 'support@example.com';
+export const LEDGER_ACCOUNT = 'acct_orders';

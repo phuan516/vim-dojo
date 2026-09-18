@@ -1,0 +1,201 @@
+@meta
+id: 32-01
+title: Ticket — cancelling twice
+chapter: 32
+type: scenario
+skills: feature-implementation, multi-file-refactor, op-linewise, obj-quote
+par: 126
+minutes: 8
+vscode: two tabs, copy a block, retype the strings
+open: src/domain/order/order.provider.ts src/configuration/errors/default.json src/domain/order/order.resolver.ts
+vimrc: set hidden
+
+@brief
+First job of the chapter. No new keys from here to the end of the dojo —
+everything below is something you already have.
+
+    ORD-771  Cancelling an order that is already cancelled refunds it a
+             second time. Support have had four of these this week.
+             Reject the second cancel with a 409.
+
+  1. src/domain/order/order.provider.ts — in `cancel`, directly after the
+     SHIPPED guard and separated from it by one blank line, reject an
+     order that is already cancelled with `ORDER_ALREADY_CANCELLED`.
+     Same shape as the guard above it.
+
+  2. src/configuration/errors/default.json — register the code directly
+     under `ORDER_ALREADY_SHIPPED`. A 409, not reported to Sentry: this
+     is a client mistake, not our bug.
+
+  3. src/domain/order/order.resolver.ts — open so you can see that the
+     mutation needs no change. Touch it and the check fails.
+
+The new guard is the old guard with two words different. Type it twice
+and you are doing the job the slow way.
+
+@keys
+| `4Y` | yank four lines |
+| `p` | put them back below |
+| `ci'` `ci"` | change inside the quotes |
+| `:bn` `:bp` | walk the buffers |
+| `:wqa` | write everything and leave |
+
+@hints
+Nothing in this ticket is new code. Both files already contain a line
+that is nearly the line you want.
+--
+In the provider, put the cursor on the `if (order.status === 'SHIPPED')`
+line and yank four lines — the guard and the blank line under it. Move
+down to the blank line and put. Now you have two guards and the spacing
+is already right.
+--
+Edit the copy, not the original. `f'` then `ci'` gets you inside the
+first string; `j0f'` then `ci'` gets the error code on the next line.
+In the JSON, `yyp` then `ci"` is the whole edit.
+
+@solution
+A route that measures 110 keystrokes.
+
+**provider** — `/'SHIPPED'` `Enter` lands on the guard, because the error
+code on the next line is `ORDER_ALREADY_SHIPPED` and has no quote before
+the `S`. Choosing a search that matches once is worth two seconds of
+thought every time.
+
+`4Y` takes the guard plus its trailing blank line. `3j` drops onto that
+blank line and `p` puts the copy after it, which leaves both guards
+spaced exactly like the original. Yanking the blank line with the block
+is the trick: it means you never type a blank line or count one.
+
+Then `f'` `ci'CANCELLED` `Esc`, `j0f'` `ci'ORDER_ALREADY_CANCELLED` `Esc`.
+The `0` matters. `j` keeps the column, and after that first change the
+column is well to the right of the quote you want, so `f'` would search
+past it and miss.
+
+**errors** — `:bn`, `/SHIPPED` `Enter`, `yyp`, `ci"ORDER_ALREADY_CANCELLED`
+`Esc`. The status code and the sentry flag are already what you want, so
+the copy needs one change, not three.
+
+**resolver** — nothing. `:wqa` writes it back unchanged, which is not the
+same as changing it.
+
+The habit this lesson is drilling is duplicate-and-edit. In a codebase
+with a house style, the thing you are about to write almost always
+already exists four lines away. Copying it also copies the style, the
+spacing and the surrounding punctuation, and every one of those is
+somewhere a retyped version can differ.
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    if (order.status === 'CANCELLED') {
+      throw exception('ORDER_ALREADY_CANCELLED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@expected src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "ORDER_ALREADY_CANCELLED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}

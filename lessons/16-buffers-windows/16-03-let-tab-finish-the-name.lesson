@@ -1,0 +1,213 @@
+@meta
+id: 16-03
+title: Let Tab finish the name
+chapter: 16
+type: lesson
+skills: buffer-switch, buffer-list
+par: 120
+minutes: 5
+vscode: Ctrl-P, type a bit, hope the first result is right
+open: order.entity.ts order.provider.ts order.repository.ts order.resolver.ts registry.ts errors.json
+vimrc: set wildmenu wildmode=full
+
+@brief
+`:b` with a fragment is fast when you are sure the fragment is unique.
+When you are not, press Tab. The command line completes the fragment to
+a full buffer name and shows you the alternatives in a strip along the
+bottom. Tab again moves to the next candidate, Enter takes the one
+shown. You get the speed of a fragment and the certainty of a name.
+
+This lesson pins the completion style so it behaves the same on every
+machine; your own vimrc may be set to complete the longest common part
+first, in which case a second Tab does what the first does here.
+
+Two fixes. `order.resolver.ts` calls `this.orderProvider.cancle`, which
+is not a method. It should be `cancel`. And `registry.ts` registers
+everything except the resolver: add
+
+    container.register('OrderResolver', { useClass: OrderResolver });
+
+as the last line of the file. Four other buffers are open and must not
+change. Write the resolver before you leave it.
+
+@keys
+| `:b res` `Tab` | complete the fragment; `res` finds only the resolver |
+| `Tab` `Tab` | next candidate when there are several |
+| `Ctrl-N` `Ctrl-P` | next and previous candidate, if Tab is far from your hand |
+| `:b reg` `Tab` | completes to `registry.ts` |
+
+@hints
+Type `:b res`, press Tab, watch the name fill in, then Enter. If the
+strip shows more than one name, Tab moves along it.
+--
+`/cancle` finds the typo; `cw` and the correct word replaces it. `:w`
+before you go.
+--
+`:b reg` and Tab for the registry, `G` for the last line, `o` and the
+registration line, `Esc`, `:wqa`.
+
+@solution
+    :b res<Tab><Enter>  /cancle<Enter>  cw cancel <Esc>  :w<Enter>
+    :b reg<Tab><Enter>  G  o container.register('OrderResolver', { useClass: OrderResolver }); <Esc>
+    :wqa<Enter>
+
+Around a hundred and ten keystrokes, and seventy of them are the
+registration line.
+
+`:b res` alone would have worked here, and Tab cost one keystroke on
+top. What it bought is the name on the command line before you commit,
+which is worth one keystroke every time you are less than certain. With
+`pro` and two providers open, Tab shows both and a second Tab picks the
+other; with `x` and nothing matching, Tab does nothing and you learn
+that without an error message.
+
+VS Code's Ctrl-P does something similar with fuzzy matching over the
+whole project. `:b` only looks at what is already loaded, which is
+usually where you want to be anyway; chapter 18 covers reaching for a
+file that is not open yet.
+
+@start order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}
+
+@start order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancle(args.id);
+  }
+}
+
+@expected order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@start registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderResolver } from '../domain/order/order.resolver';
+import { CustomerRepository } from '../domain/customer/customer.repository';
+import { CustomerProvider } from '../domain/customer/customer.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+import { EmailService } from '../infrastructure/services/email.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('CustomerRepository', { useClass: CustomerRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('PaymentService', { useClass: PaymentService });
+container.register('EmailService', { useClass: EmailService });
+
+@expected registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderResolver } from '../domain/order/order.resolver';
+import { CustomerRepository } from '../domain/customer/customer.repository';
+import { CustomerProvider } from '../domain/customer/customer.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+import { EmailService } from '../infrastructure/services/email.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('CustomerRepository', { useClass: CustomerRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('PaymentService', { useClass: PaymentService });
+container.register('EmailService', { useClass: EmailService });
+container.register('OrderResolver', { useClass: OrderResolver });
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}

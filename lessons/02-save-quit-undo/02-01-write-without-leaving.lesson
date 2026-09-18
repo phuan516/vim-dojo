@@ -1,0 +1,72 @@
+@meta
+id: 02-01
+title: Saving is not leaving
+chapter: 02
+type: lesson
+skills: write
+par: 45
+minutes: 3
+vscode: Ctrl+S
+open: release-notes.md
+
+@brief
+In VS Code, Ctrl+S is so cheap that most people hit it every few seconds
+without thinking. The vim equivalent is `:w`, and it is just as cheap.
+What it is not is a way out of the file: `:w` writes the buffer to disk
+and leaves you exactly where you were, cursor and all.
+
+`:wq` is two commands stuck together, and chapter 1 handed it to you a
+little too early. Reaching for it every time you want to save means
+quitting and reopening a file you are still working in.
+
+Two release notes are unfinished.
+
+    - The refund endpoint now returns 202 Accepted
+    - Customer search ignores case and leading whitespace
+
+Complete the first line, save. Complete the second line, save. Then quit.
+Two writes, one quit, and you never leave the file in between.
+
+@keys
+| `:w` | write the buffer to disk, stay in the file |
+| `:q` | quit — refuses if there are unsaved changes |
+| `:wq` | write, then quit |
+
+@hints
+The lines you need are three and four rows below the cursor. `j` moves
+down one row.
+--
+Both fixes are words missing from the *end* of a line. `$` goes to the
+last character, and `a` starts typing after it.
+--
+After `Esc`, type `:w` and press Enter. The file is saved and the cursor
+has not moved. Do the second line, `:w` again, then `:q`.
+
+@solution
+    jjj $ a Accepted <Esc> :w<Enter>
+    j $ a whitespace <Esc> :w<Enter>
+    :q<Enter>
+
+The habit worth building is writing at every natural pause, not at the
+end. Vim will not lose your work to a crash if it is already on disk, and
+`:w` costs three keystrokes.
+
+`:q` on its own is the honest quit. If the buffer has unsaved changes it
+refuses with `E37: No write since last change`, which is vim telling you
+it would rather annoy you than throw work away. Two ways past that
+message: save it, or say you meant it. The next two lessons are those two
+ways.
+
+@start release-notes.md
+# Release 2.14
+
+- Orders placed before the cutoff are no longer charged twice
+- The refund endpoint now returns 202
+- Customer search ignores case and leading
+
+@expected release-notes.md
+# Release 2.14
+
+- Orders placed before the cutoff are no longer charged twice
+- The refund endpoint now returns 202 Accepted
+- Customer search ignores case and leading whitespace

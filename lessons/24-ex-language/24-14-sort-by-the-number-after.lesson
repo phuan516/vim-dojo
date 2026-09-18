@@ -1,0 +1,77 @@
+@meta
+id: 24-14
+title: Sort by the number after a pattern
+chapter: 24
+type: lesson
+skills: ex-sort, ex-move
+par: 32
+minutes: 5
+vscode: nothing built in; a spreadsheet, probably
+open: errors.ts
+
+@brief
+The error map should be ordered by status code, lowest first, so the
+4xx codes read as a group above the 5xx ones. Lines 2 to 8 need
+sorting. The two 404s keep their current relative order. The first and
+last lines of the file do not move.
+
+Plain `:sort` would order by the key name. `:sort n` sorts by the first
+number it finds on each line, which is nearly right, except that two of
+the keys have digits in them and `n` would sort those on the wrong
+number. So tell it where to look. `:sort n /pattern/` skips past the
+match and sorts on the first number after it.
+
+@keys
+| `:2,8sort n /statusCode/` | sort lines 2 to 8 by the number after `statusCode` |
+| `:sort n` | sort by the first number in each line |
+| `:sort!` | sort in reverse |
+| `:sort /pat/` | sort by what comes after the match |
+
+@hints
+Range, `sort`, the numeric flag, then a pattern to skip past.
+--
+Look at `GATEWAY_V2_TIMEOUT` and `TIER_3_REQUIRED`. Without the
+pattern, `n` sorts those on `2` and `3`. The pattern only has to match
+something that sits before the code on every line.
+--
+`:2,8sort n /statusCode/` and Enter, `:wq`.
+
+@solution
+    :2,8sort n /statusCode/<Enter>  :wq<Enter>
+
+Twenty-eight keystrokes.
+
+The pattern argument to `sort` is the piece most people never learn
+and it changes what the command is for. `:sort /pat/` sorts on the text
+*after* the match, so `:sort /,/` sorts a CSV by its second column and
+`:sort /: /` sorts a YAML block by value rather than by key. Add `n` and
+the comparison is numeric, so `10` comes after `9` rather than before
+it. Add `!` and the order flips; `:2,8sort! n /statusCode/` would have
+put the 5xx codes at the top.
+
+`sort` is stable: lines that compare equal stay in the order they were
+in. That is why the two 404s did not swap. It is also why `:sort` can
+be run twice with different keys to get a secondary sort, least
+significant key first.
+
+@start errors.ts
+export const errors = {
+  REFUND_FAILED: { statusCode: 502, sentry: true },
+  ORDER_NOT_FOUND: { statusCode: 404, sentry: false },
+  GATEWAY_V2_TIMEOUT: { statusCode: 504, sentry: true },
+  ORDER_ALREADY_SHIPPED: { statusCode: 409, sentry: false },
+  CUSTOMER_NOT_FOUND: { statusCode: 404, sentry: false },
+  TIER_3_REQUIRED: { statusCode: 403, sentry: false },
+  PAYMENT_DECLINED: { statusCode: 402, sentry: false },
+};
+
+@expected errors.ts
+export const errors = {
+  PAYMENT_DECLINED: { statusCode: 402, sentry: false },
+  TIER_3_REQUIRED: { statusCode: 403, sentry: false },
+  ORDER_NOT_FOUND: { statusCode: 404, sentry: false },
+  CUSTOMER_NOT_FOUND: { statusCode: 404, sentry: false },
+  ORDER_ALREADY_SHIPPED: { statusCode: 409, sentry: false },
+  REFUND_FAILED: { statusCode: 502, sentry: true },
+  GATEWAY_V2_TIMEOUT: { statusCode: 504, sentry: true },
+};

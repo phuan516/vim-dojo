@@ -1,0 +1,59 @@
+@meta
+id: 06-05
+title: Drill — both ends of the line
+chapter: 06
+type: drill
+skills: line-start, line-end
+par: 68
+minutes: 5
+reps: 8
+vscode: Home, type, End, type, Down — four times, eight times over
+open: seed.ts
+
+@brief
+Four seed calls. Each one needs `await ` at the front of the code and a `;`
+at the end. The dojo will hand you the file eight times.
+
+Nothing to work out. The rep is `^` to the front, insert, `$` to the back,
+insert, `j` to the next line. Front, back, down.
+
+@keys
+| `^` | first non-blank |
+| `$` | last character |
+| `i` `a` | insert before, insert after |
+| `j` | down a line |
+
+@hints
+`^` `i` `await ` `Esc` does the front. `$` `a` `;` `Esc` does the back.
+--
+Do not look at the screen between the two halves. The point of the drill is
+that both anchors become one press each rather than a decision.
+
+@solution
+    j then, four times: ^ i await  <Esc> $ a ; <Esc> j
+
+Both ends of a line cost exactly one key each, and after eight passes they
+should cost no thought either. That matters more than it looks: once `^` and
+`$` are free you stop scrolling your eyes along a line to work out where you
+are, and start treating every line as something with a front and a back that
+you can be at instantly.
+
+`I` and `A` fuse each pair into a single key and you should use them when
+you are only inserting. Keep the separate motions in your fingers anyway —
+from chapter 8 they take operators, and `d$` is a different animal to `A`.
+
+@start seed.ts
+export async function seed() {
+  seedOrder('ord_1042', 'cus_88', 4999)
+  seedOrder('ord_1043', 'cus_91', 1250)
+  seedOrder('ord_1044', 'cus_88', 899)
+  seedOrder('ord_1045', 'cus_92', 15750)
+}
+
+@expected seed.ts
+export async function seed() {
+  await seedOrder('ord_1042', 'cus_88', 4999);
+  await seedOrder('ord_1043', 'cus_91', 1250);
+  await seedOrder('ord_1044', 'cus_88', 899);
+  await seedOrder('ord_1045', 'cus_92', 15750);
+}

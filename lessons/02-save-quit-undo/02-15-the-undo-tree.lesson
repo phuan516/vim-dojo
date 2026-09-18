@@ -1,0 +1,110 @@
+@meta
+id: 02-15
+title: The branch undo cannot reach
+chapter: 02
+type: lesson
+skills: undo-branches, undo, redo
+par: 50
+minutes: 8
+vscode: impossible — the work is gone
+open: pricing.md
+
+@brief
+Every editor you have used keeps undo as a straight line. Go back three
+steps, type one new character, and the three steps you undid are
+destroyed. Vim does not destroy them. When you make a change from a point
+in the past, it starts a *branch*, and the old path is still there,
+sitting beside the new one.
+
+Which means `u` and `Ctrl-R` are not enough. They only walk the current
+branch. To move between branches you need the other pair: `g-` and `g+`,
+which step backwards and forwards through every state in the order it was
+created, branch or no branch.
+
+Here is the trap, and you have to walk into it deliberately for the lesson
+to land. In order:
+
+  1. Append ` (per order)` to the Flat rate line. `Esc`.
+
+  2. Change your mind. `u`.
+
+  3. Append ` (customers only)` to the Free over line. `Esc`.
+
+  4. Pricing come back: step 1 was right and step 3 was wrong. You want
+     the file with `(per order)` on the flat rate line and nothing on the
+     free over line.
+
+Get there and save. Read the last two keys of `@keys` before you start,
+and do not retype anything.
+
+@keys
+| `g-` | go back one state in time, across branches |
+| `g+` | go forward one state in time, across branches |
+| `:undolist` | every state, its number, and when it was made |
+| `:undo 1` | jump straight to state number 1 |
+| `u` `Ctrl-R` | undo and redo along the current branch only |
+
+@hints
+Try `u` and `Ctrl-R` first and watch them fail. `u` takes you to the
+original file; `Ctrl-R` brings back the change you just made, not the one
+you undid. Neither can see the other branch.
+--
+The three states exist in the order you made them: original, then the
+flat rate version, then the free over version. You are standing on the
+third. You want the second. `g-` moves one step back through that list
+regardless of which branch each state is on.
+--
+One `g-`, then `ZZ`. If you want to see the map first, `:undolist` prints
+the states and `:undo 1` jumps to the numbered one directly.
+
+@solution
+    jj $ a  (per order) <Esc>
+    u
+    j $ a  (customers only) <Esc>
+    g-
+    ZZ
+
+Forty-three keystrokes, two of which did something no other editor you
+have used can do.
+
+Work out why `u` cannot get you there. After step 2 the history is a line
+with two states: the original and the flat rate version, and you are
+standing on the original. Step 3 branches off the original, so now the
+original has two children. `u` from there goes to the parent — the
+original. `Ctrl-R` goes back down the branch you last used — the free over
+version. The flat rate version is one node away the whole time and
+completely unreachable by those two keys.
+
+`g-` ignores the shape and uses time. Every state vim has ever held for
+this buffer gets a sequence number when it is created, and `g-` walks
+that numbering downwards, `g+` upwards. So `g-` from state 2 lands on
+state 1 no matter where either of them sits in the tree.
+
+`:undolist` shows you the numbering when you are lost:
+
+    number changes  when               saved
+         1       1  10:41:02
+         2       1  10:41:19
+
+Read it, pick a number, `:undo 2`. That is the whole interface.
+
+You will not use this weekly. You will use it on the day you undo further
+than you meant to, type something, and feel the floor go. Nothing is
+gone. `g-` a few times, or `:undolist` and jump. Combined with
+`set undofile` from the last lesson, work you abandoned last Tuesday is
+still recoverable this Thursday, which is a genuinely unreasonable thing
+for a text editor to offer.
+
+@start pricing.md
+# Shipping rules
+
+- Flat rate 4.99
+- Free over 50
+- Express is 9.99
+
+@expected pricing.md
+# Shipping rules
+
+- Flat rate 4.99 (per order)
+- Free over 50
+- Express is 9.99

@@ -1,0 +1,87 @@
+@meta
+id: 26-12
+title: Send the buffer out, change nothing
+chapter: 26
+type: lesson
+skills: write-shell
+par: 26
+minutes: 5
+vscode: save, switch to the terminal, run wc on the file, switch back
+open: pilot-stores.txt
+
+@brief
+The comment on line 1 is supposed to end with the number of stores in the
+pilot. Somebody removed the number rather than update it. Put it back.
+
+Count the store lines without leaving vim and without counting them
+yourself. `:w !cmd` writes lines to a command's standard input the way
+`:w file` writes them to a file — the buffer is not touched, nothing is
+replaced, the command's output just appears on the screen. It is the read
+half of talking to the shell: you ask a question about your text and get
+an answer back, and your text stays exactly as it was.
+
+The header is not a store, so do not count it.
+
+@keys
+| `:w !cmd` | pipe the whole buffer to a command, buffer unchanged |
+| `:{range}w !cmd` | pipe only those lines |
+| `:2,$w !wc -l` | how many lines from 2 to the end |
+| `!` vs `w !` | `:%!cmd` replaces your lines; `:%w !cmd` shows you an answer |
+
+@hints
+The range in `:2,$` is the store lines and nothing else. What goes after
+it is a `w`, then a space, then the bang.
+--
+The output appears at the bottom of the screen and vim waits for Enter
+before it will take another key. Read the number, press Enter, then edit
+line 1.
+--
+`:2,$w !wc -l` Enter, Enter, then `A` a space and the number, `Esc`,
+`:wq`.
+
+@solution
+    :2,$w !wc -l<Enter> <Enter>  A 7<Esc>  :wq<Enter>
+
+The space between `w` and `!` is not optional and it is where everyone
+trips. `:w !wc -l` pipes the buffer into `wc`. `:w!wc` is `:w!` — write,
+forced — to a file called `wc`, which is a real file you now have to
+delete. Same three characters, entirely different day.
+
+Once the distinction is in your fingers, `:w !` is how you interrogate a
+buffer without disturbing it: `:w !wc -w` for a word count on a draft,
+`:'<,'>w !sort -c` to ask whether a block is already sorted,
+`:w !python3 -m json.tool` to find out whether the JSON you are staring
+at parses, without reformatting it first. And `:w !bash` runs the buffer
+as a script, which is an unnervingly convenient way to test one.
+
+The famous one is worth knowing even though you should not practise it
+here:
+
+    :w !sudo tee % > /dev/null
+
+That is the escape hatch for the file you opened, edited for ten minutes
+and only then discovered is owned by root. Vim cannot write it — but it
+can pipe the buffer to `sudo tee`, and `tee` writes the file with the
+privileges vim does not have. The `%` is the current file's name, the
+same expansion as in any other `:!` command. Vim then notices the file
+changed underneath it and asks; answer `L` to keep your buffer as it is.
+
+@start pilot-stores.txt
+# stores in the pilot:
+store-aberdeen
+store-bristol
+store-cardiff
+store-dundee
+store-exeter
+store-glasgow
+store-leeds
+
+@expected pilot-stores.txt
+# stores in the pilot: 7
+store-aberdeen
+store-bristol
+store-cardiff
+store-dundee
+store-exeter
+store-glasgow
+store-leeds

@@ -1,0 +1,94 @@
+@meta
+id: 04-10
+title: Drawing a line with a count
+chapter: 04
+type: lesson
+skills: count-prefix, hjkl
+par: 28
+minutes: 5
+vscode: hold the hyphen key and count the characters by eye
+open: payments.md
+
+@brief
+`Payments module` at the top of this document has an underline of `=` the
+same length as the title. That is how the rest of the docs are written.
+
+Two rules are missing, and both have to be the right length:
+
+  1. Under the `Provider limits` heading, a new line of exactly fifteen
+     hyphens — the heading is fifteen characters long.
+
+  2. Under the `Everything below this line is generated...` sentence, a
+     separator of exactly sixty-four hyphens.
+
+Nobody counts hyphens by holding the key down. A count in front of an
+insert command gives you an exact number of characters for the price of
+typing the number.
+
+@keys
+| `15i-` `Esc` | insert fifteen hyphens |
+| `o` | open a line below and insert on it |
+| `j` `k` | down, up |
+
+@hints
+`o` gets you a new empty line in the right place. Then you need to get
+back out of insert mode before a count will mean anything, because in
+insert mode a digit is just a digit.
+--
+From normal mode on the empty line: the count, then `i`, then the one
+character you want repeated, then `Esc`.
+--
+`o` `Esc` puts you on a new empty line in normal mode. Then `15i-` and
+`Esc`. Do the same lower down with `64i-`.
+
+@solution
+    7j o <Esc> 15i- <Esc>
+    6j o <Esc> 64i- <Esc>
+    :wq<Enter>
+
+Twenty-two keystrokes for seventy-nine hyphens.
+
+The `o` `Esc` pair is worth noticing on its own. `o` is how you make a
+line; `Esc` immediately after is how you make an *empty* one and get back
+to normal mode, where counts work. In insert mode, `15` is the characters
+`1` and `5`.
+
+You will reach for this more often than you expect: rules in markdown,
+padding in a fixture, a column of eighty `#` in a shell script, forty
+underscores in a test string. Any time you would have held a key down and
+then counted what came out, the count is the answer. Holding a key down
+is guesswork with a cleanup step.
+
+@start payments.md
+Payments module
+===============
+
+The module owns charges, refunds and the webhook that reconciles them.
+It talks to exactly one provider and knows nothing about orders beyond
+the id it is given.
+
+Provider limits
+
+  Charges per second        25
+  Refund window             90 days
+  Webhook retry attempts    6
+
+Everything below this line is generated. Do not edit it by hand.
+
+@expected payments.md
+Payments module
+===============
+
+The module owns charges, refunds and the webhook that reconciles them.
+It talks to exactly one provider and knows nothing about orders beyond
+the id it is given.
+
+Provider limits
+---------------
+
+  Charges per second        25
+  Refund window             90 days
+  Webhook retry attempts    6
+
+Everything below this line is generated. Do not edit it by hand.
+----------------------------------------------------------------

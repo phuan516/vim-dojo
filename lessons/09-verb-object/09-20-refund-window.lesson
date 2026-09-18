@@ -1,0 +1,224 @@
+@meta
+id: 09-20
+title: Scenario — the refund window
+chapter: 09
+type: scenario
+skills: op-motion, op-counts, op-linewise, op-to-mark
+par: 285
+minutes: 14
+vscode: three tabs, a lot of selecting and retyping
+open: order.provider.ts order.entity.ts errors.json
+
+@brief
+A ticket, not an exercise.
+
+    ORD-418  Cancelled orders are refunded no matter how old they are.
+             Finance want a 30 day window. Past that, cancelling still
+             works, but no money moves and the reason is recorded.
+
+Three files, already open as three buffers. `:bn` and `:bp` move between
+them; `:ls` lists them.
+
+  1. order.entity.ts — `Order` needs a `placedAt: Date;` field, directly
+     under `customerId`. `OrderStatus` is fine as it is.
+
+  2. order.provider.ts — in `cancel`, before the refund call, work out
+     whether the order is inside the window:
+
+         const days = (Date.now() - order.placedAt.getTime()) / 86_400_000;
+
+     Refund only when `days <= 30`. When it is outside the window, set
+     `cancellationReason: 'REFUND_WINDOW_EXPIRED'` in the update values
+     instead of refunding. The order still becomes `CANCELLED` either way.
+
+  3. errors.json — nothing to add. It is open so you can check the codes
+     exist, and to prove you can leave a file alone. Change it and the
+     check fails.
+
+The dead `legacyRefund` method in the provider goes. It has been unused
+since the payment service was rewritten.
+
+@keys
+| `d}` | delete to the end of the paragraph |
+| `dap` | delete a whole paragraph including its blank line |
+| `d/text` `Enter` | delete from here up to the next match of `text` |
+| `>i{` | indent everything inside the braces |
+| `:bn` `:bp` `:ls` | next buffer, previous buffer, list them |
+| `ma` then `d'a` | mark a line, then delete from the cursor to it |
+
+@hints
+Do the entity first — it is one `o` and one line, and it tells you what
+name to use in the provider.
+--
+`legacyRefund` is a whole method with a blank line after it and none
+inside it, so to vim it is one paragraph. Put the cursor on its first line
+and `dap` takes the method and the gap in one go — no counting lines, no
+selecting. (A method with a blank line in its body is two paragraphs;
+`dap` would take only the first. `d}` twice, or a visual selection, covers
+that case.)
+--
+For the conditional, write the `if` and `else` skeleton first with `o`,
+then move the two existing lines into it. `>>` indents a line; `3>>`
+indents three. `>i{` indents everything inside the nearest braces, which
+is usually what you actually wanted.
+--
+Your keystroke count will be dominated by typing the new code, and that
+is fine. Par assumes you type the new lines once and never select, cut or
+retype anything that is already correct.
+
+@solution
+A route that measures 248 keystrokes, buffer by buffer.
+
+**order.entity.ts** — `:bn`, then `/customerId` `Enter`, `o`, type
+`placedAt: Date;` (autoindent supplies the two spaces), `Esc`, `:w`.
+
+**order.provider.ts** — `:bp` back. Delete the dead method: `/legacyRefund`
+`Enter` then `dap`. Find the refund: `/await this.paymentService` `Enter`.
+`O` opens a line above it; type the `const days` line, `Enter` twice, then
+`if (days <= 30) {` and `Esc`.
+
+Now the part worth stealing. The return block that follows the refund has
+to appear twice — once inside the `if`, once after it with the extra
+reason. Do not type it twice. `j` `2j` to the `return` line, `4yy` to take
+the four lines, `2k` back to `await`, then `6>>` indents the refund, the
+gap and the return block into the `if` in one stroke. `5j` to the `});`,
+`o` then `Ctrl-D` then `}` to close the `if` one level out. `o` `Esc` for
+the gap, `p` to put the copy, `2j` to its `values` line, `f'` `;` to the
+closing quote of `'CANCELLED'`, and `a` to append the reason. `Esc`,
+`:wqa`.
+
+**errors.json** — do not touch it.
+
+The point of this one is that nothing in it is a new key. Every move is
+something chapter 8 and 9 already gave you, and the job still takes three
+files and a real decision. That gap — knowing the keys, and reaching for
+the right one under mild pressure on unfamiliar code — is the only gap
+that matters, and repetition is the only thing that closes it.
+
+Three habits worth stealing from the solution: search to navigate rather
+than scrolling to navigate; delete by structure (`dap`) rather than by
+counting lines; and when the same block must exist twice, yank it once
+and edit the copy. Counting lines is how you end up off by one. Retyping
+is how you end up with two versions that differ by a character.
+
+@start order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@expected order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  placedAt: Date;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async legacyRefund(id: string) {
+    const order = await this.findOne(id);
+    return this.paymentService.refundLegacy(order.id, order.total);
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    const days = (Date.now() - order.placedAt.getTime()) / 86_400_000;
+
+    if (days <= 30) {
+      await this.paymentService.refund(order.id);
+
+      return this.orderRepository.update({
+        where: { id },
+        values: { status: 'CANCELLED' },
+      });
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED', cancellationReason: 'REFUND_WINDOW_EXPIRED' },
+    });
+  }
+}
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "PAYMENT_REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}

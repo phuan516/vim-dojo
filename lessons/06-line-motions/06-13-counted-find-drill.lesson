@@ -1,0 +1,55 @@
+@meta
+id: 06-13
+title: Drill — count to the comma
+chapter: 06
+type: drill
+skills: find-f, line-start
+par: 72
+minutes: 5
+reps: 8
+vscode: four rows, eight clicks, one miscount
+open: settlements.csv
+
+@brief
+Four settlement rows, all missing their currency field. Each needs `,GBP`
+inserted immediately before the third comma — that is, directly after the
+amount. Eight passes over the file.
+
+The rep is `0`, `3f,`, `i,GBP` `Esc`, `j`.
+
+@keys
+| `0` | column one |
+| `3f,` | forward to the third comma |
+| `i` | insert before the cursor |
+
+@hints
+`0` before every count. The third comma from the middle of the line is not
+the third comma from the start of it.
+--
+Do not verify each row before moving on. Run all four, then look at the file
+once at the end — that is how you find out whether the count is really in
+your fingers.
+
+@solution
+    four times: 0 3f, i ,GBP <Esc> j
+
+Nine keys a row, four of them the text itself. The interesting number is the
+one that does not appear: zero keys spent working out where the third comma
+is.
+
+Counted `f` is the closest thing vim has to a column selector, and it is
+better than one, because it tracks the data rather than the layout. These
+rows are not aligned, the amounts have different widths, and none of that
+changes the rep by a single keystroke.
+
+@start settlements.csv
+ord_1042,cus_88,4999,CANCELLED,2024-03-11
+ord_1043,cus_91,1250,PENDING,2024-03-12
+ord_1044,cus_88,899,SETTLED,2024-03-12
+ord_1045,cus_92,15750,SETTLED,2024-03-13
+
+@expected settlements.csv
+ord_1042,cus_88,4999,GBP,CANCELLED,2024-03-11
+ord_1043,cus_91,1250,GBP,PENDING,2024-03-12
+ord_1044,cus_88,899,GBP,SETTLED,2024-03-12
+ord_1045,cus_92,15750,GBP,SETTLED,2024-03-13

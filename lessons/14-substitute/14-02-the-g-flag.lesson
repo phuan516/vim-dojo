@@ -1,0 +1,77 @@
+@meta
+id: 14-02
+title: All of them, not the first one
+chapter: 14
+type: lesson
+skills: sub-basic
+par: 18
+minutes: 4
+vscode: select the line, Ctrl-H with "in selection", Replace All
+open: payout.constants.ts
+
+@brief
+The payouts importer reads `PAYOUT_BATCH` and splits it on
+`PAYOUT_SEPARATOR`, which is a comma. Somebody pasted the batch in with
+bars instead. Every bar on that line must become a comma.
+
+The two type unions above and below it use bars too, and those bars are
+TypeScript. They stay.
+
+Run the substitute without any flag first and look at what happened.
+Undo it. Then find the flag that means "every match on the line, not
+just the first".
+
+@keys
+| `:s/|/,/` `Enter` | first bar on this line becomes a comma |
+| `:s/|/,/g` `Enter` | every bar on this line |
+| `u` | undo the first attempt |
+| `2j` | down to the batch line |
+
+@hints
+Get the cursor onto the batch line before you type the colon. A
+substitute with no range only ever touches the line you are on.
+--
+Without a flag, `:s` changes the first match and stops. The `g` flag
+means global — but global across the line, not the file.
+--
+`2j` then `:s/|/,/g` and Enter. Eleven bars become eleven commas in one
+command.
+
+@solution
+    2j  :s/|/,/g<Enter>  :wq<Enter>
+
+Chapter 11 did this exact job with `f|r,` and then `;.` eleven times.
+Twenty-six keystrokes there against nine here is not the point; the
+point is that nine keystrokes is the same whether the line has eleven
+bars or three hundred, and you never look at any of them.
+
+The `g` flag is the one you will forget most. Vim's default of "first
+match on the line" dates from a time when a line was usually a
+sentence and you usually meant one word. In code, where a line can hold
+a whole array, it is almost never what you want. Most people end up
+typing `g` by reflex and dropping it only when they specifically want
+the first match. That is a fine habit.
+
+One thing to notice about the pattern: `|` is a plain character here.
+In the very magic dialect from chapter 13 it would mean *or*, and
+`:s/\v|/,/g` would match empty strings and do something strange. Plain
+magic mode, where only `\|` is alternation, is the right dialect for
+this one. Choosing the dialect is part of writing the pattern.
+
+@start payout.constants.ts
+export type PayoutCurrency = 'GBP' | 'EUR' | 'USD';
+
+export const PAYOUT_BATCH = 'PAY-2201|PAY-2202|PAY-2203|PAY-2204|PAY-2205|PAY-2206|PAY-2207|PAY-2208|PAY-2209|PAY-2210|PAY-2211|PAY-2212';
+export const PAYOUT_SEPARATOR = ',';
+export const PAYOUT_RETRY_LIMIT = 3;
+
+export type PayoutState = 'queued' | 'sent' | 'settled' | 'failed';
+
+@expected payout.constants.ts
+export type PayoutCurrency = 'GBP' | 'EUR' | 'USD';
+
+export const PAYOUT_BATCH = 'PAY-2201,PAY-2202,PAY-2203,PAY-2204,PAY-2205,PAY-2206,PAY-2207,PAY-2208,PAY-2209,PAY-2210,PAY-2211,PAY-2212';
+export const PAYOUT_SEPARATOR = ',';
+export const PAYOUT_RETRY_LIMIT = 3;
+
+export type PayoutState = 'queued' | 'sent' | 'settled' | 'failed';

@@ -1,0 +1,339 @@
+@meta
+id: 19-07
+title: Say no to one of them
+chapter: 19
+type: lesson
+skills: cdo
+par: 116
+minutes: 7
+vscode: Replace All, with two results unticked
+vimrc: set nohidden
+open: README.md
+
+@brief
+`OrderRepository.findByCustomer` is becoming `findForCustomer`. Two
+things in the tree carry the old name and must not change, both in the
+order provider: the cache key `` `findByCustomer:${customerId}` ``,
+because a deploy must not throw away the warm cache, and the metric
+name `'orders.findByCustomer.ms'`, because a dashboard is built on it.
+Neither can be told from the real hits by a paren this time: the test's
+`reveal(orderRepository).findByCustomer.mockResolvedValue` has no paren
+after the name either, and that one must change.
+
+When the pattern cannot make the distinction, you make it. Chapter 14's
+`c` flag works inside `:cdo`. `:cdo s/old/new/gc | update` stops at
+every match and asks; `y` changes it, `n` leaves it, and `:cdo` carries
+on to the next entry either way. In a file where you answered `n` to
+everything nothing changed, and `update` writes nothing, which is why
+it is `update` and not `w`.
+
+Rename the definition, the call, the mock and the assertion. Keep the
+cache key and the metric.
+
+@keys
+| `:cdo s/old/new/gc \| update` | substitute on each hit, asking first |
+| `y` `n` | change this one, skip this one |
+| `a` | change this one and every remaining one in this file |
+| `q` | stop asking in this file; `:cdo` still moves to the next |
+
+@hints
+`:vimgrep /findByCustomer/ **/*.ts` and `:copen` to see the order. Six
+hits. The two strings are in the provider, and the provider's three
+hits are in the middle of the list.
+--
+`:cdo s/findByCustomer/findForCustomer/gc | update`. Read each prompt;
+it shows the line with the match highlighted.
+--
+In list order the answers are y, y, n, y, n, y. Then `:qa`.
+
+@solution
+    :vimgrep /findByCustomer/ **/*.ts<Enter>  :copen<Enter>
+    :cdo s/findByCustomer/findForCustomer/gc | update<Enter>  y y n y n y  :qa<Enter>
+
+This is the vim answer to "Replace All, but not that one". Each prompt
+shows the line with the match highlighted, so a `n` is a decision made
+with the line in front of you, not a guess from a file name. Six
+prompts for six hits is quick. Sixty would be a sign that the pattern
+should be doing more of the work, as it did in the previous lesson, and
+the two approaches combine: narrow the pattern as far as it will go,
+then confirm the remainder.
+
+`a` says yes to this match and every later one in the same file; `q`
+stops asking in this file and leaves the rest untouched. `l` changes
+this one and then stops. `:cdo` moves on to the next entry after any of
+them, so `q` is a per-file decision, not a way out of the whole run.
+
+@start README.md
+# Orders service
+
+Cancelling an order refunds it through `PaymentService.sendRefund`, which
+is named after the gateway's `/sendRefund` endpoint. A refund the gateway
+rejects raises `REFUND_FAILED`. Refund events go out on the
+`payment.sendRefund` routing key, which the ledger service consumes.
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { Order } from './order.entity';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.sendRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async listForCustomer(customerId: string) {
+    const key = `findByCustomer:${customerId}`;
+    const cached = await this.cache.get<Order[]>(key);
+
+    if (cached) {
+      return cached;
+    }
+
+    const started = Date.now();
+    const orders = await this.orderRepository.findByCustomer({ customerId });
+
+    this.metrics.timing('orders.findByCustomer.ms', Date.now() - started);
+    await this.cache.set(key, orders);
+
+    return orders;
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { Order } from './order.entity';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.sendRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async listForCustomer(customerId: string) {
+    const key = `findByCustomer:${customerId}`;
+    const cached = await this.cache.get<Order[]>(key);
+
+    if (cached) {
+      return cached;
+    }
+
+    const started = Date.now();
+    const orders = await this.orderRepository.findForCustomer({ customerId });
+
+    this.metrics.timing('orders.findByCustomer.ms', Date.now() - started);
+    await this.cache.set(key, orders);
+
+    return orders;
+  }
+}
+
+@start src/domain/order/order.provider.test.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { orderFactory } from '../../../test/factories/order.factory';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const provider = new OrderProvider(orderRepository, paymentService);
+
+  afterEach(() => jest.resetAllMocks());
+
+  it('refunds a pending order when it is cancelled', async () => {
+    const order = orderFactory({ status: 'PENDING' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    reveal(paymentService).sendRefund.mockResolvedValue(undefined);
+
+    await provider.cancel(order.id);
+
+    expect(paymentService.sendRefund).toHaveBeenCalledWith(order.id);
+  });
+
+  it('refuses to cancel a shipped order', async () => {
+    const order = orderFactory({ status: 'SHIPPED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+
+    await expect(provider.cancel(order.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+    expect(paymentService.sendRefund).not.toHaveBeenCalled();
+  });
+
+  it('lists the orders for a customer', async () => {
+    const orders = [orderFactory(), orderFactory()];
+    reveal(orderRepository).findByCustomer.mockResolvedValue(orders);
+
+    await expect(provider.listForCustomer('cus_1')).resolves.toEqual(orders);
+    expect(orderRepository.findByCustomer).toHaveBeenCalledWith({ customerId: 'cus_1' });
+  });
+});
+
+@expected src/domain/order/order.provider.test.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { orderFactory } from '../../../test/factories/order.factory';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const provider = new OrderProvider(orderRepository, paymentService);
+
+  afterEach(() => jest.resetAllMocks());
+
+  it('refunds a pending order when it is cancelled', async () => {
+    const order = orderFactory({ status: 'PENDING' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    reveal(paymentService).sendRefund.mockResolvedValue(undefined);
+
+    await provider.cancel(order.id);
+
+    expect(paymentService.sendRefund).toHaveBeenCalledWith(order.id);
+  });
+
+  it('refuses to cancel a shipped order', async () => {
+    const order = orderFactory({ status: 'SHIPPED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+
+    await expect(provider.cancel(order.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+    expect(paymentService.sendRefund).not.toHaveBeenCalled();
+  });
+
+  it('lists the orders for a customer', async () => {
+    const orders = [orderFactory(), orderFactory()];
+    reveal(orderRepository).findForCustomer.mockResolvedValue(orders);
+
+    await expect(provider.listForCustomer('cus_1')).resolves.toEqual(orders);
+    expect(orderRepository.findForCustomer).toHaveBeenCalledWith({ customerId: 'cus_1' });
+  });
+});
+
+@start src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      placedAt: record.placedAt,
+    };
+  }
+}
+
+@expected src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findForCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      placedAt: record.placedAt,
+    };
+  }
+}
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}

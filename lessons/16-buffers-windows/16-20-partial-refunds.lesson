@@ -1,0 +1,308 @@
+@meta
+id: 16-20
+title: Scenario — partial refunds
+chapter: 16
+type: scenario
+skills: buffer-switch, split-window, window-nav, buffer-list, search-slash, find-f, open-o
+par: 640
+minutes: 18
+vscode: Ctrl-P four times, two of them for files you did not know you needed
+open: order.provider.ts payment.service.ts order.entity.ts registry.ts
+
+@brief
+A ticket, not an exercise, and two of the files it needs are not open.
+
+    ORD-611  Support want to refund part of an order. A refund larger
+             than the order total must be rejected with
+             REFUND_EXCEEDS_TOTAL. Expose it as refundOrder on the
+             resolver.
+
+  1. `order.provider.ts` — a new method directly after `cancel`, with
+     a blank line before it:
+
+         public async refundPartial(id: string, amount: number) {
+           const order = await this.findOne(id);
+
+           if (amount > order.total) {
+             throw exception('REFUND_EXCEEDS_TOTAL');
+           }
+
+           return this.paymentService.refund(order.id, amount);
+         }
+
+  2. `payment.service.ts` — `refund` takes an optional amount:
+     `refund(orderId: string, amount?: number)`, and passes it on in
+     the body: `{ orderId, amount }`.
+
+  3. `errors.json` — not open. Add, directly above `REFUND_FAILED`:
+
+         "REFUND_EXCEEDS_TOTAL": { "statusCode": 422, "sentry": false },
+
+  4. `order.resolver.ts` — not open. A new method directly after
+     `cancelOrder`, with a blank line before it:
+
+         public async refundOrder(_: unknown, args: { id: string; amount: number }) {
+           return this.orderProvider.refundPartial(args.id, args.amount);
+         }
+
+  5. `order.entity.ts` and `registry.ts` — open, and unchanged. The
+     entity has nothing to add and the resolver is already registered.
+
+@keys
+| `:b pay` | the service |
+| `:sp errors.json` `:sp order.resolver.ts` | the two you have to open yourself |
+| `:wq` in a split | write that buffer and close that window |
+| `Ctrl-W o` | back to one window if it gets crowded |
+| `:ls` | what is loaded, what is `+` |
+| `:wqa` | write everything, everywhere, and leave |
+
+@hints
+Provider: `G` is the closing brace of the class, `k` is the closing
+brace of `cancel`. `o` there, `Enter` for the blank line, then type
+the method. Leading spaces are autoindent's job; closing braces dedent
+themselves.
+--
+Service: `/refund(` then `f)` and `i` for the parameter. `/orderId }`
+lands on `orderId`; `e` then `a` appends after it.
+--
+The two files you open: `:sp errors.json`, `/FAILED`, `O`, the line,
+`Esc`, `:wq`. `:sp order.resolver.ts`, `G`, `k`, `o`, `Enter`, the
+method, `Esc`, `:wq`. Each `:wq` closes only the split.
+--
+`:ls` before you leave. Four buffers from the command line, two you
+added; the entity and the registry must show no `+`. Then `:wqa`.
+
+@solution
+A reasonable route.
+
+**order.provider.ts** — `G` `k` `o` `Enter`, then the method, one
+line per Enter, no leading spaces, `Esc`, `:w`.
+
+**payment.service.ts** — `:b pay`. `/refund(` `Enter`, `f)`, `i`,
+`, amount?: number`, `Esc`. `/orderId }` `Enter`, `e`, `a`,
+`, amount`, `Esc`.
+
+**errors.json** — `:sp errors.json`. `/FAILED` `Enter`, `O`, the
+entry, `Esc`, `:wq`.
+
+**order.resolver.ts** — `:sp order.resolver.ts`. `G` `k` `o` `Enter`,
+the method, `Esc`, `:wq`.
+
+`:wqa`.
+
+Around five hundred and sixty keystrokes, and all but about fifty of
+them are the code the ticket asked for. Everything the chapter added,
+the buffer hop, the two splits, the two `:wq` that close a window and
+not vim, comes to under forty.
+
+That ratio is the point. In VS Code this ticket is four tabs, two
+Ctrl-P searches, and a moment of "which tab was the resolver". Here
+the files you were given are a fragment away and the files you were
+not given are a `:sp` away, and the layout never gets in the way of
+the code. A window opened for one edit closes with the same `:wq` you
+were going to type anyway.
+
+The trap is the pair of decoys. A ticket that says "expose it on the
+resolver" makes you want to open the registry and add a line, and the
+line is already there. Read before you type. The buffer list is cheap;
+a change to a file that did not need one is not.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async refundPartial(id: string, amount: number) {
+    const order = await this.findOne(id);
+
+    if (amount > order.total) {
+      throw exception('REFUND_EXCEEDS_TOTAL');
+    }
+
+    return this.paymentService.refund(order.id, amount);
+  }
+}
+
+@start payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string) {
+    const response = await this.http.post(`/refunds`, { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@expected payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string, amount?: number) {
+    const response = await this.http.post(`/refunds`, { orderId, amount });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@start order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderResolver } from '../domain/order/order.resolver';
+import { PaymentService } from '../infrastructure/services/payment.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('PaymentService', { useClass: PaymentService });
+container.register('OrderResolver', { useClass: OrderResolver });
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@expected errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_EXCEEDS_TOTAL": { "statusCode": 422, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@start order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@expected order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+
+  public async refundOrder(_: unknown, args: { id: string; amount: number }) {
+    return this.orderProvider.refundPartial(args.id, args.amount);
+  }
+}

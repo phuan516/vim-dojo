@@ -1,0 +1,126 @@
+@meta
+id: 15-04
+title: Keep only what matches
+chapter: 15
+type: lesson
+skills: global-invert
+par: 18
+minutes: 4
+vscode: filter the output panel by ERROR, copy the results into a new file
+open: gateway.log
+
+@brief
+The payment gateway log from the incident is sixty lines. The postmortem
+wants the errors and nothing else. Keep every `ERROR` line; every other
+line, whatever its level, goes.
+
+You could write a `:g` for each level you want rid of, but that is the
+wrong way round. The lines you want are the ones that are easy to
+describe. What you need is a way to say "every line that does *not*
+match, run the command there".
+
+That command exists. It is `:g` with the sense inverted, and it has its
+own letter.
+
+@keys
+| `:v/pattern/d` | delete every line that does not match `pattern` |
+| `:g!/pattern/d` | the same thing, spelled with a bang |
+
+@hints
+Describe what you want to keep, not what you want to delete.
+--
+`:v` is `:g` inverted. `v` as in vim's own mnemonic, "inVerse" — or think
+of `grep -v`, which does the same job on the command line.
+--
+`:v/ERROR/d` and Enter. Everything that is not an error is gone.
+
+@solution
+    :v/ERROR/d<Enter>  :wq<Enter>
+
+Fifteen keystrokes, and a log of sixty lines is a log of eight.
+
+`:v` marks every line that does not match and runs the command on those.
+With `d` it is a filter: keep what matches, drop the rest. That is the
+overwhelmingly common use, so common that `:v/x/d` should feel like one
+word.
+
+`:g!` is the identical command with a different spelling. Use whichever
+your fingers prefer, but recognise both when you read them.
+
+The choice between `:g` and `:v` is only ever about which set is easier
+to name. Deleting debug lines: the noise is one word, use `:g`. Keeping
+errors: the signal is one word, use `:v`. If you find yourself writing
+a pattern with three alternatives joined by `\|`, stop and ask whether
+the other tool would want a pattern of one.
+
+@start gateway.log
+2026-09-15T23:58:11Z INFO  gateway request POST /captures ord_4102
+2026-09-15T23:58:12Z INFO  gateway 200 /captures ord_4102 118ms
+2026-09-15T23:58:40Z DEBUG gateway pool size 8
+2026-09-15T23:59:02Z INFO  gateway request POST /refunds ord_4088
+2026-09-15T23:59:03Z INFO  gateway 200 /refunds ord_4088 92ms
+2026-09-16T00:00:00Z INFO  gateway rotating log
+2026-09-16T00:00:14Z DEBUG gateway pool size 8
+2026-09-16T00:00:31Z INFO  gateway request POST /captures ord_4103
+2026-09-16T00:00:33Z WARN  gateway slow upstream 1840ms
+2026-09-16T00:00:33Z INFO  gateway 200 /captures ord_4103 1912ms
+2026-09-16T00:01:05Z INFO  gateway request POST /captures ord_4104
+2026-09-16T00:01:07Z WARN  gateway slow upstream 2210ms
+2026-09-16T00:01:08Z ERROR gateway 502 /captures ord_4104 upstream timeout
+2026-09-16T00:01:08Z INFO  gateway retry 1 /captures ord_4104
+2026-09-16T00:01:11Z ERROR gateway 502 /captures ord_4104 upstream timeout
+2026-09-16T00:01:11Z INFO  gateway retry 2 /captures ord_4104
+2026-09-16T00:01:14Z ERROR gateway 502 /captures ord_4104 giving up
+2026-09-16T00:01:20Z DEBUG gateway pool size 7
+2026-09-16T00:01:44Z INFO  gateway request POST /captures ord_4105
+2026-09-16T00:01:46Z ERROR gateway 502 /captures ord_4105 upstream timeout
+2026-09-16T00:01:46Z INFO  gateway retry 1 /captures ord_4105
+2026-09-16T00:01:49Z INFO  gateway 200 /captures ord_4105 2980ms
+2026-09-16T00:02:03Z DEBUG gateway pool size 6
+2026-09-16T00:02:15Z WARN  gateway circuit half-open
+2026-09-16T00:02:30Z INFO  gateway request POST /refunds ord_4090
+2026-09-16T00:02:31Z ERROR gateway 503 /refunds ord_4090 circuit open
+2026-09-16T00:02:31Z INFO  gateway request POST /refunds ord_4091
+2026-09-16T00:02:31Z ERROR gateway 503 /refunds ord_4091 circuit open
+2026-09-16T00:02:40Z DEBUG gateway pool size 6
+2026-09-16T00:03:00Z INFO  gateway circuit probe
+2026-09-16T00:03:02Z WARN  gateway probe failed 2005ms
+2026-09-16T00:03:30Z INFO  gateway circuit probe
+2026-09-16T00:03:31Z INFO  gateway probe ok 210ms
+2026-09-16T00:03:31Z INFO  gateway circuit closed
+2026-09-16T00:03:45Z INFO  gateway request POST /captures ord_4106
+2026-09-16T00:03:46Z INFO  gateway 200 /captures ord_4106 130ms
+2026-09-16T00:04:01Z DEBUG gateway pool size 8
+2026-09-16T00:04:22Z INFO  gateway request POST /captures ord_4107
+2026-09-16T00:04:22Z INFO  gateway 200 /captures ord_4107 101ms
+2026-09-16T00:04:50Z INFO  gateway request POST /refunds ord_4090
+2026-09-16T00:04:51Z INFO  gateway 200 /refunds ord_4090 144ms
+2026-09-16T00:05:10Z INFO  gateway request POST /refunds ord_4091
+2026-09-16T00:05:11Z ERROR gateway 409 /refunds ord_4091 already refunded
+2026-09-16T00:05:30Z DEBUG gateway pool size 8
+2026-09-16T00:06:00Z INFO  gateway request POST /captures ord_4108
+2026-09-16T00:06:01Z INFO  gateway 200 /captures ord_4108 97ms
+2026-09-16T00:06:33Z INFO  gateway request POST /captures ord_4109
+2026-09-16T00:06:34Z INFO  gateway 200 /captures ord_4109 112ms
+2026-09-16T00:07:12Z WARN  gateway slow upstream 1502ms
+2026-09-16T00:07:12Z INFO  gateway request POST /captures ord_4110
+2026-09-16T00:07:15Z ERROR gateway 502 /captures ord_4110 upstream timeout
+2026-09-16T00:07:15Z INFO  gateway retry 1 /captures ord_4110
+2026-09-16T00:07:17Z INFO  gateway 200 /captures ord_4110 2100ms
+2026-09-16T00:07:40Z DEBUG gateway pool size 8
+2026-09-16T00:08:00Z INFO  gateway request POST /captures ord_4111
+2026-09-16T00:08:01Z INFO  gateway 200 /captures ord_4111 88ms
+2026-09-16T00:08:30Z INFO  gateway request POST /refunds ord_4092
+2026-09-16T00:08:31Z INFO  gateway 200 /refunds ord_4092 105ms
+2026-09-16T00:09:00Z DEBUG gateway pool size 8
+2026-09-16T00:09:12Z INFO  gateway idle
+
+@expected gateway.log
+2026-09-16T00:01:08Z ERROR gateway 502 /captures ord_4104 upstream timeout
+2026-09-16T00:01:11Z ERROR gateway 502 /captures ord_4104 upstream timeout
+2026-09-16T00:01:14Z ERROR gateway 502 /captures ord_4104 giving up
+2026-09-16T00:01:46Z ERROR gateway 502 /captures ord_4105 upstream timeout
+2026-09-16T00:02:31Z ERROR gateway 503 /refunds ord_4090 circuit open
+2026-09-16T00:02:31Z ERROR gateway 503 /refunds ord_4091 circuit open
+2026-09-16T00:05:11Z ERROR gateway 409 /refunds ord_4091 already refunded
+2026-09-16T00:07:15Z ERROR gateway 502 /captures ord_4110 upstream timeout

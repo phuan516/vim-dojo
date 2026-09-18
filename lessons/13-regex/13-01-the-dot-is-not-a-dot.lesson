@@ -1,0 +1,168 @@
+@meta
+id: 13-01
+title: The dot is not a dot
+chapter: 13
+type: lesson
+skills: regex-classes
+par: 36
+minutes: 5
+vscode: Ctrl+F, watch it land on the SQL, press Enter again
+open: refund.service.ts
+
+@brief
+The refund argument type was renamed a while ago: its `total` became
+`amount`. One call site in `submit` never caught up and still reads
+`refund.total`. Make it `refund.amount`.
+
+Search for `refund.total` and watch where the cursor lands. It is not on
+the TypeScript. It is on `refund_total`, a SQL column name in a query
+string twenty lines higher, and pressing `n` walks you through three
+more of those before you reach the code.
+
+That is the whole chapter in one line: what you type after `/` is not
+text, it is a pattern, and in a pattern the dot means "any single
+character". `refund.total` matches `refund_total`, `refund-total` and
+`refund total` just as happily as the thing you meant. When you mean a
+real dot, you have to say so.
+
+@keys
+| `.` | in a pattern: any one character |
+| `\.` | a literal full stop |
+| `/pattern/e` `Enter` | land on the last character of the match |
+| `ciw` | change the word under the cursor |
+
+@hints
+The plain search lands on the SQL because the dot in your pattern
+accepts the underscore. Tell vim the dot is a dot.
+--
+A backslash in front of a character that would otherwise be special
+makes it literal. `\.` matches only a full stop.
+--
+`/refund\.total/e` `Enter` puts the cursor on the last letter of the
+right `total`. `ciwamount` and `Esc` replaces the word.
+
+@solution
+/refund\.total/e<Enter>  ciwamount<Esc>  :wq<Enter>
+
+Thirty-one keystrokes, one of which is the backslash that made the
+difference.
+
+Everything in the search prompt is a pattern. Most characters stand for
+themselves, which is why chapter 12 never had to mention it, but a
+handful do not: `.`, `*`, `[`, `^`, `$`, `~` and `\` itself. When one of
+those turns up in the text you are hunting for, put a backslash in front
+of it. `\.` for a full stop, `\*` for an asterisk, `\[` for a bracket.
+Paths like `order.repository` and version numbers like `2.4.1` are the
+usual victims — `2.4.1` matches `2x4x1` and `2.401`.
+
+The other direction is the useful one. Once you know `.` matches
+anything, you can lean on it. `/refund.total` was wrong here because the
+file happened to contain the SQL, but `/order.id` is a fine way to say
+"order followed by any separator followed by id" when you want
+`order.id`, `order_id` and `orderId`.
+
+The `/e` offset and `ciw` are chapter 12 and chapter 10 doing their
+jobs. Landing on the end of the match and changing the word you are on
+is a pair you will use over and over: the pattern gets you to the right
+place, the text object does the edit without you having to know how
+long the word is.
+
+@start refund.service.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { DatabaseClient } from '../database/database.client';
+import { GatewayClient } from './gateway.client';
+
+@injectable()
+export class RefundService {
+  constructor(
+    @inject(DatabaseClient) protected databaseClient: DatabaseClient,
+    @inject(GatewayClient) protected gatewayClient: GatewayClient,
+  ) {}
+
+  public async totalsByOrder(orderId: string) {
+    return this.databaseClient.query(
+      'SELECT order_id, SUM(amount) AS refund_total FROM refunds WHERE order_id = ? GROUP BY order_id',
+      [orderId],
+    );
+  }
+
+  public async exceedsOrder(orderId: string) {
+    const rows = await this.databaseClient.query(
+      'SELECT refund_total, order_total FROM order_totals WHERE order_id = ?',
+      [orderId],
+    );
+
+    if (!rows.length) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return rows[0].refund_total > rows[0].order_total;
+  }
+
+  public async submit(refund: { id: string; orderId: string; amount: number }) {
+    const order = await this.gatewayClient.lookup(refund.orderId);
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    if (await this.exceedsOrder(order.id)) {
+      throw exception('REFUND_EXCEEDS_TOTAL');
+    }
+
+    await this.gatewayClient.refund(order.id, refund.total);
+
+    return { refundId: refund.id, submitted: true };
+  }
+}
+
+@expected refund.service.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { DatabaseClient } from '../database/database.client';
+import { GatewayClient } from './gateway.client';
+
+@injectable()
+export class RefundService {
+  constructor(
+    @inject(DatabaseClient) protected databaseClient: DatabaseClient,
+    @inject(GatewayClient) protected gatewayClient: GatewayClient,
+  ) {}
+
+  public async totalsByOrder(orderId: string) {
+    return this.databaseClient.query(
+      'SELECT order_id, SUM(amount) AS refund_total FROM refunds WHERE order_id = ? GROUP BY order_id',
+      [orderId],
+    );
+  }
+
+  public async exceedsOrder(orderId: string) {
+    const rows = await this.databaseClient.query(
+      'SELECT refund_total, order_total FROM order_totals WHERE order_id = ?',
+      [orderId],
+    );
+
+    if (!rows.length) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return rows[0].refund_total > rows[0].order_total;
+  }
+
+  public async submit(refund: { id: string; orderId: string; amount: number }) {
+    const order = await this.gatewayClient.lookup(refund.orderId);
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    if (await this.exceedsOrder(order.id)) {
+      throw exception('REFUND_EXCEEDS_TOTAL');
+    }
+
+    await this.gatewayClient.refund(order.id, refund.amount);
+
+    return { refundId: refund.id, submitted: true };
+  }
+}

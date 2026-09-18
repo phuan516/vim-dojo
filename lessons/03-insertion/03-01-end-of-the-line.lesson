@@ -1,0 +1,65 @@
+@meta
+id: 03-01
+title: Append at the end without going there
+chapter: 03
+type: lesson
+skills: insert-A
+par: 12
+minutes: 3
+vscode: click at the end of the line, type the semicolon
+open: retry.config.ts
+
+@brief
+Line one of retry.config.ts is missing the semicolon that every other line
+has. Add it.
+
+The cursor starts at column one, where the `e` of `export` is. In VS Code
+you would click at the far end of the line first, because the cursor has to
+be there before you can type there. Vim does not work that way: you can say
+"start typing at the end of this line" as a single instruction, from
+wherever the cursor happens to be sitting.
+
+Do not walk the cursor along the line to get there.
+
+@keys
+| `a` | append — insert to the right of the cursor |
+| `$` | move to the end of the line |
+| `A` | append at the end of the line, from anywhere on it |
+| `Esc` | back to normal mode |
+| `:wq` | write and quit |
+
+@hints
+You already know a two-key way to do this from chapter one: get to the end
+of the line, then append. There is a one-key way that does both.
+--
+The key is `A`. Capital letters in vim are usually the bigger, further, or
+more aggressive version of the lowercase key. `a` appends here; `A` appends
+at the end.
+--
+`A`, type the semicolon, `Esc`, then `:wq` and Enter.
+
+@solution
+    A ; <Esc> :wq<Enter>
+
+Seven keystrokes, and only one of them is the edit.
+
+`A` is exactly `$a` in a single key. That matters more than it sounds like
+it should, because appending to the end of a line is one of the most common
+things you will ever do to code: a semicolon, a comma, a closing brace, a
+trailing argument. Any time you catch yourself pressing `$` and then `a`,
+press `A` instead.
+
+The other half of the lesson is the column you started in. It did not
+matter. A vim command that says "the end of the line" does not care where
+you are on the line, so you never pay for positioning first. Half of what
+makes vim fast is commands that make your current position irrelevant.
+
+@start retry.config.ts
+export const RETRY_LIMIT = 3
+export const BACKOFF_MS = 500;
+export const QUEUE_NAME = 'payments.refunds';
+
+@expected retry.config.ts
+export const RETRY_LIMIT = 3;
+export const BACKOFF_MS = 500;
+export const QUEUE_NAME = 'payments.refunds';

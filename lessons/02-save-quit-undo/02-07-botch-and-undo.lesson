@@ -1,0 +1,45 @@
+@meta
+id: 02-07
+title: Drill — botch it, undo it
+chapter: 02
+type: drill
+skills: undo, write
+par: 26
+minutes: 5
+reps: 8
+vscode: type, Ctrl+Z, type again
+open: queue.md
+
+@brief
+Eight times, the same three seconds: append ` TODO` to the line, undo it,
+append ` (done)` instead, write and quit.
+
+Nothing to work out. What you are building is the reflex of reaching for
+`u` the moment an edit looks wrong, instead of staring at it.
+
+@keys
+| `$a` | append at the end of the line |
+| `u` | undo the last change |
+| `ZZ` | write and quit |
+
+@hints
+`Esc` before `u`, every time. In insert mode `u` is just a letter.
+--
+After the undo the cursor is back on the line that changed, so `$a` works
+straight away without moving first.
+
+@solution
+    $ a  TODO <Esc> u $ a  (done) <Esc> ZZ
+
+Twenty-two keystrokes, and by rep four you should not be reading them.
+
+Watch what `u` does to the cursor: it puts you on the line it changed.
+That is deliberate, and it is why the second `$a` needs no navigation.
+Vim's undo is not just a rewind of the text, it is a rewind of where you
+were, which is what makes it usable in the middle of a thought.
+
+@start queue.md
+- Reconcile the payment batch
+
+@expected queue.md
+- Reconcile the payment batch (done)

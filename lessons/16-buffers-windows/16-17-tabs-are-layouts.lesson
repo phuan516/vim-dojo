@@ -1,0 +1,170 @@
+@meta
+id: 16-17
+title: Tabs are layouts
+chapter: 16
+type: lesson
+skills: tabpages
+par: 130
+minutes: 6
+vscode: a tab is a file; here it is not
+open: order.provider.ts
+
+@brief
+Vim has tabs, and the word is a trap. A VS Code tab is a file. A vim
+tab is a page: a whole arrangement of windows, with its own splits and
+sizes, that you can switch to and back. The buffer list is shared
+across every tab. Open a file in tab 2 and it is in `:ls` from tab 1
+as well, because the tab was never holding the file; it was holding a
+layout.
+
+`:tabnew errors.json` opens a new tab page with one window showing
+that file. `gt` goes to the next tab, `gT` to the previous, and both
+wrap round. `:tabclose` closes the current page; its buffers stay
+loaded. `:tabs` lists the pages and what each one is showing.
+
+The refund window is being shortened and the error table is missing
+its code. Do the errors file in its own tab, then come back.
+
+  1. `errors.json`: directly under `ORDER_ALREADY_SHIPPED`, add
+
+         "REFUND_WINDOW_EXPIRED": { "statusCode": 409, "sentry": false },
+
+  2. `order.provider.ts`: `days <= 30` becomes `days <= 14`.
+
+`:wqa` writes every buffer in every tab and closes all of it.
+
+@keys
+| `:tabnew name` | a new tab page showing `name`; `:tabnew` alone shows an empty buffer |
+| `gt` `gT` | next tab page, previous tab page; `2gt` goes to page 2 |
+| `:tabclose` | close this page; `:tabonly` closes every other one |
+| `:tabs` | list the pages and their windows |
+| `:wqa` `:qa` | across every tab, not just this one |
+
+@hints
+`:tabnew errors.json`, `/SHIPPED`, `o`, the new entry, `Esc`.
+--
+`gt` from the last page wraps to the first, so one `gt` is back to the
+provider. `:tabs` if you want to see the two pages listed.
+--
+`/<= 30`, `f3`, `cw14`, `Esc`, `:wqa`.
+
+@solution
+    :tabnew errors.json<Enter>  /SHIPPED<Enter>  o "REFUND_WINDOW_EXPIRED": { "statusCode": 409, "sentry": false }, <Esc>
+    gt  /<= 30<Enter>  f3  cw 14 <Esc>  :wqa<Enter>
+
+Around a hundred and fifteen keystrokes, most of them the JSON line;
+the tab cost the same as a split would have.
+
+So what is a tab for, if not a file? A second layout. One page with the
+provider and its test side by side, another with the migration and the
+schema, and `gt` between the two jobs without disturbing either
+arrangement. That is a real use, and it comes up perhaps once a day.
+The next lesson is about the use that comes up every minute in VS Code
+and is the wrong tool here.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    const days = (Date.now() - order.placedAt.getTime()) / 86_400_000;
+
+    if (days <= 30) {
+      await this.paymentService.refund(order.id);
+
+      return this.orderRepository.update({
+        where: { id },
+        values: { status: 'CANCELLED' },
+      });
+    }
+
+    throw exception('REFUND_WINDOW_EXPIRED');
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    const days = (Date.now() - order.placedAt.getTime()) / 86_400_000;
+
+    if (days <= 14) {
+      await this.paymentService.refund(order.id);
+
+      return this.orderRepository.update({
+        where: { id },
+        values: { status: 'CANCELLED' },
+      });
+    }
+
+    throw exception('REFUND_WINDOW_EXPIRED');
+  }
+}
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@expected errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "REFUND_WINDOW_EXPIRED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}

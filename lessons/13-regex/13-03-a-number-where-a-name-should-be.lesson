@@ -1,0 +1,118 @@
+@meta
+id: 13-03
+title: A number where a name should be
+chapter: 13
+type: lesson
+skills: regex-classes
+par: 62
+minutes: 6
+vscode: read every line, find the three literals by eye
+open: retry.config.ts
+
+@brief
+Every value in this config is supposed to come from a named constant.
+Three of them are still bare numbers, left over from before the
+constants file existed. Replace each literal with its constant, in the
+order they appear in the file:
+
+    the timeout      →  TIMEOUT_MS
+    the attempts     →  MAX_ATTEMPTS
+    the backoff      →  BACKOFF_MS
+
+You do not need to know what the numbers are, and that is the point.
+Searching for `30000` works for the first one and tells you nothing
+about the other two. There are also digits in the queue names and the
+hash algorithm, so searching for a digit on its own stops in the wrong
+places.
+
+What you want to say is "a colon, a space, and then some digit". A
+pattern has a word for "some digit".
+
+@keys
+| `\d` | any digit, `0` to `9` |
+| `\D` | anything that is not a digit |
+| `/pattern/e` `Enter` | land on the last character of the match — here, the digit |
+| `n` | next match, same pattern, same offset |
+| `cw` | change to the end of the word |
+
+@hints
+Describe the shape of a literal value rather than the value itself. All
+three look the same from the left: the key, a colon, a space, a digit.
+--
+`\d` stands for any single digit. `/: \d` finds a colon, a space and a
+digit, wherever the digit is on its own rather than inside a name. A
+search lands on the *start* of its match, which here is the colon, so
+you will want the `/e` offset from chapter 12 to land on the digit.
+--
+`/: \d/e` `Enter`, then `cwTIMEOUT_MS` and `Esc`. `n` jumps to the next
+literal, keeping the offset, and `cw` again — the pattern is the same
+each time even though the numbers are not.
+
+@solution
+/: \d/e<Enter>  cwTIMEOUT_MS<Esc>  n  cwMAX_ATTEMPTS<Esc>  n  cwBACKOFF_MS<Esc>  :wq<Enter>
+
+Fifty-five keystrokes, forty of them the three constant names. The
+search was typed once.
+
+`\d` is the first of vim's character classes: a backslash and a letter
+that stands for a whole set of characters. The ones you will use are
+
+    \d   a digit                 \D   not a digit
+    \w   a word character        \W   not a word character
+    \s   whitespace              \S   not whitespace
+
+where "word character" means letters, digits and underscore — the same
+definition `w` and `*` use. The capital is always the complement.
+
+Notice why `/: \d` beat `/\d`. On its own, `\d` matched the `2` in
+`v2` and the `256` in `sha256` first. The colon and space are context:
+they say where the digit has to sit. A pattern is nearly always a bit of
+context plus a bit of shape, and getting the context right is what
+stops it landing on the wrong thing.
+
+The `/e` offset matters more than it looks. The match was three
+characters long — colon, space, digit — and without the offset the
+cursor sits on the colon, so `cw` would have eaten the colon instead of
+the number. Landing on the end of the match put you on the digit. Later
+in the chapter there is a cleaner way to say "match this, but put me
+there", and it is one of the best things vim's patterns have.
+
+`cw` on a number changes the whole number, because a run of digits is a
+word. That is why the three edits could share one shape — you never had
+to know how long each literal was.
+
+@start retry.config.ts
+import { BACKOFF_MS, MAX_ATTEMPTS, TIMEOUT_MS } from './retry.constants';
+
+export const retryConfig = {
+  queue: 'payments.refunds.v2',
+  deadLetter: 'payments.refunds.v2.dead',
+  exchange: 'payments.v2',
+  routingKey: 'refund.retry',
+  signature: 'sha256',
+  timeoutMs: 30000,
+  consumerTag: 'order-service-v2',
+  prefetch: PREFETCH,
+  maxAttempts: 5,
+  jitter: JITTER,
+  backoffMs: 250,
+  metricsPrefix: 'p95',
+};
+
+@expected retry.config.ts
+import { BACKOFF_MS, MAX_ATTEMPTS, TIMEOUT_MS } from './retry.constants';
+
+export const retryConfig = {
+  queue: 'payments.refunds.v2',
+  deadLetter: 'payments.refunds.v2.dead',
+  exchange: 'payments.v2',
+  routingKey: 'refund.retry',
+  signature: 'sha256',
+  timeoutMs: TIMEOUT_MS,
+  consumerTag: 'order-service-v2',
+  prefetch: PREFETCH,
+  maxAttempts: MAX_ATTEMPTS,
+  jitter: JITTER,
+  backoffMs: BACKOFF_MS,
+  metricsPrefix: 'p95',
+};

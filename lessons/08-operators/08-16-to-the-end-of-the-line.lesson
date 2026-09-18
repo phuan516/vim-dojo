@@ -1,0 +1,76 @@
+@meta
+id: 08-16
+title: D and C take the rest of the line
+chapter: 08
+type: lesson
+skills: delete-d, change-c
+par: 37
+minutes: 5
+vscode: click, Shift-End, Delete
+open: payment.service.ts
+
+@brief
+"From here to the end of the line" is the most common thing you ever ask
+an editor to do — it is the Shift-End of your old life. Vim gives it to
+you as a single capital letter, twice: one that deletes and one that
+changes.
+
+Two jobs in this service.
+
+The idempotency key has a stale TODO comment hanging off the end of it.
+The comment goes; the code before it stays.
+
+The gateway call still passes `mode: 'legacy'`, which the new gateway
+rejects. The call should end up as:
+
+    return this.gateway.post('/refunds', { orderId, key });
+
+@keys
+| `D` | delete from the cursor to the end of the line |
+| `C` | change from the cursor to the end of the line |
+| `f{` | forward to the next `{` |
+| `f/` | forward to the next `/` |
+
+@hints
+Both edits are "everything from this point onwards, on this line". Land
+on the first character you want gone, then say so once.
+--
+`D` deletes to the end of the line and stays in normal mode. `C` does the
+same and leaves you in insert mode to type the replacement.
+--
+On the comment line, `f/` lands on the first slash — `D` from there. On
+the gateway line, `f{` lands on the opening brace of the argument, and
+`C` lets you retype the tail from there.
+
+@solution
+    2j f/ D  j f{ C{ orderId, key });<Esc>  :wq<Enter>
+
+`D` leaves a trailing space behind where the comment was. Nobody can see
+it, the grader ignores it, and your formatter will strip it — but if it
+bothers you, land one character earlier with `h` before pressing `D`.
+
+Both of these are shorthand. `D` is `d$` and `C` is `c$`, spelled with
+one key because you will want them hundreds of times a day. Vim is full
+of this: the operations people actually repeat get a capital letter of
+their own.
+
+Which makes `Y` the odd one out. By the pattern it should be `y$`, and it
+is not — `Y` yanks the whole line, the same as `yy`. There is no
+single-key "yank to the end of the line". It is the one inconsistency in
+this family and it catches everybody once.
+
+@start payment.service.ts
+export class PaymentService {
+  public async refund(orderId: string) {
+    const key = `refund:${orderId}`; // TODO drop when the gateway is fixed
+    return this.gateway.post('/refunds', { orderId, key, mode: 'legacy' });
+  }
+}
+
+@expected payment.service.ts
+export class PaymentService {
+  public async refund(orderId: string) {
+    const key = `refund:${orderId}`;
+    return this.gateway.post('/refunds', { orderId, key });
+  }
+}

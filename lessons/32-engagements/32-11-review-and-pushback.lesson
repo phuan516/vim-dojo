@@ -1,0 +1,247 @@
+@meta
+id: 32-11
+title: Review — the comment you do not apply
+chapter: 32
+type: scenario
+skills: code-review, sub-basic, ex-sort, open-O
+par: 128
+minutes: 11
+vscode: apply all four suggestions, break the API
+open: src/domain/order/order.provider.ts src/domain/order/order.resolver.ts src/domain/order/order.schema.graphql
+vimrc: set hidden
+
+@brief
+Four comments on !341. Three of them you apply. One you do not.
+
+    @jm  Three `let`s in here that are never reassigned. `const`.
+
+    @jm  `50000` twice. Pull it out as `APPROVAL_LIMIT` at module
+         scope, under the imports, one blank line either side, and use
+         the name in both places.
+
+    @pv  The imports in the resolver are not in order. Sort them.
+
+    @pv  `args.id` reads badly in the resolver. Rename it to
+         `args.orderId`.
+
+The last one is wrong, and the schema file open in the third buffer is
+why: `id` is the argument name in the published GraphQL schema. Renaming
+the destructured field renames the API. Every client breaks, and the
+reviewer cannot see that from the diff they were looking at.
+
+So: the provider and the resolver's imports change. Nothing else in the
+resolver changes, and the schema does not change. Reply to @pv with the
+schema line; that part is not something vim can do for you.
+
+@keys
+| `:%s/\<let\>/const/g` | whole word only, every line |
+| `:1,4sort` | sort those four lines |
+| `O` | open a line above and type on it |
+| `:bn` `:wqa` | next buffer, write everything |
+
+@hints
+Do the two substitutions in the provider before you type the constant.
+If you add `const APPROVAL_LIMIT = 50000;` first, the substitution that
+replaces `50000` will replace it in the declaration too, and you will
+have written `const APPROVAL_LIMIT = APPROVAL_LIMIT;`.
+--
+`\<let\>` with the word boundaries, not bare `let`. Without them the
+pattern is inside `complete`, `deleted`, `outlet` and anything else that
+happens to contain the letters.
+--
+For the constant: `:%s/50000/APPROVAL_LIMIT/g` first, then `/^@injectable`
+`Enter` `O`, type the declaration, press Enter once more to leave a blank
+line, and `Esc`.
+
+@solution
+`:%s/\<let\>/const/g`, `:%s/50000/APPROVAL_LIMIT/g`,
+`/^@injectable` `Enter` `O` `const APPROVAL_LIMIT = 50000;` `Enter` `Esc`,
+then `:bn` `:1,4sort` `:wqa`. 111 keystrokes.
+
+**Order of operations is the trap.** Both substitutions are trivial, and
+doing them in the wrong order relative to typing the declaration produces
+a file that compiles, reads almost right, and is wrong. When you are
+about to introduce a name that is defined in terms of the thing you are
+replacing, replace first and declare after. It is the same reason you
+rename the callers before the definition when the compiler is helping
+you.
+
+**`\<` and `\>` are not decoration.** `let` is three letters that occur
+inside real words. A rename of a keyword or a short identifier without
+word boundaries is one of the two or three ways a careless refactor gets
+into a codebase, and it is invisible in review because the diff looks
+plausible.
+
+**`:sort` for imports.** Four lines, one command, no argument about which
+order they were in before. Note that it is a plain ASCII sort, so
+`tsyringe` sorts after the capitalised ones — which is the convention
+this codebase already uses everywhere else, so it happens to be right.
+Check that before you reach for it in a project that groups its imports
+by origin; there `:sort` will cheerfully destroy the grouping.
+
+**And the one you do not apply.** The interesting part of this lesson is
+the comment you leave alone. A reviewer reading a diff cannot see the
+schema file, and a suggestion that is right about the code can still be
+wrong about the system. Applying all four is faster, feels more
+agreeable, and ships an API break. "No, because" plus a file path is a
+complete answer and takes thirty seconds to write.
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    let order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    let order = await this.findOne(id);
+
+    if (order.total > 50000) {
+      throw exception('REFUND_NEEDS_APPROVAL');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async refund(id: string, amount: number) {
+    let order = await this.findOne(id);
+
+    if (amount > 50000) {
+      throw exception('REFUND_NEEDS_APPROVAL');
+    }
+
+    return this.paymentService.refund(order.id, amount);
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+const APPROVAL_LIMIT = 50000;
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.total > APPROVAL_LIMIT) {
+      throw exception('REFUND_NEEDS_APPROVAL');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async refund(id: string, amount: number) {
+    const order = await this.findOne(id);
+
+    if (amount > APPROVAL_LIMIT) {
+      throw exception('REFUND_NEEDS_APPROVAL');
+    }
+
+    return this.paymentService.refund(order.id, amount);
+  }
+}
+
+@start src/domain/order/order.resolver.ts
+import { OrderProvider } from './order.provider';
+import { injectable, inject } from 'tsyringe';
+import { CustomerProvider } from '../customer/customer.provider';
+import { InvoiceProvider } from '../billing/invoice.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(
+    @inject(OrderProvider) protected orderProvider: OrderProvider,
+    @inject(CustomerProvider) protected customerProvider: CustomerProvider,
+    @inject(InvoiceProvider) protected invoiceProvider: InvoiceProvider,
+  ) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+
+  public async orderInvoice(_: unknown, args: { id: string }) {
+    return this.invoiceProvider.forOrder(args.id);
+  }
+}
+
+@expected src/domain/order/order.resolver.ts
+import { CustomerProvider } from '../customer/customer.provider';
+import { InvoiceProvider } from '../billing/invoice.provider';
+import { OrderProvider } from './order.provider';
+import { injectable, inject } from 'tsyringe';
+
+@injectable()
+export class OrderResolver {
+  constructor(
+    @inject(OrderProvider) protected orderProvider: OrderProvider,
+    @inject(CustomerProvider) protected customerProvider: CustomerProvider,
+    @inject(InvoiceProvider) protected invoiceProvider: InvoiceProvider,
+  ) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+
+  public async orderInvoice(_: unknown, args: { id: string }) {
+    return this.invoiceProvider.forOrder(args.id);
+  }
+}
+
+@start src/domain/order/order.schema.graphql
+type Query {
+  order(id: ID!): Order
+  orderInvoice(id: ID!): Invoice
+}
+
+type Mutation {
+  cancelOrder(id: ID!): Order
+}

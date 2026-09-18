@@ -1,0 +1,272 @@
+@meta
+id: 32-17
+title: Boss — a new producer from an old one
+chapter: 32
+type: boss
+skills: feature-implementation, multi-file-refactor, code-review, buffer-switch, sub-case
+par: 710
+minutes: 25
+vscode: new file, paste, rename, forget the registry
+open: src/domain/customer/customer.producer.ts src/domain/order/order.provider.ts src/configuration/registry.ts
+vimrc: set hidden
+
+@brief
+    ORD-1400  When a refund completes, publish `order.refunded` so the
+              email service can tell the customer. The consumer is in
+              another repository and is already listening.
+
+Four things, and one of them is a file that does not exist yet.
+
+  1. Create `src/domain/order/order.producer.ts`. There is exactly one
+     producer in this codebase already and it is open in the first
+     buffer. The new one is the same file with the nouns changed: an
+     `OrderRefundedEvent` of `orderId` and `refundedAt`, a class
+     `OrderProducer`, and a `refunded` method that publishes to
+     `order.refunded`.
+
+  2. src/domain/order/order.provider.ts — import the producer, inject it
+     after `paymentService`, and publish from `refund` after the payment
+     has gone through and before the repository update:
+
+         await this.orderProducer.refunded({
+           orderId: order.id,
+           refundedAt: new Date().toISOString(),
+         });
+
+     with a blank line either side, like everything else in that method.
+
+  3. src/configuration/registry.ts — import and register it, next to the
+     customer producer.
+
+  4. And the review comment from the refund MR that never got done:
+     there is a `console.log` in `refund`. It goes, along with the blank
+     line it sits on.
+
+Par is 710 keystrokes. Typing the producer file out is about three
+hundred of those on its own, and you do not have to type any of it.
+
+@keys
+| `yG` | yank from here to the end of the file |
+| `:e path/to/new.ts` | open a file that does not exist yet |
+| `P` | put the yanked lines above the cursor |
+| `:%s/\Cold/new/g` | case-sensitive rename, whole buffer |
+| `:b2` `:b3` | go to buffer 2, buffer 3 |
+| `yyp` then `:s/…/…/` | duplicate a line and rewrite the copy |
+
+@hints
+Nothing in this ticket needs typing out from scratch. The producer
+already exists for customers; the import line, the injection line and the
+registry lines all exist for the customer producer; the publish block has
+the same shape as the repository update three lines below it.
+--
+To make the new file: from the customer producer, `gg` `yG` takes the
+whole thing. `:e src/domain/order/order.producer.ts` opens an empty
+buffer at the right path and `P` drops the copy in. Now it is four
+substitutions, not three hundred keystrokes.
+--
+Do the capitalised substitutions before the lowercase ones, and put `\C`
+on all of them. Without `\C` the first pass takes the lowercase spellings
+too and you end up with `Order.suspended` as a routing key.
+--
+For the publish block in the provider: the repository update below it is
+four lines of exactly the right shape. Put the cursor on the blank line
+above it, yank five lines so the blank comes too, `P`, and rewrite the
+copy — one line with `cw` and `ciw`, two lines with `cc`.
+
+@solution
+A route that measures 617 keystrokes. Four movements.
+
+**The producer** — `gg` `yG`, `:e src/domain/order/order.producer.ts`,
+`P`, then
+
+    :%s/\CCustomer/Order/g
+    :%s/\CSuspended/Refunded/g
+    :%s/\Ccustomer/order/g
+    :%s/\Csuspended/refunded/g
+
+Four passes because there are four spellings, and each pass is anchored
+to a case so it cannot eat another pass's work. Capitalised first: if
+`\Ccustomer` ran first it would leave `Customer` alone, which is fine,
+but if the `\C` were missing anywhere the order would matter and the
+routing key would come out wrong. Anchor the case and the ordering stops
+being load-bearing.
+
+**The import and the injection** — `:b2`, then
+`/import { OrderRepository` `Enter` `O` and type the import line, and
+`/PaymentService) protected` `Enter` `yyp`
+`:s/\CPaymentService/OrderProducer/g` `:s/\CpaymentService/orderProducer/g`.
+The injection line is the line above it with two words changed, and the
+two substitutions are shorter and safer than retyping a decorator.
+
+**The review comment** — `/console.log` `Enter` `2dd`. Two lines: the log
+and the gap it left behind. Do it while you are in the file, not as a
+separate pass at the end.
+
+**The publish block** — `/return this.orderRepository` `Enter` `k` `5Y`
+`P` `j` `^`, then `cwawait` `Esc` `3w` `ciworderProducer` `Esc` `2w`
+`ciwrefunded` `Esc`, then `j` `cc` `orderId: order.id,` `Esc` `j` `cc`
+`refundedAt: new Date().toISOString(),` `Esc`.
+
+Yanking five lines rather than four is the trick again: the blank line
+comes along, so the block lands correctly spaced at both ends without you
+typing or counting a gap. The `^` after `j` matters — the put leaves the
+cursor on a blank line at column zero, and `cw` from column zero eats the
+indentation instead of the word.
+
+**The registry** — `:b3`, `/import { CustomerProducer` `Enter` `yyp`
+`:s/\CCustomer/Order/g` `:s/\Ccustomer/order/g`, then
+`/register('CustomerProducer` `Enter` `yyp` `:s/\CCustomer/Order/g`.
+Then `:wqa`, which writes the new file along with the rest.
+
+The thing to take from this one: **a new file is almost never new.** In
+any codebase with a house style there is an existing file that is the
+same shape, and the honest way to write the new one is to copy that file
+and change the nouns. It gives you the imports in the right order, the
+decorator, the export style, the way events are typed inline, and the
+blank line conventions — none of which you have to remember and all of
+which review will notice. The four substitutions afterwards are the whole
+of the work, and they are reviewable in a way that three hundred
+keystrokes of fresh typing is not.
+
+The one thing copying will not give you is the registry entry, because
+nothing in the new file refers to it. That is the line this kind of
+ticket forgets, and it is why the last thing you do is search the tree
+for the name of the thing you copied from and check you have done all the
+same places for the thing you made.
+
+@start src/domain/customer/customer.producer.ts
+import { injectable, inject } from 'tsyringe';
+import { Queue } from '../../infrastructure/queue';
+
+type CustomerSuspendedEvent = {
+  customerId: string;
+  suspendedAt: string;
+};
+
+@injectable()
+export class CustomerProducer {
+  constructor(@inject(Queue) protected queue: Queue) {}
+
+  public async suspended(event: CustomerSuspendedEvent) {
+    return this.queue.publish('customer.suspended', event);
+  }
+}
+
+@expected src/domain/order/order.producer.ts
+import { injectable, inject } from 'tsyringe';
+import { Queue } from '../../infrastructure/queue';
+
+type OrderRefundedEvent = {
+  orderId: string;
+  refundedAt: string;
+};
+
+@injectable()
+export class OrderProducer {
+  constructor(@inject(Queue) protected queue: Queue) {}
+
+  public async refunded(event: OrderRefundedEvent) {
+    return this.queue.publish('order.refunded', event);
+  }
+}
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async refund(id: string) {
+    const order = await this.findOne(id);
+
+    console.log('refunding', order.id);
+
+    await this.paymentService.refund(order.id, order.total);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'REFUNDED' },
+    });
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderProducer } from './order.producer';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(OrderProducer) protected orderProducer: OrderProducer,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async refund(id: string) {
+    const order = await this.findOne(id);
+
+    await this.paymentService.refund(order.id, order.total);
+
+    await this.orderProducer.refunded({
+      orderId: order.id,
+      refundedAt: new Date().toISOString(),
+    });
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'REFUNDED' },
+    });
+  }
+}
+
+@start src/configuration/registry.ts
+import { container } from 'tsyringe';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderRepository } from '../domain/order/order.repository';
+import { CustomerProducer } from '../domain/customer/customer.producer';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerProducer', { useClass: CustomerProducer });
+
+@expected src/configuration/registry.ts
+import { container } from 'tsyringe';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderRepository } from '../domain/order/order.repository';
+import { CustomerProducer } from '../domain/customer/customer.producer';
+import { OrderProducer } from '../domain/order/order.producer';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerProducer', { useClass: CustomerProducer });
+container.register('OrderProducer', { useClass: OrderProducer });

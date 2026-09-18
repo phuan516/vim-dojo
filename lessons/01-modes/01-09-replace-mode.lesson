@@ -1,0 +1,66 @@
+@meta
+id: 01-09
+title: Replace mode, the overwriting one
+chapter: 01
+type: lesson
+skills: mode-awareness, esc, survival-motion
+par: 17
+minutes: 4
+vscode: the Insert key, if you have ever pressed it on purpose
+open: deploy.md
+
+@brief
+There is a fourth door. `R` — capital R — puts you in REPLACE mode, where
+what you type overwrites what is already there instead of pushing it
+along. The indicator at the bottom reads `-- REPLACE --`.
+
+It earns its keep where the text is aligned: version numbers, dates,
+status codes, anything in a column. Insert mode would shift everything to
+the right of the cursor and break the alignment. Replace mode leaves the
+line exactly as long as it was.
+
+deploy.md says the service is on 2.4.0. It went out as 2.5.1 this
+morning. Fix the version line without disturbing the columns.
+
+@keys
+| `R` | replace mode — typing overwrites |
+| `Esc` | back to normal mode |
+| `$` | last character of the line |
+| `h` | one character left |
+
+@hints
+The version is the last thing on its line, so `$` gets you close. You need
+to be on the character where the *first* difference starts.
+--
+From the end of `2.4.0`, two `h` presses put you on the `4`. Everything
+from there rightwards is going to be typed over.
+--
+`R` then `5.1` overwrites three characters with three characters. `Esc`
+when you are done — replace mode does not end on its own.
+
+@solution
+    j j $ h h R 5 . 1 <Esc> :wq<Enter>
+
+Note what did not happen: no selecting, no deleting, no retyping of the
+parts that were already right. You put the cursor at the first wrong
+character and typed the correct text over the top.
+
+Replace mode is a mode, not a one-shot. It keeps overwriting until you
+press `Esc`, which is the mistake people make with it — they fix three
+characters, carry on typing a comment, and quietly eat the rest of the
+line. For a single character there is a better tool coming in chapter 3.
+For a fixed-width field like this one, `R` is exactly right.
+
+@start deploy.md
+# Deploy log  payments-api
+
+Version   2.4.0
+Released  2026-05-11
+Window    30 days
+
+@expected deploy.md
+# Deploy log  payments-api
+
+Version   2.5.1
+Released  2026-05-11
+Window    30 days

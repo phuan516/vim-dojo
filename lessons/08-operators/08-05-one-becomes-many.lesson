@@ -1,0 +1,67 @@
+@meta
+id: 08-05
+title: When one character becomes a word
+chapter: 08
+type: lesson
+skills: substitute-s
+par: 52
+minutes: 5
+vscode: double-click the letter and type the word
+open: seed.ts
+
+@brief
+`r` swaps one character for one character. When the replacement is longer
+than what it replaces, `r` is no use: you would have to delete, then find
+your way into insert mode at the right spot.
+
+There is a key that fuses those two steps. It removes the character under
+the cursor and drops you straight into insert mode where it was.
+
+The seed data still uses the old single-letter statuses. The enum now
+spells them out: `P` is `PENDING`, `S` is `SHIPPED`, `C` is `CANCELLED`.
+The quotes stay exactly where they are.
+
+@keys
+| `s` | delete the character under the cursor and start inserting |
+| `$` | end of the line |
+| `3h` | three characters left |
+| `Esc` | back to normal mode |
+
+@hints
+You need the character gone *and* the cursor in its place, ready to type.
+One key does both.
+--
+`s` is `x` and `i` in a single press. Type the word, then `Esc`.
+--
+The letter is three characters back from the end of each line: `$` then
+`3h` lands on it. Then `s`, the word, `Esc`, and `j` to the next one.
+
+@solution
+    j $3h sPENDING<Esc>  j $3h sSHIPPED<Esc>  j $3h sCANCELLED<Esc>  :wq<Enter>
+
+Most of that count is the words themselves, which you would have typed
+whatever editor you were in. The vim part is four keystrokes a line.
+
+`s` is worth knowing by its real name: *substitute*. It is the first key
+in this chapter that leaves you in insert mode, and that changes the
+rhythm — every `s` needs an `Esc` to finish it, in a way that `x` and `r`
+never do.
+
+There is a linewise version, `S`, which throws the whole line away and
+leaves you inserting on an empty line with the indentation kept. You will
+meet it again in a few lessons under a different name, because vim gives
+that exact command two spellings.
+
+@start seed.ts
+export async function seed() {
+  await seedOrder('ord_1042', 'P');
+  await seedOrder('ord_1043', 'S');
+  await seedOrder('ord_1044', 'C');
+}
+
+@expected seed.ts
+export async function seed() {
+  await seedOrder('ord_1042', 'PENDING');
+  await seedOrder('ord_1043', 'SHIPPED');
+  await seedOrder('ord_1044', 'CANCELLED');
+}

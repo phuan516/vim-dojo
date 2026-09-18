@@ -1,0 +1,232 @@
+@meta
+id: 32-15
+title: Incident — under a budget
+chapter: 32
+type: scenario
+skills: diagnose-from-logs, speed-under-pressure, vimgrep, cfdo, code-review
+par: 93
+minutes: 9
+vscode: open three files you have to find first, edit seven lines
+open: logs/api-2024-11-03.log src/support/format.ts
+vimrc: set hidden
+
+@brief
+    INC-91  Error rate 4.1% and climbing since the 09:38 release. Three
+            endpoints are 500ing with the same stack trace.
+
+The log is in front of you. Read the first four lines and you have the
+cause: `formatMoney` does not handle a null amount, and the release
+rolled it out to every money field in the API.
+
+`formatAmount` is the old helper. It handles null, it is still exported,
+and every affected file already imports it — the rollout was gradual, so
+both names are in scope everywhere. The fix is to point every *call* at
+`formatAmount` and get out.
+
+Do not rename the definition in format.ts and do not touch the import
+lines. `formatMoney` stays in the codebase; making it null-safe is a
+ticket for tomorrow, when you are not on a call with three people
+listening.
+
+**The budget is 93 keystrokes.** Opening the affected files by hand
+and editing seven call sites is about four hundred. You do not know which
+files they are yet, and finding out is part of the budget.
+
+@keys
+| `:vimgrep /pat/gj src/**/*.ts` | find every call site, in every file |
+| `:cfdo %s/old/new/g` | change them all |
+| `:wqa` | write everything, including the files vimgrep opened for you |
+
+@hints
+You do not know which files are affected, so the first command is the one
+that finds out. Everything after that operates on the list rather than on
+files you chose.
+--
+The pattern has to separate calls from everything else with the same
+name. A call is the name followed immediately by an open bracket. The
+definition has a space and an equals sign after it; the imports have a
+comma or a brace.
+--
+`:vimgrep /formatMoney(/gj src/**/*.ts`, then
+`:cfdo %s/formatMoney(/formatAmount(/g`, then `:wqa`.
+
+@solution
+`:vimgrep /formatMoney(/gj src/**/*.ts` `:cfdo %s/formatMoney(/formatAmount(/g`
+`:wqa`. 81 keystrokes, three commands, and you never opened a file.
+
+**The bracket is the whole pattern.** `formatMoney` matches ten things in
+this tree: three imports, one definition, one log line and seven calls.
+`formatMoney(` matches exactly the seven you want. Under pressure the
+temptation is to rename everything and fix the fallout; one character of
+precision in the pattern removes the fallout instead. When you need to
+separate a call from a declaration, the open bracket does it, and it
+costs nothing.
+
+**The list is also the report.** When somebody asks what you changed, the
+answer is the quickfix list: three files, seven call sites, one
+substitution. That is a sentence you can say on the call while it is
+happening, which is worth more than the thirty seconds the route saved.
+
+**Leave the real fix for tomorrow.** `formatMoney` is still broken and
+still exported. Fixing it properly means deciding what a null amount
+should render as, which is a product question, and asking product
+questions during an incident is how a five-minute rollback becomes a
+forty-minute outage. Stop the bleeding with the smallest change that is
+obviously correct, then raise the follow-up before you close the
+incident — not after, because after is when you forget.
+
+A note on the budget. It is not there to make you type faster. It is
+there because the slow route — find the files, open each one, eyeball the
+call sites — is also the route where you miss the third file, declare the
+incident closed, and get paged again in ten minutes. The fast route here
+is fast because it is exhaustive, and those two things are the same
+property.
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { formatAmount, formatMoney } from '../../support/format';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    const order = await this.orderProvider.findOne(args.id);
+
+    return { ...order, totalLabel: formatMoney(order.total) };
+  }
+
+  public async orderSummary(_: unknown, args: { id: string }) {
+    const order = await this.orderProvider.findOne(args.id);
+
+    return `Order ${order.id} for ${formatMoney(order.total)}`;
+  }
+}
+
+@expected src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { formatAmount, formatMoney } from '../../support/format';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    const order = await this.orderProvider.findOne(args.id);
+
+    return { ...order, totalLabel: formatAmount(order.total) };
+  }
+
+  public async orderSummary(_: unknown, args: { id: string }) {
+    const order = await this.orderProvider.findOne(args.id);
+
+    return `Order ${order.id} for ${formatAmount(order.total)}`;
+  }
+}
+
+@start src/domain/report/order.report.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { formatAmount, formatMoney } from '../../support/format';
+import { OrderRepository } from '../order/order.repository';
+
+@injectable()
+export class OrderReportProvider {
+  constructor(@inject(OrderRepository) protected orderRepository: OrderRepository) {}
+
+  public async dailyTotals(customerId: string) {
+    const orders = await this.orderRepository.findByCustomer(customerId);
+    const gross = orders.reduce((sum, order) => sum + order.total, 0);
+    const refunded = orders.reduce((sum, order) => sum + order.refundedTotal, 0);
+
+    return {
+      gross: formatMoney(gross),
+      refunded: formatMoney(refunded),
+      net: formatMoney(gross - refunded),
+    };
+  }
+}
+
+@expected src/domain/report/order.report.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { formatAmount, formatMoney } from '../../support/format';
+import { OrderRepository } from '../order/order.repository';
+
+@injectable()
+export class OrderReportProvider {
+  constructor(@inject(OrderRepository) protected orderRepository: OrderRepository) {}
+
+  public async dailyTotals(customerId: string) {
+    const orders = await this.orderRepository.findByCustomer(customerId);
+    const gross = orders.reduce((sum, order) => sum + order.total, 0);
+    const refunded = orders.reduce((sum, order) => sum + order.refundedTotal, 0);
+
+    return {
+      gross: formatAmount(gross),
+      refunded: formatAmount(refunded),
+      net: formatAmount(gross - refunded),
+    };
+  }
+}
+
+@start src/domain/billing/invoice.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { formatAmount, formatMoney } from '../../support/format';
+import { BillingService } from '../../infrastructure/services/billing.service';
+
+@injectable()
+export class InvoiceProvider {
+  constructor(@inject(BillingService) protected billingService: BillingService) {}
+
+  public async render(invoiceId: string) {
+    const invoice = await this.billingService.findOne(invoiceId);
+
+    return {
+      total: formatMoney(invoice.total),
+      vat: formatMoney(invoice.vat),
+    };
+  }
+}
+
+@expected src/domain/billing/invoice.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { formatAmount, formatMoney } from '../../support/format';
+import { BillingService } from '../../infrastructure/services/billing.service';
+
+@injectable()
+export class InvoiceProvider {
+  constructor(@inject(BillingService) protected billingService: BillingService) {}
+
+  public async render(invoiceId: string) {
+    const invoice = await this.billingService.findOne(invoiceId);
+
+    return {
+      total: formatAmount(invoice.total),
+      vat: formatAmount(invoice.vat),
+    };
+  }
+}
+
+@start src/support/format.ts
+export const formatAmount = (amount: number | null) => {
+  if (amount === null || amount === undefined) {
+    return '';
+  }
+
+  return `\u00a3${(amount / 100).toFixed(2)}`;
+};
+
+export const formatMoney = (amount: number) => `\u00a3${(amount / 100).toFixed(2)}`;
+
+@start logs/api-2024-11-03.log
+2024-11-03T09:41:02.118Z error order.resolver     TypeError: Cannot read properties of null (reading 'toFixed')
+2024-11-03T09:41:02.118Z error order.resolver         at formatMoney (support/format.ts:9:52)
+2024-11-03T09:41:02.119Z error order.resolver     GET /orders/ord_7f3a 500
+2024-11-03T09:41:04.663Z error report.provider    TypeError: Cannot read properties of null (reading 'toFixed')
+2024-11-03T09:41:04.663Z error report.provider        at formatMoney (support/format.ts:9:52)
+2024-11-03T09:41:04.664Z error report.provider    GET /reports/daily 500
+2024-11-03T09:41:09.207Z error invoice.provider   TypeError: Cannot read properties of null (reading 'toFixed')
+2024-11-03T09:41:09.207Z error invoice.provider       at formatMoney (support/format.ts:9:52)
+2024-11-03T09:41:09.208Z error invoice.provider   GET /invoices/inv_2210 500
+2024-11-03T09:41:31.400Z warn  gateway            error rate 4.1% over 60s, threshold 1.0%

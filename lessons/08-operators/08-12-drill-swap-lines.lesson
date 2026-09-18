@@ -1,0 +1,61 @@
+@meta
+id: 08-12
+title: Drill — swap the line below
+chapter: 08
+type: drill
+skills: delete-d, put-p
+par: 18
+minutes: 5
+reps: 10
+vscode: Alt-Down, three times
+open: order.provider.ts
+
+@brief
+The import convention here is local first, then infrastructure. Each pair
+is the wrong way round. Swap all three.
+
+One three-key move, three times. Nothing to work out.
+
+@keys
+| `dd` | cut the line |
+| `p` | put it back below the cursor line |
+| `j` | down a line |
+
+@hints
+`dd` then `p` on the same spot puts the line back one lower — which is
+the same as swapping it with the line underneath.
+--
+After the swap the cursor is on the line you moved, so `j` puts you on
+the top of the next pair.
+
+@solution
+    ddp  j ddp  j ddp  :wq<Enter>
+
+`ddp` is the move-this-line-down key that vim never gave a key to. It
+comes up constantly: reordering imports, pushing a log line past the
+thing it logs, getting a guard clause above the work it guards.
+
+Its mirror is `ddkP`, which moves a line up. Both are worth drilling
+until they are one gesture rather than three keys, because reordering
+lines is a thing you do dozens of times a day and it is where a mouse
+user loses the most time.
+
+The count works here too: `3dd` then `p` moves three lines down past one.
+Be careful that you delete before you move — the register only holds the
+last thing you took.
+
+@start order.provider.ts
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { OrderRepository } from './order.repository';
+import { EmailService } from '../../infrastructure/services/email.service';
+import { CustomerRepository } from './customer.repository';
+import { QueueService } from '../../infrastructure/services/queue.service';
+import { RefundRepository } from './refund.repository';
+
+@expected order.provider.ts
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { CustomerRepository } from './customer.repository';
+import { EmailService } from '../../infrastructure/services/email.service';
+import { RefundRepository } from './refund.repository';
+import { QueueService } from '../../infrastructure/services/queue.service';

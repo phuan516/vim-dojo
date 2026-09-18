@@ -1,0 +1,59 @@
+@meta
+id: 21-13
+title: Drill — clear, record, recurse
+chapter: 21
+type: drill
+skills: macro-recursive
+par: 40
+minutes: 5
+reps: 6
+vscode: six cursors, type, End, paste
+open: status-labels.ts
+
+@brief
+Six status names need to become entries whose value is the name
+itself:
+
+    PENDING,    →    PENDING: 'PENDING',
+
+Then `};`. Empty the register, record with a guard first and `@a`
+last, play once. Six times, until `qaq` is automatic.
+
+@keys
+| `qaq` | empty register `a` |
+| `^f,` | the guard: no comma on `};` |
+| `@a` | last key of the recording, and then the run |
+
+@hints
+`^f,` then `s: '` `Esc`, `^yiw`, `$p`, `a',` `Esc`, `j`, `@a`, `q`.
+The yank comes after the `s`, because `s` would overwrite it.
+--
+Play it with a single `@a`. If you are pressing it more than once, the
+`@a` did not make it into the recording.
+
+@solution
+    j  qaq   qa ^f, s: ' <Esc> ^yiw $p a', <Esc> j @a q   @a   :wq<Enter>
+
+Thirty-four keystrokes. The drill is the ritual: `qaq`, `qa`, guard, edit,
+step, `@a`, `q`, `@a`. Skip the first `qaq` once and you will not skip
+it again.
+
+@start status-labels.ts
+export const statusLabels = {
+  PENDING,
+  CONFIRMED,
+  PAID,
+  SHIPPED,
+  CANCELLED,
+  REFUNDED,
+};
+
+@expected status-labels.ts
+export const statusLabels = {
+  PENDING: 'PENDING',
+  CONFIRMED: 'CONFIRMED',
+  PAID: 'PAID',
+  SHIPPED: 'SHIPPED',
+  CANCELLED: 'CANCELLED',
+  REFUNDED: 'REFUNDED',
+};

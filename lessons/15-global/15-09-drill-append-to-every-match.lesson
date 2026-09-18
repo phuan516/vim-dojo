@@ -1,0 +1,74 @@
+@meta
+id: 15-09
+title: Drill — append to every match
+chapter: 15
+type: drill
+skills: global-normal
+par: 30
+minutes: 4
+reps: 8
+vscode: click at the end of each import, type a semicolon, eight times
+open: registry.ts
+
+@brief
+Eight times: the file came out of a code generator that forgets
+semicolons on `import` lines and nowhere else. Put one on the end of
+every import. The `container.register` lines already have theirs.
+
+One `:g`, one `normal`, one `A`.
+
+@keys
+| `:g/pattern/normal A;` | on every matching line, append a semicolon |
+
+@hints
+Anchor the pattern so it only marks lines that start with `import`.
+--
+`:g/^import/normal A;` and Enter.
+
+@solution
+    :g/^import/normal A;<Enter>  :wq<Enter>
+
+Twenty-five keystrokes. `A` is the one insert command that does not care
+where the cursor starts, which is why it pairs so well with `:g`: the
+left-edge cursor is no obstacle when the edit is at the right edge.
+
+By rep eight the shape `:g/.../normal A...` should be one gesture. It
+is the everyday form for "add something to the end of every line that
+looks like this", and you will type it more often than any other
+`:normal`.
+
+@start registry.ts
+import { container } from 'tsyringe'
+import { OrderRepository } from '../domain/order/order.repository'
+import { OrderProvider } from '../domain/order/order.provider'
+import { OrderResolver } from '../domain/order/order.resolver'
+import { CustomerRepository } from '../domain/customer/customer.repository'
+import { CustomerProvider } from '../domain/customer/customer.provider'
+import { PaymentService } from '../infrastructure/services/payment.service'
+import { EmailService } from '../infrastructure/services/email.service'
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('CustomerRepository', { useClass: CustomerRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('PaymentService', { useClass: PaymentService });
+container.register('EmailService', { useClass: EmailService });
+container.register('OrderResolver', { useClass: OrderResolver });
+
+@expected registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderResolver } from '../domain/order/order.resolver';
+import { CustomerRepository } from '../domain/customer/customer.repository';
+import { CustomerProvider } from '../domain/customer/customer.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+import { EmailService } from '../infrastructure/services/email.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('CustomerRepository', { useClass: CustomerRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('PaymentService', { useClass: PaymentService });
+container.register('EmailService', { useClass: EmailService });
+container.register('OrderResolver', { useClass: OrderResolver });

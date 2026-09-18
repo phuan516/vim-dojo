@@ -1,0 +1,157 @@
+@meta
+id: 11-16
+title: Scenario — the payout export
+chapter: 11
+type: scenario
+skills: dot-repeat, dot-design, cgn, amp-repeat-sub
+par: 104
+minutes: 14
+vscode: three tabs, one replace-all you would have to check by hand
+open: payout.provider.ts payout.constants.ts payout.test.ts
+
+@brief
+A ticket, not an exercise.
+
+    PAY-233  The payouts importer was rewritten over the weekend. Three
+             things in our code no longer match what it accepts, and the
+             batch run is at 17:00.
+
+  1. payout.provider.ts — the importer calls the column `customerId`.
+     We call it `custId` everywhere in this file. Rename all six.
+
+  2. payout.constants.ts — the batch string is pipe-separated and the
+     importer wants commas. While you are in there, the file came out of
+     a converter with no semicolons on any of its four lines. Add them.
+
+  3. payout.test.ts — the ledger is in euros now, so the five assertions
+     expect `'EUR'`. The comments on those lines are a record of what the
+     refunds were raised in and do not change. Neither does anything else
+     in the file.
+
+Everything here is a repeat of something you did earlier in the chapter.
+The judgement being tested is which repeat, and noticing that the third
+file is the one where the obvious tool is the wrong one.
+
+Write all three and quit in one go when you are done.
+
+@keys
+| `:w` then `:bn` | write this file, move to the next one |
+| `:ls` | which files are open |
+| `*` `cgn` `.` | rename every match of the word under the cursor |
+| `f|` `r,` then `;.` | walk a line replacing a separator |
+| `A` `;` `Esc` then `j.` | a semicolon on the end of every line |
+| `:s/x/y/` then `&` | a substitute, then the same substitute here |
+| `:wqa` | write every file and quit. `:wq` will refuse — there are more files |
+
+@hints
+Do the files in the order they are open and finish each one before you
+move. Vim will not let you leave a modified file behind without a `:w`.
+--
+The rename is `*` and `cgn` and then dot until the matches run out. The
+constants file is two separate repeats: one that walks along a line and
+one that walks down the file.
+--
+In the test file the thing you are matching has quotes around it, and the
+same three letters appear in the comment on every line. That rules out
+searching for the word — state the pattern once with a substitute and
+repeat it down the file with `&`.
+--
+`:wqa` at the end, not `:wq`. With three files open, `:wq` writes the
+first one and then tells you there are more files to edit.
+
+@solution
+**payout.provider.ts** — `jw` onto the first `custId`, then `*`, then
+`cgncustomerId` and `Esc`, then `.` five times. `:w` and `:bn`.
+
+**payout.constants.ts** — `f|r,` and then `;.` five times takes the
+separators. Then `A;` and `Esc` on the first line and `j.` three times
+for the rest. `:w` and `:bn`.
+
+**payout.test.ts** — `2j` down to the first assertion,
+`:s/'GBP'/'EUR'/` and Enter, then `j&` four times. `:wqa`.
+
+Three files, three repeats, and the only thing you typed more than once
+was `j`.
+
+The third file is the decision. `*` on `GBP` would have matched the
+comments too — you would have been pressing `n` and `.` alternately down
+ten matches and getting it wrong on one of them. The quotes are the part
+of the pattern that separates the code from the prose, and only a
+substitute can say them. Recognising which of the two repeats fits the
+pattern in front of you is the actual skill this chapter has been
+teaching; the keys took ten minutes to learn on day one.
+
+One habit to take into chapter 12: every one of these started by naming
+the thing rather than by finding it on screen. `*` names a word, `f|`
+names a character, `:s` names a pattern. Once it is named, repeating is
+free.
+
+@start payout.provider.ts
+export type PayoutArgs = {
+  custId: string;
+  amountPence: number;
+};
+
+export async function createPayout(args: PayoutArgs) {
+  const customer = await customerRepository.findOne({ where: { id: args.custId } });
+
+  if (!customer) {
+    throw exception('CUSTOMER_NOT_FOUND');
+  }
+
+  logger.info('payout requested', { custId: args.custId });
+
+  return ledger.credit({ custId: args.custId, amount: args.amountPence });
+}
+
+@expected payout.provider.ts
+export type PayoutArgs = {
+  customerId: string;
+  amountPence: number;
+};
+
+export async function createPayout(args: PayoutArgs) {
+  const customer = await customerRepository.findOne({ where: { id: args.customerId } });
+
+  if (!customer) {
+    throw exception('CUSTOMER_NOT_FOUND');
+  }
+
+  logger.info('payout requested', { customerId: args.customerId });
+
+  return ledger.credit({ customerId: args.customerId, amount: args.amountPence });
+}
+
+@start payout.constants.ts
+export const PAYOUT_BATCH = 'PAY-2201|PAY-2202|PAY-2203|PAY-2204|PAY-2205|PAY-2206|PAY-2207'
+export const PAYOUT_CURRENCY = 'EUR'
+export const PAYOUT_RETRY_LIMIT = 3
+export const PAYOUT_CUTOFF_HOUR = 17
+
+@expected payout.constants.ts
+export const PAYOUT_BATCH = 'PAY-2201,PAY-2202,PAY-2203,PAY-2204,PAY-2205,PAY-2206,PAY-2207';
+export const PAYOUT_CURRENCY = 'EUR';
+export const PAYOUT_RETRY_LIMIT = 3;
+export const PAYOUT_CUTOFF_HOUR = 17;
+
+@start payout.test.ts
+describe('payout currency', () => {
+  it('matches the ledger', () => {
+    expect(payouts['PAY-2201'].currency).toEqual('GBP'); // raised as GBP in 2023
+    expect(payouts['PAY-2202'].currency).toEqual('GBP'); // raised as GBP in 2023
+    expect(payouts['PAY-2203'].currency).toEqual('GBP'); // GBP, card payment
+    expect(payouts['PAY-2204'].currency).toEqual('GBP'); // GBP, bank transfer
+    expect(payouts['PAY-2205'].currency).toEqual('GBP'); // GBP, manual adjustment
+  });
+});
+
+@expected payout.test.ts
+describe('payout currency', () => {
+  it('matches the ledger', () => {
+    expect(payouts['PAY-2201'].currency).toEqual('EUR'); // raised as GBP in 2023
+    expect(payouts['PAY-2202'].currency).toEqual('EUR'); // raised as GBP in 2023
+    expect(payouts['PAY-2203'].currency).toEqual('EUR'); // GBP, card payment
+    expect(payouts['PAY-2204'].currency).toEqual('EUR'); // GBP, bank transfer
+    expect(payouts['PAY-2205'].currency).toEqual('EUR'); // GBP, manual adjustment
+  });
+});

@@ -1,0 +1,103 @@
+@meta
+id: 20-06
+title: Capital letters append
+chapter: 20
+type: lesson
+skills: register-append
+par: 44
+minutes: 6
+vscode: cut, scroll, paste, scroll, cut, scroll, paste, scroll
+open: CHANGELOG.md
+
+@brief
+A lowercase register letter replaces what was there. The same letter in
+uppercase *appends* to it. `"ayy` starts a collection; `"Ayy` adds the
+next line to the end of it; `"ap` puts the whole collection out at once,
+in the order you gathered it. That turns "move six lines from all over
+the file to one place" from six round trips into one pass and one put.
+
+The Unreleased section of this changelog mixes teams. Finance only
+read the Payments section, so every `payments:` entry has to move out
+of Unreleased and into Payments, below the entry already there, in the
+same order they appear now. Move them; do not leave copies behind.
+
+@keys
+| `"add` | delete the line into `a`, replacing what was there |
+| `"Add` | delete the line and append it to `a` |
+| `"Ayy` | the same with yank, when the originals stay |
+| `"ap` | put the whole collection |
+| `n` | the next match, so you never scroll to find the next one |
+
+@hints
+Search for `payments:` and delete each match into the register with a
+capital letter. The colon keeps the search away from the Payments
+heading.
+--
+Because `a` starts empty, `"Add` works from the first line onward. In a
+long session you would start with `"add` to throw away whatever `a` had
+before.
+--
+`/payments:` Enter, `"Add`, then `n` `"Add` three more times. You end up
+on the blank line above the Payments heading. `}` `}` goes to the blank
+line after its one entry; `"aP` puts the four lines above that.
+
+@solution
+    /payments:<Enter> "Add n"Add n"Add n"Add  }} "aP  :wq<Enter>
+
+The search does the finding, the capital letter does the collecting,
+and there is exactly one put. Compare that to moving each line
+separately: four searches, four deletes, four trips to the destination
+and back, and the order of the trips has to be right or the entries
+come out reversed.
+
+Appending works with any register operation. `"Ayiw` adds a word to a
+collection of words, and appending characterwise text to a linewise
+register keeps the register linewise, which is usually what you want. It
+is also the trick for editing a macro in chapter 21: put the register
+out, fix the keystrokes, yank it back in.
+
+@start CHANGELOG.md
+# Changelog
+
+## Unreleased
+
+- orders: reject cancellation of shipped orders
+- payments: retry a refund once on timeout
+- customers: add `email` to the customer entity
+- payments: surface `REFUND_FAILED` with the gateway response
+- orders: record `cancellationReason` on the order
+- payments: capture instead of authorise for card payments
+- customers: validate the email format on create
+- payments: drop the legacy `/v1/captures` call
+
+## Payments
+
+- payments: gateway client with retries
+
+## 1.4.0
+
+- orders: initial order provider
+- customers: initial customer provider
+
+@expected CHANGELOG.md
+# Changelog
+
+## Unreleased
+
+- orders: reject cancellation of shipped orders
+- customers: add `email` to the customer entity
+- orders: record `cancellationReason` on the order
+- customers: validate the email format on create
+
+## Payments
+
+- payments: gateway client with retries
+- payments: retry a refund once on timeout
+- payments: surface `REFUND_FAILED` with the gateway response
+- payments: capture instead of authorise for card payments
+- payments: drop the legacy `/v1/captures` call
+
+## 1.4.0
+
+- orders: initial order provider
+- customers: initial customer provider

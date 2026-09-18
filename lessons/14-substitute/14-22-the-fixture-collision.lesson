@@ -1,0 +1,230 @@
+@meta
+id: 14-22
+title: Scenario — the fixture collision
+chapter: 14
+type: scenario
+skills: sub-backref, sub-expression, sub-case, sub-range, sub-confirm, regex-zs-ze, regex-verymagic
+par: 185
+minutes: 16
+vscode: a regex replace you would test three times, a calculator, and a lot of Shift-F3
+open: refund.test.ts fixtures.ts refund.constants.ts seed.sql
+
+@brief
+A ticket, not an exercise.
+
+    PAY-540  Refund tests are flaky since the production seed was
+             loaded into the test database. Three things to fix
+             before the release branch cuts at 17:00.
+
+Four files, open as four buffers. `:bn` moves to the next. Write each
+file with `:w` before you leave it and finish with `:wqa`.
+
+  1. refund.test.ts — the assertion library is changing. Every
+     `expect(a).toEqual(b);` becomes `assert.equal(a, b);`. The
+     `rejects.toThrow` and `toHaveBeenCalled` assertions have no
+     equivalent yet and stay exactly as they are.
+
+  2. fixtures.ts — the fixture order ids collide with the production
+     seed, which uses `ord_9101` upwards. Add 1000 to every order id
+     in the file. Customer ids and refund ids are not in the seed and
+     do not move.
+
+  3. refund.constants.ts — the tests already use the upper-case
+     status codes, and this file still has them lower case. Upper-case
+     every status code: in the union, the constants, and the keys of
+     the messages map. The message *text* is read by customers and
+     stays as written.
+
+  4. seed.sql — the production seed, open so you can see the
+     collision. It is not yours to edit.
+
+Every tool is from this chapter. Which one, per file, is the job.
+
+@keys
+| `\v…\((.*)\)…\((.*)\)…` | groups around the two arguments, literal parens escaped |
+| `\1` `\2` | the groups, in the replacement |
+| `\zs` | start the match after the context |
+| `\=submatch(0)+1000` | the match as a number, plus a thousand |
+| `\U\1` and `\U&` | a group or the match, upper-cased |
+| `:w` then `:bn` | save, next buffer |
+| `:wqa` | write every changed file and quit |
+
+@hints
+Test file: `expect\((.*)\)\.toEqual\((.*)\);` captures the two
+halves. The `toThrow` lines do not contain `toEqual` so the pattern
+cannot touch them. Write `assert.equal(\1, \2);` as the replacement.
+--
+Fixtures: `ord_\zs\d+` makes the digits the match and `ord_` the
+context, so `\=submatch(0)+1000` only sees the number. The `g` flag
+matters — one line holds four ids.
+--
+Constants: the codes are the only single-quoted single words in the
+file, so `'(\w+)'` with `'\U\1'` upper-cases them and cannot match a
+sentence. The map keys are a second, smaller substitute: a word at the
+start of an indented line, followed by a colon.
+--
+If any of the three patterns worries you, the `n` flag will tell you
+how many hits it has before it changes anything, and the `c` flag
+will show you each one.
+
+@solution
+**refund.test.ts** —
+`:%s/\vexpect\((.*)\)\.toEqual\((.*)\);/assert.equal(\1, \2);/`.
+Six lines restructured, the `toThrow` and `toHaveBeenCalled` lines
+untouched because the pattern names `toEqual`. `:w`, `:bn`.
+
+**fixtures.ts** — `:%s/\vord_\zs\d+/\=submatch(0)+1000/g`. Eight
+ids shifted; the `cus_` and `rfd_` ids are not `ord_` and were never
+in play. `:w`, `:bn`.
+
+**refund.constants.ts** — two commands: `:%s/\v'(\w+)'/'\U\1'/g` for
+the quoted codes, then `:%s/\v^  \zs\w+\ze:/\U&/` for the map keys.
+The messages are multi-word strings and match neither. `:wqa`.
+
+**seed.sql** — nothing. `:wqa` writes only what changed.
+
+Around a hundred and seventy keystrokes across four files, and not one
+of them was a character of the result typed by hand. Everything was
+described: the shape of an assertion, the digits after `ord_`, a
+single word in quotes.
+
+This is what the chapter was for. A substitute is a small program:
+a pattern that picks the text apart, a replacement that puts it back
+together, and a range and flags that say where and how carefully.
+Backreferences, expressions and case modifiers are what give the
+replacement side something to say. The judgement is in the pattern —
+`toEqual` rather than `expect`, `ord_` rather than `\d+`, a single
+quoted word rather than any quoted string — and in knowing, before
+you press Enter on `%`, that you have seen or counted every hit.
+Chapter 15 hands you `:g`, which runs a command on every line a
+pattern matches, and a substitute is the command it most often runs.
+
+@start refund.test.ts
+import { RefundProvider } from './refund.provider';
+import { FIXTURES } from './fixtures';
+
+describe('RefundProvider', () => {
+  it('approves a pending refund', async () => {
+    const refund = await provider.approve(FIXTURES.pending.id);
+
+    expect(refund.status).toEqual('APPROVED');
+    expect(refund.approvedBy).toEqual('reviewer_1');
+  });
+
+  it('settles an approved refund', async () => {
+    const refund = await provider.settle(FIXTURES.approved.id);
+
+    expect(refund.status).toEqual('SETTLED');
+    expect(refund.settledAmount).toEqual(1999);
+    expect(paymentService.refund).toHaveBeenCalledWith(FIXTURES.approved.orderId, 1999);
+  });
+
+  it('lists refunds for an order', async () => {
+    const refunds = await provider.findByOrder(FIXTURES.approved.orderId);
+
+    expect(refunds.map((refund) => refund.id)).toEqual(['rfd_0301', 'rfd_0302']);
+    expect(refunds.length).toEqual(2);
+  });
+
+  it('refuses to settle a rejected refund', async () => {
+    await expect(provider.settle(FIXTURES.rejected.id)).rejects.toThrow('REFUND_NOT_APPROVED');
+  });
+
+  it('refuses an unknown refund', async () => {
+    await expect(provider.approve('rfd_0000')).rejects.toThrow('REFUND_NOT_FOUND');
+    expect(paymentService.refund).not.toHaveBeenCalled();
+  });
+});
+
+@expected refund.test.ts
+import { RefundProvider } from './refund.provider';
+import { FIXTURES } from './fixtures';
+
+describe('RefundProvider', () => {
+  it('approves a pending refund', async () => {
+    const refund = await provider.approve(FIXTURES.pending.id);
+
+    assert.equal(refund.status, 'APPROVED');
+    assert.equal(refund.approvedBy, 'reviewer_1');
+  });
+
+  it('settles an approved refund', async () => {
+    const refund = await provider.settle(FIXTURES.approved.id);
+
+    assert.equal(refund.status, 'SETTLED');
+    assert.equal(refund.settledAmount, 1999);
+    expect(paymentService.refund).toHaveBeenCalledWith(FIXTURES.approved.orderId, 1999);
+  });
+
+  it('lists refunds for an order', async () => {
+    const refunds = await provider.findByOrder(FIXTURES.approved.orderId);
+
+    assert.equal(refunds.map((refund) => refund.id), ['rfd_0301', 'rfd_0302']);
+    assert.equal(refunds.length, 2);
+  });
+
+  it('refuses to settle a rejected refund', async () => {
+    await expect(provider.settle(FIXTURES.rejected.id)).rejects.toThrow('REFUND_NOT_APPROVED');
+  });
+
+  it('refuses an unknown refund', async () => {
+    await expect(provider.approve('rfd_0000')).rejects.toThrow('REFUND_NOT_FOUND');
+    expect(paymentService.refund).not.toHaveBeenCalled();
+  });
+});
+
+@start fixtures.ts
+export const FIXTURES = {
+  pending: { id: 'rfd_0301', orderId: 'ord_9101', customerId: 'cus_9101', amount: 1999 },
+  approved: { id: 'rfd_0302', orderId: 'ord_9104', customerId: 'cus_9104', amount: 1999 },
+  rejected: { id: 'rfd_0303', orderId: 'ord_9112', customerId: 'cus_9112', amount: 4500 },
+  settled: { id: 'rfd_0304', orderId: 'ord_9118', customerId: 'cus_9118', amount: 750 },
+};
+
+export const ORDER_IDS = ['ord_9101', 'ord_9104', 'ord_9112', 'ord_9118'];
+
+@expected fixtures.ts
+export const FIXTURES = {
+  pending: { id: 'rfd_0301', orderId: 'ord_10101', customerId: 'cus_9101', amount: 1999 },
+  approved: { id: 'rfd_0302', orderId: 'ord_10104', customerId: 'cus_9104', amount: 1999 },
+  rejected: { id: 'rfd_0303', orderId: 'ord_10112', customerId: 'cus_9112', amount: 4500 },
+  settled: { id: 'rfd_0304', orderId: 'ord_10118', customerId: 'cus_9118', amount: 750 },
+};
+
+export const ORDER_IDS = ['ord_10101', 'ord_10104', 'ord_10112', 'ord_10118'];
+
+@start refund.constants.ts
+export type RefundStatus = 'pending' | 'approved' | 'rejected' | 'settled';
+
+export const INITIAL_STATUS: RefundStatus = 'pending';
+export const TERMINAL_STATUSES: RefundStatus[] = ['rejected', 'settled'];
+export const REVIEW_REQUIRED: RefundStatus[] = ['pending'];
+
+export const STATUS_MESSAGES: Record<RefundStatus, string> = {
+  pending: 'Your refund is pending review',
+  approved: 'Your refund has been approved',
+  rejected: 'We could not approve this refund',
+  settled: 'Your refund has been settled',
+};
+
+@expected refund.constants.ts
+export type RefundStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SETTLED';
+
+export const INITIAL_STATUS: RefundStatus = 'PENDING';
+export const TERMINAL_STATUSES: RefundStatus[] = ['REJECTED', 'SETTLED'];
+export const REVIEW_REQUIRED: RefundStatus[] = ['PENDING'];
+
+export const STATUS_MESSAGES: Record<RefundStatus, string> = {
+  PENDING: 'Your refund is pending review',
+  APPROVED: 'Your refund has been approved',
+  REJECTED: 'We could not approve this refund',
+  SETTLED: 'Your refund has been settled',
+};
+
+@start seed.sql
+-- Production seed. Loaded into every environment, including test.
+INSERT INTO orders (id, customer_id, status, total) VALUES
+  ('ord_9101', 'cus_9101', 'PAID', 1999),
+  ('ord_9104', 'cus_9104', 'PAID', 1999),
+  ('ord_9112', 'cus_9112', 'SHIPPED', 4500),
+  ('ord_9118', 'cus_9118', 'CANCELLED', 750);

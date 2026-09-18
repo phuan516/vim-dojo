@@ -1,0 +1,53 @@
+@meta
+id: 26-03
+title: Drill — range, bang, command
+chapter: 26
+type: drill
+skills: filter-bang
+par: 17
+minutes: 5
+reps: 8
+vscode: nothing that is one command
+open: zones.txt
+
+@brief
+Eight times: sort lines 2 to 6 through the shell's `sort`, leave the
+comment on line 1 where it is, save, quit.
+
+Nothing to work out. What you are drilling is that `range` `!` `command`
+comes out of your fingers as one movement instead of three decisions.
+
+@keys
+| `:2,6!sort` | lines 2 to 6, through `sort` |
+| `u` | undo the whole filter in one step |
+
+@hints
+The range goes before the `!`, the command after it. No space is needed
+anywhere, though one after the `!` is harmless.
+--
+`:2,6!sort` and Enter.
+
+@solution
+    :2,6!sort<Enter>  :wq<Enter>
+
+By rep eight the interesting part should be the command, not the syntax
+around it. That is the point: once the shape is automatic you stop
+thinking "can vim do this" and start thinking "what would I type in a
+terminal", which is a much better question, because the answer is almost
+always yes.
+
+@start zones.txt
+# shipping zones, keep sorted
+zone-east
+zone-north
+zone-west
+zone-central
+zone-south
+
+@expected zones.txt
+# shipping zones, keep sorted
+zone-central
+zone-east
+zone-north
+zone-south
+zone-west

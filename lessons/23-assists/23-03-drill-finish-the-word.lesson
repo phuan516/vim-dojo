@@ -1,0 +1,48 @@
+@meta
+id: 23-03
+title: Drill — start the word, let vim finish it
+chapter: 23
+type: drill
+skills: complete-keyword
+par: 25
+minutes: 4
+reps: 8
+vscode: type three letters, press Tab
+open: index.ts
+
+@brief
+Eight times: add `refundOrderOutsideWindow` to the end of the
+`commands` object, after `cancelOrder`. Type no more than the first
+seven letters of it.
+
+@keys
+| `Ctrl-N` | complete from the buffer |
+| `ea` | append after the end of the current word |
+
+@hints
+`G$2b` lands on `cancelOrder`. `ea` opens insert mode right after it.
+--
+Type `, refundO` and press `Ctrl-N`. The rest of the name is already
+in the import above.
+
+@solution
+    G$2b ea, refundO<Ctrl-N><Esc> :wq<Enter>
+
+Twenty-one keystrokes for a twenty-four letter identifier. The drill is
+about not stopping to look: type enough letters to be unique, press
+`Ctrl-N`, keep going. If the wrong word appears, `Ctrl-N` again cycles;
+if nothing appears, you have a typo in the prefix.
+
+@start index.ts
+import { placeOrder } from './place-order';
+import { cancelOrder } from './cancel-order';
+import { refundOrderOutsideWindow } from './refund-order-outside-window';
+
+export const commands = { placeOrder, cancelOrder };
+
+@expected index.ts
+import { placeOrder } from './place-order';
+import { cancelOrder } from './cancel-order';
+import { refundOrderOutsideWindow } from './refund-order-outside-window';
+
+export const commands = { placeOrder, cancelOrder, refundOrderOutsideWindow };

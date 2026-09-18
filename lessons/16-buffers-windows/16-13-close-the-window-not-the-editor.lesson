@@ -1,0 +1,162 @@
+@meta
+id: 16-13
+title: Close the window, not the editor
+chapter: 16
+type: lesson
+skills: window-nav, split-window
+par: 90
+minutes: 6
+vscode: close the split, then close the other split, then find the file you started in
+open: order.provider.ts
+
+@brief
+Windows open cheaply, so they have to close cheaply too, and the
+important thing to know is what `:q` means once there is more than one.
+It closes the current window. Vim stays open with the rest. Only when
+the last window goes does vim exit. That is the same command you have
+been using to leave since 02-01, with the same meaning: "I am done with
+this view."
+
+`Ctrl-W c` closes the current window without writing anything. `Ctrl-W
+q` is `:q` as a chord. And the one you will use most: `Ctrl-W o`, or
+`:only`, closes every window except the current one. Two reference
+files open beside the code, finished looking, one chord, back to the
+code alone.
+
+The provider has two typos that the two reference files settle. `ship`
+compares the status to `'PENDNG'`, and `order.entity.ts` says the
+value is `'PENDING'`. It also throws `ORDER_ALREADY_SHIPED`, and
+`errors.json` says the code is `ORDER_ALREADY_SHIPPED`. Open both
+references in windows, fix the provider, and leave. Neither reference
+changes.
+
+@keys
+| `:q` | close this window; vim exits only when it was the last one |
+| `Ctrl-W c` | close this window |
+| `Ctrl-W q` | `:q` as a chord |
+| `Ctrl-W o` `:only` | close every other window |
+| `:qa` | close every window and exit, refusing if anything is unsaved |
+
+@hints
+`:sp errors.json` then `:vs order.entity.ts` gives three windows: two
+references on top, the provider below. `Ctrl-W j` gets you back down to
+it.
+--
+`Ctrl-W o` from the provider window closes the other two. Now the fixes:
+`/PENDNG`, `cw`, `PENDING`; `/SHIPED`, `cw`, `SHIPPED`.
+--
+Single window, single file: `:wq` is enough. Had you left the
+references open, `:wq` would have closed only the provider's window
+and vim would still be running; `:wqa` or `:qa` is the reflex for
+that.
+
+@solution
+    :sp errors.json<Enter>  :vs order.entity.ts<Enter>  Ctrl-W j  Ctrl-W o
+    /PENDNG<Enter>  cw PENDING <Esc>  /SHIPED<Enter>  cw SHIPPED <Esc>  :wq<Enter>
+
+Eighty keystrokes, of which the two references cost forty and closing
+them cost two.
+
+`:q` closing a window rather than vim is the thing that surprises
+people the first time. It is also the reason `:qa` exists. A tidy exit
+from a many-window session is `:wqa` if everything should be written,
+`:qa` if you want vim to tell you what is not, and `:qa!` if you mean
+it. `Ctrl-W o` before any of those is a good habit: one window, one
+buffer, and you can see exactly what `:wq` is about to do.
+
+A window closing does not remove anything from the buffer list. The
+entity and the errors file are still there for `:b` after `Ctrl-W o`,
+which is often what you want: out of sight, one fragment away.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDNG') {
+      throw exception('ORDER_ALREADY_SHIPED');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+}
+
+@start order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}

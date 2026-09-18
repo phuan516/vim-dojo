@@ -1,0 +1,159 @@
+@meta
+id: 23-02
+title: Direction decides which word you get
+chapter: 23
+type: lesson
+skills: complete-keyword
+par: 69
+minutes: 5
+vscode: IntelliSense ranks candidates for you
+open: order.provider.ts
+
+@brief
+`retryPayment` stops at a bare `return`. It should charge the card again:
+
+    return this.paymentService.charge(order.id, order.total);
+
+Two properties in this file start with `paymentS`: `paymentService`,
+used a few lines above the cursor, and `paymentSchedule`, used a few
+lines below. Completion finds them in a definite order, and the order
+depends on which key you press. Get the right one without cycling.
+
+@keys
+| `Ctrl-N` | complete, scanning forward from the cursor |
+| `Ctrl-P` | complete, scanning backward from the cursor |
+| `Ctrl-N` / `Ctrl-P` in the menu | next / previous candidate |
+
+@hints
+`/return$` then `A this.paymentS`. Before pressing a completion key,
+think about which of the two candidates is nearer in which direction.
+--
+`Ctrl-N` scans forward and finds `paymentSchedule` first, because it
+is below the cursor. `Ctrl-P` scans backward and finds `paymentService`
+first.
+--
+`A this.paymentS` `Ctrl-P` `.charge(order.id, order.total);` `Esc`.
+Typing the dot accepts the candidate.
+
+@solution
+    /return$<Enter>
+    A this.paymentS<Ctrl-P>.charge(order.id, order.total);<Esc>
+    :wq<Enter>
+
+`Ctrl-N` and `Ctrl-P` build the same candidate list; they differ only
+in where they start. Forward from the cursor, the first hit is the
+schedule; backward, it is the service. When the word you want is the
+one you used most recently — which is most of the time, because code
+is written top to bottom — `Ctrl-P` gets it in one press.
+
+If you pressed `Ctrl-N` and got the wrong one, a second `Ctrl-N` moves
+to the next candidate, and `Ctrl-P` moves back. That works, but it is
+two extra keys and a glance at the menu. Choosing the direction is
+free.
+
+Notice what was not on the list: `PAYMENT_FAILED`. Completion matches
+keyword characters, and an underscore after `PAYMENT` is not an `S`.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { PaymentSchedule } from '../../infrastructure/services/payment.schedule';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(PaymentSchedule) protected paymentSchedule: PaymentSchedule,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+    const receipt = await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED', refundReceipt: receipt.id },
+    });
+  }
+
+  public async retryPayment(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PAYMENT_FAILED') {
+      throw exception('ORDER_NOT_RETRYABLE');
+    }
+
+    return
+  }
+
+  public async schedulePayment(id: string, runAt: Date) {
+    const order = await this.findOne(id);
+
+    return this.paymentSchedule.enqueue(order.id, runAt);
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { PaymentSchedule } from '../../infrastructure/services/payment.schedule';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(PaymentSchedule) protected paymentSchedule: PaymentSchedule,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+    const receipt = await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED', refundReceipt: receipt.id },
+    });
+  }
+
+  public async retryPayment(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PAYMENT_FAILED') {
+      throw exception('ORDER_NOT_RETRYABLE');
+    }
+
+    return this.paymentService.charge(order.id, order.total);
+  }
+
+  public async schedulePayment(id: string, runAt: Date) {
+    const order = await this.findOne(id);
+
+    return this.paymentSchedule.enqueue(order.id, runAt);
+  }
+}

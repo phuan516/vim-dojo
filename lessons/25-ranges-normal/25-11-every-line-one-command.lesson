@@ -1,0 +1,86 @@
+@meta
+id: 25-11
+title: Every line, one normal command
+chapter: 25
+type: lesson
+skills: ex-normal
+par: 19
+minutes: 5
+vscode: Alt-click the end of every line, type the semicolon once
+open: analytics.sql
+
+@brief
+Eight queries pasted out of the dashboard, none of them terminated. Every
+line needs a semicolon on the end. There are no blank lines and no
+exceptions.
+
+You could do this with a macro, or with `:%s/$/;/`. Reach instead for the
+command this chapter is named after. `:normal` takes a string of keys and
+presses them, in normal mode, once for every line in its range. `A;` is
+what you would press on one line. `:%normal A;` is what you press for all
+of them.
+
+That is the whole idea: any normal-mode edit you can do to one line, you
+can do to a range of lines by putting `:%normal` in front of it.
+
+@keys
+| `:%normal A;` | press `A;` on every line in the file |
+| `:5,20normal x` | the same keys, on lines 5 to 20 |
+| `:normal` | on the current line only |
+
+@hints
+Work out the keys for one line first. Appending to the end of a line is
+two keys.
+--
+Then put the range and the command in front of them, and do not press
+Esc — the range ends the insert for you.
+--
+`:%normal A;` and Enter, then `:wq`.
+
+@solution
+    :%normal A;<Enter>  :wq<Enter>
+
+Sixteen keystrokes for eight lines, and the same sixteen for eight
+hundred.
+
+Two things vim does for you here, both worth knowing:
+
+**Insert mode is closed at the end of every line.** `A;` leaves you in
+insert mode when you type it by hand; `:normal` behaves as if an Esc were
+pressed after the last key, per line. So `A;` is complete as written and
+`A;<Esc>` would be wrong — the Esc has to be spelled differently, which
+is the subject of a later lesson.
+
+**The range is worked out before the command runs.** `:%normal dd` does
+not delete every other line the way a naive loop would; vim tracks the
+lines as they shift.
+
+Use `:normal!` in anything you save — a script, a mapping, a vimrc. The
+bang ignores the player's own mappings, so the keys mean what the manual
+says they mean rather than what someone's config made them mean. Typed
+by hand on your own machine, plain `:normal` is fine.
+
+The obvious question is how this differs from `:g//normal` from chapter
+15. `:g` picks the lines by pattern and then acts; `:normal` acts on
+every line of a range you have described. They compose:
+`:/BEGIN/,/END/g/status/normal A,` is a perfectly ordinary command.
+
+@start analytics.sql
+SELECT count(*) FROM orders WHERE status = 'PENDING'
+SELECT count(*) FROM orders WHERE status = 'SHIPPED'
+SELECT count(*) FROM orders WHERE status = 'CANCELLED'
+SELECT sum(total) FROM orders WHERE created_at > now() - interval '1 day'
+SELECT customer_id, count(*) FROM orders GROUP BY customer_id
+SELECT count(*) FROM refunds WHERE settled_at IS NULL
+SELECT avg(total) FROM orders WHERE status = 'SHIPPED'
+SELECT count(*) FROM payments WHERE gateway = 'legacy'
+
+@expected analytics.sql
+SELECT count(*) FROM orders WHERE status = 'PENDING';
+SELECT count(*) FROM orders WHERE status = 'SHIPPED';
+SELECT count(*) FROM orders WHERE status = 'CANCELLED';
+SELECT sum(total) FROM orders WHERE created_at > now() - interval '1 day';
+SELECT customer_id, count(*) FROM orders GROUP BY customer_id;
+SELECT count(*) FROM refunds WHERE settled_at IS NULL;
+SELECT avg(total) FROM orders WHERE status = 'SHIPPED';
+SELECT count(*) FROM payments WHERE gateway = 'legacy';

@@ -1,0 +1,116 @@
+@meta
+id: 28-03
+title: Group the pile into sections
+chapter: 28
+type: lesson
+skills: vimrc-structure
+par: 106
+minutes: 7
+vscode: settings.json, where everything is alphabetical and nothing is grouped
+open: .vimrc
+
+@brief
+Fifteen settings added one at a time, in the order things annoyed you,
+is a pile. You will read this file for years, usually in a hurry,
+usually to answer "did I set that, or is it a default?". So it gets
+sections, and each section gets a comment.
+
+The eight settings under the header block belong in three groups, in
+this order:
+
+    " --- Looks ---
+    set number
+    set ruler
+    set showcmd
+
+    " --- Searching ---
+    set incsearch
+    set hlsearch
+
+    " --- Indentation ---
+    set expandtab
+    set shiftwidth=2
+    set autoindent
+
+Nothing is added and nothing is removed. The lines move and three
+comments appear. The top three lines stay exactly where they are.
+
+Moving lines is chapter 24 work: `:m` takes a range in front and a
+destination line after it, and the cursor never has to go near either.
+
+@keys
+| `:10m7` | move line 10 to sit below line 7 |
+| `O` | open a line above and type |
+| `Enter` in insert | start another line without leaving insert mode |
+| `:m` | move the current line |
+
+@hints
+Sort the lines first, add the comment headers afterwards. Doing it the
+other way round means your line numbers change under you twice.
+--
+`ruler` needs to sit below `number`, and `showcmd` below `ruler`. Both
+are `:m` with a line number. Check the gutter — `set number` is on, so
+the numbers are right there.
+--
+`:10m7`, `:13m8`, `:12m10` puts the eight in order. Then `8G` and `O`
+for the first header; for the other two, `O` followed by Enter gives you
+a blank line and then the comment.
+
+@solution
+    :10m7<Enter> :13m8<Enter> :12m10<Enter>
+    7G O " --- Looks --- <Esc>
+    4j O <Enter> " --- Searching --- <Esc>
+    3j O <Enter> " --- Indentation --- <Esc>
+    :wq<Enter>
+
+Three moves, three inserts, around 100 keystrokes. Retyping the eight
+lines would cost twice that and would introduce a typo in an option
+name that vim would then complain about at every startup.
+
+The grouping is not decoration. It is the difference between a config
+you can bisect and one you cannot. When something is wrong, you comment
+out a section, restart, and either the problem is gone or it is not —
+that halves the search space in one step. Lesson 28-15 does exactly
+that. A file with no seams has to be bisected line by line.
+
+Use whatever section names mean something to you. The ones people
+converge on are looks, searching, indentation, editing, backups,
+mappings and filetypes, roughly in that order, because that is also the
+order in which they stop being defaults and start being yours.
+
+@start .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+set number
+set incsearch
+set expandtab
+set ruler
+set hlsearch
+set shiftwidth=2
+set showcmd
+set autoindent
+
+@expected .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Looks ---
+set number
+set ruler
+set showcmd
+
+" --- Searching ---
+set incsearch
+set hlsearch
+
+" --- Indentation ---
+set expandtab
+set shiftwidth=2
+set autoindent

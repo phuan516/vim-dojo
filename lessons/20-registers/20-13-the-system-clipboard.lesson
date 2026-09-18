@@ -1,0 +1,96 @@
+@meta
+id: 20-13
+title: The system clipboard
+chapter: 20
+type: lesson
+skills: register-clipboard
+par: 34
+minutes: 6
+vscode: Ctrl-C, Ctrl-V — this is the one register VS Code has
+open: .env.example README.md
+
+@brief
+Two registers reach outside vim. `"+` is the system clipboard, the one
+Ctrl-C and Ctrl-V use in every other program. `"*` is, on Linux, the
+primary selection — whatever you last highlighted with the mouse, pasted
+by the middle button. On macOS and Windows the two are the same thing.
+`"+yy` copies a line for the browser; `"+p` pastes what the browser
+copied.
+
+The README's configuration section should show the exact
+`PAYMENT_GATEWAY_URL` line from `.env.example`, inside the empty code
+block. Copy it across through the clipboard register, by name, so you
+have done it once on purpose.
+
+@keys
+| `"+yy` | yank the line to the system clipboard |
+| `"+p` | put from the system clipboard |
+| `"*` | the primary selection, where that is a separate thing |
+| `:reg +*` | see what both hold |
+| `:set clipboard?` | how this vim is wired up |
+
+@hints
+`/GATEWAY` Enter, `"+yy`. Then `:bn` to the README and find the opening
+fence.
+--
+`/sh` Enter lands on the ```` ```sh ```` line. `"+p` puts the line
+below it.
+--
+`/GATEWAY` Enter `"+yy` `:bn` Enter `/sh` Enter `"+p` `:wqa` Enter.
+
+@solution
+    /GATEWAY<Enter> "+yy  :bn<Enter> /sh<Enter> "+p  :wqa<Enter>
+
+Now the part that matters on this machine. Your vimrc has
+`clipboard=unnamedplus`, which makes the unnamed register and `"+` the
+same thing: every `yy` is a `"+yy`, every `p` is a `"+p`. That is why
+copying between vim and a browser has worked all along without you
+naming a register, and it is why this lesson would have passed with a
+plain `yy` and `p`.
+
+It has a cost, and you met it in lesson 20-01. If the clipboard is the
+unnamed register, then anything copied anywhere on the machine lands in
+`""` — a URL from the browser, a snippet from a chat window — and the
+next `p` in vim puts that instead of the line you yanked. `"0` ignores
+the clipboard and holds your last yank in vim, which is the real reason
+to have it in your fingers. And `"_` still deletes into nothing, even
+when nothing means "not the clipboard either".
+
+On a machine without the setting, `y` and `p` stay inside vim and `"+`
+is the only way out. `:set clipboard?` tells you which world you are in.
+Ssh into a server and the answer is usually the second one, plus no
+clipboard at all — vim will silently use the unnamed register in place
+of `"+`, and `"+yy` there is just `yy`.
+
+@start .env.example
+DATABASE_URL=mysql://root:root@database:3306/orders
+PAYMENT_GATEWAY_URL=https://gateway.payments.example/v2
+PAYMENT_GATEWAY_TIMEOUT_MS=5000
+EMAIL_FROM=orders@example.com
+
+@start README.md
+# Orders service
+
+## Configuration
+
+The payment gateway is configured through the environment. Set this in
+your `.env` before starting the service:
+
+```sh
+```
+
+The timeout defaults to five seconds.
+
+@expected README.md
+# Orders service
+
+## Configuration
+
+The payment gateway is configured through the environment. Set this in
+your `.env` before starting the service:
+
+```sh
+PAYMENT_GATEWAY_URL=https://gateway.payments.example/v2
+```
+
+The timeout defaults to five seconds.

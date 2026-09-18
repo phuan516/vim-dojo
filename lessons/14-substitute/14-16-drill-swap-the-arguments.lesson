@@ -1,0 +1,67 @@
+@meta
+id: 14-16
+title: Drill — swap the arguments
+chapter: 14
+type: drill
+skills: sub-backref
+par: 56
+minutes: 5
+reps: 8
+vscode: a regex replace with $2, $1, typed carefully
+open: refund.calls.ts
+
+@brief
+Eight times: `refund` used to take `(amount, orderId)` and now takes
+`(orderId, amount)`. Five call sites, two groups, one substitute.
+
+You are drilling the shape of a swap until the groups and the
+references come out in the right order without thinking.
+
+@keys
+| `\v(\w+), (\w+)` | two groups: a word, a comma, a word |
+| `\2, \1` | the same two, the other way round |
+
+@hints
+Capture the two arguments as two groups. Write `refund(` and `)`
+around them in both halves so nothing else with a comma matches.
+--
+`:%s/\vrefund\((\w+), (\w+)\)/refund(\2, \1)/` and Enter.
+
+@solution
+    :%s/\vrefund\((\w+), (\w+)\)/refund(\2, \1)/<Enter>  :wq<Enter>
+
+Forty-nine keystrokes. The `refund\(` at the front is what keeps the
+other comma-separated pairs in the file out of it; the `\w+` groups are
+what makes the five different argument names irrelevant. If the swap
+feels slower than editing five lines by hand, count the keystrokes for
+one line by hand and multiply by five.
+
+@start refund.calls.ts
+export async function settle(orderId: string, amount: number, fee: number, deposit: number) {
+  await paymentService.refund(amount, orderId);
+  await paymentService.refund(fee, orderId);
+  await ledger.record(orderId, amount);
+
+  if (deposit > 0) {
+    await paymentService.refund(deposit, orderId);
+  }
+
+  const partial = Math.round(amount / 2);
+  await paymentService.refund(partial, orderId);
+  await paymentService.refund(fee, orderId);
+}
+
+@expected refund.calls.ts
+export async function settle(orderId: string, amount: number, fee: number, deposit: number) {
+  await paymentService.refund(orderId, amount);
+  await paymentService.refund(orderId, fee);
+  await ledger.record(orderId, amount);
+
+  if (deposit > 0) {
+    await paymentService.refund(orderId, deposit);
+  }
+
+  const partial = Math.round(amount / 2);
+  await paymentService.refund(orderId, partial);
+  await paymentService.refund(orderId, fee);
+}

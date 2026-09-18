@@ -1,0 +1,207 @@
+@meta
+id: 23-18
+title: Scenario — the provider from the chat window
+chapter: 23
+type: scenario
+skills: indent-equals, format-gq, complete-keyword, spell, arglist
+par: 135
+minutes: 12
+vscode: format document, Rewrap, IntelliSense, a spell checker extension, four tabs
+open: refund.provider.ts REFUNDS.md
+vimrc: set textwidth=72 spell
+
+@brief
+A ticket, not an exercise.
+
+    REF-77  Someone pasted RefundProvider into the repo from Slack.
+            Make it fit the codebase and finish it, then fix the doc
+            that goes with it.
+
+Two files, opened in that order. `:wn` writes the current one and
+moves to the next.
+
+  1. refund.provider.ts — the indentation is gone or wrong on every
+     line of the class. The header comment is one long line and must
+     wrap at 72 columns, `//` on every line. And `expire` is missing
+     its `values` line, which belongs directly after `where: { id },`:
+
+         values: { status: 'CANCELLED', cancellationReason: 'REFUND_WINDOW_EXPIRED' },
+
+     Both long names already appear in the file. Do not type them out.
+
+  2. REFUNDS.md — three misspelled words. Spell checking is on. Take
+     the first suggestion for each.
+
+Par assumes you reflow with an operator, re-indent with an operator,
+complete the long names, and fix the typos without typing them.
+
+@keys
+| `gqip` | reflow the header paragraph |
+| `gg=G` | re-indent the whole file |
+| `Ctrl-N` | complete a long name from the buffer |
+| `]s` `1z=` | next typo, first suggestion |
+| `:wn` | write, then move to the next file |
+
+@hints
+Reflow the header first, from line 1: it is a paragraph on its own.
+Then re-indent the entire file in one command, before adding the new
+line, so the line you add inherits a correct indent from `autoindent`.
+--
+`/async expire` then `/where` puts you on the line the new one goes
+under. `o` opens below it at the right depth. Type `cancellationR`
+and let `Ctrl-N` finish it; the word is in the header comment, and
+completion does not care that it is in a comment. Same for
+`REFUND_W`.
+--
+`:wn` to the doc. `]s1z=` three times. `:wq`.
+
+@solution
+    gqip gg=G
+    /async expire<Enter> /where<Enter>
+    ovalues: { status: 'CANCELLED', cancellationR<Ctrl-N>: 'REFUND_W<Ctrl-N>' },<Esc>
+    :wn<Enter>
+    ]s1z= ]s1z= ]s1z= :wq<Enter>
+
+About 115 keystrokes, roughly forty of which are the new line.
+
+Nothing here is a new key; the chapter gave you all of it. What the
+ticket tests is whether you reach for the operator instead of the
+hand-fix: `gq` instead of `J` and Enter twenty times, `=` instead of
+`>>` on thirty lines, `Ctrl-N` instead of retyping a twenty-letter
+identifier you can see on the screen, `1z=` instead of retyping a word
+you have just proved you cannot spell.
+
+Order matters once. `gg=G` before `o`, because the new line takes its
+indent from the line above it, and that line has to be right first.
+Everything else could have been done in any sequence.
+
+One thing to notice about the completion: `cancellationReason` was
+only in a comment, and `REFUND_WINDOW_EXPIRED` only in the same
+comment. Keyword completion reads words, not code, which cuts both
+ways — it will also happily offer you a typo from three lines up.
+
+@start refund.provider.ts
+// Refund window. Orders can be refunded for thirty days after they are placed. Past that point cancelling still works, but no money moves and the order records cancellationReason REFUND_WINDOW_EXPIRED so finance can reconcile it at month end.
+
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from '../order/order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class RefundProvider {
+constructor(
+@inject(OrderRepository) protected orderRepository: OrderRepository,
+@inject(PaymentService) protected paymentService: PaymentService,
+) {}
+
+public async findOne(id: string) {
+const order = await this.orderRepository.findOne({ where: { id } });
+
+if (!order) {
+throw exception('ORDER_NOT_FOUND');
+}
+
+return order;
+}
+
+public isInsideWindow(placedAt: Date) {
+return Date.now() - placedAt.getTime() <= 30 * 86_400_000;
+}
+
+    public async refund(id: string) {
+            const order = await this.findOne(id);
+
+        if (!this.isInsideWindow(order.placedAt)) {
+    return this.expire(id);
+            }
+
+        await this.paymentService.refund(order.id);
+
+            return this.orderRepository.update({
+    where: { id },
+        values: { status: 'CANCELLED' },
+    });
+        }
+
+  public async expire(id: string) {
+      return this.orderRepository.update({
+    where: { id },
+      });
+    }
+}
+
+@expected refund.provider.ts
+// Refund window. Orders can be refunded for thirty days after they are
+// placed. Past that point cancelling still works, but no money moves
+// and the order records cancellationReason REFUND_WINDOW_EXPIRED so
+// finance can reconcile it at month end.
+
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from '../order/order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class RefundProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public isInsideWindow(placedAt: Date) {
+    return Date.now() - placedAt.getTime() <= 30 * 86_400_000;
+  }
+
+  public async refund(id: string) {
+    const order = await this.findOne(id);
+
+    if (!this.isInsideWindow(order.placedAt)) {
+      return this.expire(id);
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async expire(id: string) {
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED', cancellationReason: 'REFUND_WINDOW_EXPIRED' },
+    });
+  }
+}
+
+@start REFUNDS.md
+# Refunds and the thirty day window
+
+A refund request is proccessed by the payment provider, not by us. We
+store the reciept id on the order when the provider calls back, and
+the order moves to CANCELLED immediatly whether or not money moves.
+
+Outside the window nothing is charged back. The order still moves to
+CANCELLED and the reason is recorded for finance.
+
+@expected REFUNDS.md
+# Refunds and the thirty day window
+
+A refund request is processed by the payment provider, not by us. We
+store the receipt id on the order when the provider calls back, and
+the order moves to CANCELLED immediately whether or not money moves.
+
+Outside the window nothing is charged back. The order still moves to
+CANCELLED and the reason is recorded for finance.

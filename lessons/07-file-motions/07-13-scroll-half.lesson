@@ -1,0 +1,378 @@
+@meta
+id: 07-13
+title: Reading down a log half a screen at a time
+chapter: 07
+type: lesson
+skills: scroll-half, screen-HML
+par: 75
+minutes: 8
+vscode: the scrollbar, and losing your place twice
+open: orders-service.log
+
+@brief
+An hour of log from the incident, 150 lines, pasted into the ticket. Four
+of these lines are not `INFO`: three `ERROR` and one `WARN`. Mark each one
+by putting `>>> ` at the front of it.
+
+Nobody has told you which lines they are on. You have to read the file to
+find them, and that is a different job from jumping to a place you already
+know about. `G` and `47G` are no use when the whole task is finding out
+where to go.
+
+Do not use search — you have not been taught it yet, and this lesson is
+about the thing you do before you know what to search for.
+
+@keys
+| `Ctrl-D` | down half a screen, taking the cursor with it |
+| `Ctrl-U` | up half a screen |
+| `j` `k` | the last line or two |
+| `I` | insert at the front of the line |
+
+@hints
+You need to move the text past your eyes in readable chunks, not jump over
+it. Half a screen at a time is the size that works, because half the screen
+is still there afterwards and you keep your place.
+--
+`Ctrl-D` scrolls down half a screen and moves the cursor with it. `Ctrl-U`
+does the same upwards. Pressing them repeatedly walks the whole file past
+you at a pace you can actually read.
+--
+When a marked line comes into view, a couple of `j` or `k` presses land on
+it, then `I` `>>> ` `Esc`. If a `Ctrl-D` takes you past one, `Ctrl-U` comes
+straight back — overshooting and stepping back is normal and costs nothing.
+
+@solution
+One route, on a 24 line terminal. Yours will differ, because how far
+`Ctrl-D` goes depends on how tall your window is, and that is the point of
+it rather than a flaw.
+
+    Ctrl-D x5   2j   I >>>  <Esc>
+    Ctrl-D x6        I >>>  <Esc>
+    Ctrl-D x5   2k   I >>>  <Esc>
+    Ctrl-D x7   Ctrl-U   3j   I >>>  <Esc>
+    :wq<Enter>
+
+Fifty-eight keystrokes to read and annotate a hundred and fifty lines, and
+most of them were one finger on Ctrl-D.
+
+Half a screen is a deliberate choice and it is worth understanding why it
+beats a full screen. After `Ctrl-D` the top half of your screen is the
+bottom half of what you were just looking at, so your eye has an anchor and
+you do not have to re-orient. Scroll a whole screen and every line is new,
+which is why holding Page Down feels like being lost.
+
+Two things people get wrong at first. The cursor comes with you, so you are
+never scrolled away from where you are working — unlike a mouse wheel,
+which moves the view and leaves the cursor behind, so your next keystroke
+snaps you back somewhere you cannot see. And `Ctrl-U` is not undo. Undo is
+`u`, it always has been, and `Ctrl-U` is the one that takes you back up the
+file.
+
+The other lesson here is about overshooting. A half screen is a coarse unit
+and you will land past things. That is fine: coarse motion to get near,
+then `j`, `k`, `H` or `L` for the last few lines. Trying to land exactly
+with a scroll is the wrong kind of care.
+
+@start orders-service.log
+2026-08-14T08:01:35Z INFO orders-service GET /v2/orders 200 in 32ms
+2026-08-14T08:02:47Z INFO orders-service POST /v2/orders 201 in 37ms
+2026-08-14T08:02:15Z INFO orders-service POST /v2/orders/ord_1428/cancel 200 in 230ms
+2026-08-14T08:02:45Z INFO orders-service POST /v2/orders/ord_1060/cancel 200 in 225ms
+2026-08-14T08:03:50Z INFO orders-service POST /v2/orders 201 in 306ms
+2026-08-14T08:05:13Z INFO orders-service reconciliation batch 4 of 9 complete
+2026-08-14T08:06:36Z INFO orders-service GET /v2/customers/cus_25 200 in 81ms
+2026-08-14T08:07:45Z INFO orders-service reconciliation batch 4 of 9 complete
+2026-08-14T08:08:33Z INFO orders-service reconciliation batch 4 of 9 complete
+2026-08-14T08:08:49Z INFO orders-service reconciliation batch 4 of 9 complete
+2026-08-14T08:10:59Z INFO orders-service payment.capture ok for ord_1476 in 168ms
+2026-08-14T08:11:29Z INFO orders-service webhook refund.created accepted for ord_1813
+2026-08-14T08:12:15Z INFO orders-service GET /health 200 in 1ms
+2026-08-14T08:13:56Z INFO orders-service webhook refund.created accepted for ord_1294
+2026-08-14T08:13:42Z INFO orders-service POST /v2/orders 201 in 222ms
+2026-08-14T08:15:36Z INFO orders-service GET /v2/customers/cus_95 200 in 28ms
+2026-08-14T08:16:31Z INFO orders-service POST /v2/orders 201 in 187ms
+2026-08-14T08:18:14Z INFO orders-service reconciliation batch 4 of 9 complete
+2026-08-14T08:18:13Z INFO orders-service webhook refund.created accepted for ord_1662
+2026-08-14T08:20:28Z INFO orders-service cache hit ratio 0.94 over last 1000 requests
+2026-08-14T08:20:39Z INFO orders-service GET /v2/orders 200 in 189ms
+2026-08-14T08:22:13Z INFO orders-service POST /v2/orders 201 in 119ms
+2026-08-14T08:23:35Z INFO orders-service GET /v2/customers/cus_73 200 in 208ms
+2026-08-14T08:24:38Z INFO orders-service POST /v2/orders 201 in 213ms
+2026-08-14T08:26:45Z INFO orders-service GET /v2/customers/cus_63 200 in 150ms
+2026-08-14T08:28:24Z INFO orders-service GET /v2/orders 200 in 85ms
+2026-08-14T08:29:52Z INFO orders-service GET /v2/customers/cus_72 200 in 127ms
+2026-08-14T08:30:26Z INFO orders-service reconciliation batch 4 of 9 complete
+2026-08-14T08:31:49Z INFO orders-service webhook refund.settled accepted for ord_1326
+2026-08-14T08:31:39Z INFO orders-service GET /health 200 in 1ms
+2026-08-14T08:33:16Z INFO orders-service webhook refund.settled accepted for ord_1649
+2026-08-14T08:34:14Z INFO orders-service GET /v2/orders/ord_1451 200 in 114ms
+2026-08-14T08:35:48Z INFO orders-service POST /v2/orders 201 in 34ms
+2026-08-14T08:36:44Z INFO orders-service reconciliation batch 4 of 9 complete
+2026-08-14T08:36:14Z INFO orders-service reconciliation batch 4 of 9 complete
+2026-08-14T08:37:32Z INFO orders-service GET /v2/customers/cus_70 200 in 316ms
+2026-08-14T08:37:41Z INFO orders-service POST /v2/orders 201 in 246ms
+2026-08-14T08:38:15Z ERROR orders-service payment.capture failed for ord_1104: PAYMENT_PROVIDER_ERROR
+2026-08-14T08:39:40Z INFO orders-service GET /health 200 in 1ms
+2026-08-14T08:40:19Z INFO orders-service POST /v2/orders/ord_1936/cancel 200 in 286ms
+2026-08-14T08:41:51Z INFO orders-service payment.capture ok for ord_1712 in 54ms
+2026-08-14T08:42:20Z INFO orders-service payment.capture ok for ord_1790 in 190ms
+2026-08-14T08:43:50Z INFO orders-service payment.capture ok for ord_1627 in 122ms
+2026-08-14T08:45:57Z INFO orders-service POST /v2/orders/ord_1204/cancel 200 in 124ms
+2026-08-14T08:46:56Z INFO orders-service webhook refund.created accepted for ord_1028
+2026-08-14T08:47:22Z INFO orders-service webhook refund.created accepted for ord_1979
+2026-08-14T08:48:33Z INFO orders-service webhook refund.created accepted for ord_1225
+2026-08-14T08:50:22Z INFO orders-service POST /v2/orders/ord_1209/cancel 200 in 180ms
+2026-08-14T08:50:40Z INFO orders-service reconciliation batch 4 of 9 complete
+2026-08-14T08:50:34Z INFO orders-service POST /v2/orders 201 in 110ms
+2026-08-14T08:51:15Z INFO orders-service webhook refund.settled accepted for ord_1474
+2026-08-14T08:51:56Z INFO orders-service GET /health 200 in 1ms
+2026-08-14T08:52:47Z INFO orders-service GET /v2/orders/ord_1825 200 in 246ms
+2026-08-14T08:54:52Z INFO orders-service GET /v2/customers/cus_80 200 in 187ms
+2026-08-14T08:55:11Z INFO orders-service payment.capture ok for ord_1818 in 15ms
+2026-08-14T08:56:37Z INFO orders-service POST /v2/orders 201 in 107ms
+2026-08-14T08:57:23Z INFO orders-service GET /v2/orders/ord_1513 200 in 157ms
+2026-08-14T08:58:26Z INFO orders-service reconciliation batch 4 of 9 complete
+2026-08-14T08:59:39Z INFO orders-service GET /v2/orders/ord_1834 200 in 306ms
+2026-08-14T09:00:44Z INFO orders-service webhook refund.settled accepted for ord_1536
+2026-08-14T09:02:59Z INFO orders-service GET /v2/orders/ord_1623 200 in 101ms
+2026-08-14T09:03:19Z INFO orders-service GET /v2/customers/cus_25 200 in 250ms
+2026-08-14T09:03:30Z INFO orders-service payment.capture ok for ord_1543 in 273ms
+2026-08-14T09:03:45Z INFO orders-service webhook refund.created accepted for ord_1254
+2026-08-14T09:03:59Z INFO orders-service POST /v2/refunds 201 in 58ms
+2026-08-14T09:03:58Z INFO orders-service payment.capture ok for ord_1453 in 40ms
+2026-08-14T09:04:54Z INFO orders-service reconciliation batch 4 of 9 complete
+2026-08-14T09:06:42Z INFO orders-service payment.capture ok for ord_1715 in 134ms
+2026-08-14T09:07:38Z INFO orders-service POST /v2/refunds 201 in 78ms
+2026-08-14T09:09:30Z INFO orders-service webhook refund.settled accepted for ord_1687
+2026-08-14T09:11:14Z WARN orders-service provider latency above threshold, 2140ms on payment.capture
+2026-08-14T09:12:55Z INFO orders-service POST /v2/orders 201 in 195ms
+2026-08-14T09:14:24Z INFO orders-service GET /v2/customers/cus_72 200 in 56ms
+2026-08-14T09:15:20Z INFO orders-service GET /v2/customers/cus_61 200 in 228ms
+2026-08-14T09:17:22Z INFO orders-service GET /v2/orders 200 in 190ms
+2026-08-14T09:18:11Z INFO orders-service GET /health 200 in 1ms
+2026-08-14T09:18:34Z INFO orders-service webhook refund.created accepted for ord_1529
+2026-08-14T09:18:17Z INFO orders-service POST /v2/refunds 201 in 125ms
+2026-08-14T09:19:27Z INFO orders-service POST /v2/orders 201 in 28ms
+2026-08-14T09:20:37Z INFO orders-service POST /v2/refunds 201 in 140ms
+2026-08-14T09:22:54Z INFO orders-service payment.capture ok for ord_1091 in 175ms
+2026-08-14T09:23:37Z INFO orders-service GET /v2/orders/ord_1275 200 in 45ms
+2026-08-14T09:23:26Z INFO orders-service cache hit ratio 0.94 over last 1000 requests
+2026-08-14T09:24:17Z INFO orders-service POST /v2/orders 201 in 240ms
+2026-08-14T09:26:27Z INFO orders-service payment.capture ok for ord_1044 in 74ms
+2026-08-14T09:27:17Z INFO orders-service GET /health 200 in 1ms
+2026-08-14T09:28:29Z INFO orders-service GET /v2/customers/cus_36 200 in 164ms
+2026-08-14T09:30:42Z INFO orders-service POST /v2/refunds 201 in 99ms
+2026-08-14T09:31:12Z INFO orders-service GET /v2/orders/ord_1018 200 in 15ms
+2026-08-14T09:32:42Z INFO orders-service payment.capture ok for ord_1251 in 251ms
+2026-08-14T09:34:52Z INFO orders-service POST /v2/orders 201 in 261ms
+2026-08-14T09:35:54Z INFO orders-service payment.capture ok for ord_1235 in 118ms
+2026-08-14T09:36:35Z INFO orders-service POST /v2/orders/ord_1055/cancel 200 in 185ms
+2026-08-14T09:36:50Z INFO orders-service GET /v2/orders/ord_1441 200 in 138ms
+2026-08-14T09:36:52Z INFO orders-service GET /v2/orders/ord_1891 200 in 203ms
+2026-08-14T09:37:48Z INFO orders-service cache hit ratio 0.94 over last 1000 requests
+2026-08-14T09:39:21Z INFO orders-service GET /v2/orders/ord_1275 200 in 88ms
+2026-08-14T09:40:33Z INFO orders-service GET /v2/orders/ord_1995 200 in 176ms
+2026-08-14T09:41:12Z INFO orders-service GET /v2/orders 200 in 166ms
+2026-08-14T09:41:31Z INFO orders-service GET /v2/customers/cus_70 200 in 203ms
+2026-08-14T09:42:25Z INFO orders-service POST /v2/refunds 201 in 266ms
+2026-08-14T09:43:15Z INFO orders-service POST /v2/orders 201 in 81ms
+2026-08-14T09:45:11Z INFO orders-service GET /v2/orders/ord_1311 200 in 161ms
+2026-08-14T09:46:15Z ERROR orders-service refund ord_1980 failed: REFUND_FAILED after 3 attempts
+2026-08-14T09:48:58Z INFO orders-service GET /v2/customers/cus_73 200 in 174ms
+2026-08-14T09:49:56Z INFO orders-service GET /v2/customers/cus_75 200 in 82ms
+2026-08-14T09:51:56Z INFO orders-service cache hit ratio 0.94 over last 1000 requests
+2026-08-14T09:51:53Z INFO orders-service payment.capture ok for ord_1817 in 307ms
+2026-08-14T09:52:15Z INFO orders-service GET /health 200 in 1ms
+2026-08-14T09:53:16Z INFO orders-service cache hit ratio 0.94 over last 1000 requests
+2026-08-14T09:53:50Z INFO orders-service payment.capture ok for ord_1641 in 17ms
+2026-08-14T09:54:41Z INFO orders-service cache hit ratio 0.94 over last 1000 requests
+2026-08-14T09:54:52Z INFO orders-service POST /v2/orders 201 in 277ms
+2026-08-14T09:54:26Z INFO orders-service POST /v2/refunds 201 in 128ms
+2026-08-14T09:56:41Z INFO orders-service POST /v2/orders/ord_1078/cancel 200 in 203ms
+2026-08-14T09:57:59Z INFO orders-service cache hit ratio 0.94 over last 1000 requests
+2026-08-14T09:58:14Z INFO orders-service cache hit ratio 0.94 over last 1000 requests
+2026-08-14T09:59:49Z INFO orders-service POST /v2/refunds 201 in 298ms
+2026-08-14T09:59:41Z INFO orders-service webhook refund.created accepted for ord_1995
+2026-08-14T10:00:53Z INFO orders-service POST /v2/orders 201 in 258ms
+2026-08-14T10:02:39Z INFO orders-service POST /v2/refunds 201 in 246ms
+2026-08-14T10:03:29Z INFO orders-service payment.capture ok for ord_1958 in 51ms
+2026-08-14T10:04:39Z INFO orders-service GET /v2/orders/ord_1839 200 in 47ms
+2026-08-14T10:05:34Z INFO orders-service webhook refund.created accepted for ord_1938
+2026-08-14T10:05:19Z INFO orders-service POST /v2/orders 201 in 276ms
+2026-08-14T10:06:17Z INFO orders-service GET /v2/customers/cus_73 200 in 194ms
+2026-08-14T10:08:11Z INFO orders-service webhook refund.created accepted for ord_1003
+2026-08-14T10:10:35Z INFO orders-service cache hit ratio 0.94 over last 1000 requests
+2026-08-14T10:11:34Z INFO orders-service webhook refund.settled accepted for ord_1123
+2026-08-14T10:12:58Z INFO orders-service GET /v2/orders/ord_1859 200 in 181ms
+2026-08-14T10:13:55Z INFO orders-service POST /v2/orders 201 in 14ms
+2026-08-14T10:14:14Z INFO orders-service POST /v2/refunds 201 in 209ms
+2026-08-14T10:15:37Z INFO orders-service POST /v2/orders 201 in 148ms
+2026-08-14T10:15:13Z INFO orders-service POST /v2/refunds 201 in 154ms
+2026-08-14T10:16:37Z INFO orders-service POST /v2/orders/ord_1323/cancel 200 in 269ms
+2026-08-14T10:18:11Z INFO orders-service GET /v2/orders 200 in 212ms
+2026-08-14T10:19:56Z INFO orders-service payment.capture ok for ord_1050 in 49ms
+2026-08-14T10:20:51Z INFO orders-service webhook refund.created accepted for ord_1497
+2026-08-14T10:21:20Z INFO orders-service payment.capture ok for ord_1424 in 249ms
+2026-08-14T10:22:26Z INFO orders-service POST /v2/refunds 201 in 141ms
+2026-08-14T10:23:40Z INFO orders-service POST /v2/orders/ord_1684/cancel 200 in 293ms
+2026-08-14T10:24:51Z INFO orders-service POST /v2/orders 201 in 90ms
+2026-08-14T10:26:45Z ERROR orders-service webhook signature invalid from 203.0.113.44, rejected
+2026-08-14T10:28:18Z INFO orders-service webhook refund.created accepted for ord_1197
+2026-08-14T10:29:31Z INFO orders-service POST /v2/orders 201 in 292ms
+2026-08-14T10:30:26Z INFO orders-service POST /v2/orders/ord_1206/cancel 200 in 299ms
+2026-08-14T10:32:34Z INFO orders-service GET /health 200 in 1ms
+2026-08-14T10:34:27Z INFO orders-service POST /v2/orders/ord_1770/cancel 200 in 181ms
+2026-08-14T10:35:46Z INFO orders-service webhook refund.created accepted for ord_1128
+2026-08-14T10:36:15Z INFO orders-service payment.capture ok for ord_1918 in 146ms
+
+@expected orders-service.log
+2026-08-14T08:01:35Z INFO orders-service GET /v2/orders 200 in 32ms
+2026-08-14T08:02:47Z INFO orders-service POST /v2/orders 201 in 37ms
+2026-08-14T08:02:15Z INFO orders-service POST /v2/orders/ord_1428/cancel 200 in 230ms
+2026-08-14T08:02:45Z INFO orders-service POST /v2/orders/ord_1060/cancel 200 in 225ms
+2026-08-14T08:03:50Z INFO orders-service POST /v2/orders 201 in 306ms
+2026-08-14T08:05:13Z INFO orders-service reconciliation batch 4 of 9 complete
+2026-08-14T08:06:36Z INFO orders-service GET /v2/customers/cus_25 200 in 81ms
+2026-08-14T08:07:45Z INFO orders-service reconciliation batch 4 of 9 complete
+2026-08-14T08:08:33Z INFO orders-service reconciliation batch 4 of 9 complete
+2026-08-14T08:08:49Z INFO orders-service reconciliation batch 4 of 9 complete
+2026-08-14T08:10:59Z INFO orders-service payment.capture ok for ord_1476 in 168ms
+2026-08-14T08:11:29Z INFO orders-service webhook refund.created accepted for ord_1813
+2026-08-14T08:12:15Z INFO orders-service GET /health 200 in 1ms
+2026-08-14T08:13:56Z INFO orders-service webhook refund.created accepted for ord_1294
+2026-08-14T08:13:42Z INFO orders-service POST /v2/orders 201 in 222ms
+2026-08-14T08:15:36Z INFO orders-service GET /v2/customers/cus_95 200 in 28ms
+2026-08-14T08:16:31Z INFO orders-service POST /v2/orders 201 in 187ms
+2026-08-14T08:18:14Z INFO orders-service reconciliation batch 4 of 9 complete
+2026-08-14T08:18:13Z INFO orders-service webhook refund.created accepted for ord_1662
+2026-08-14T08:20:28Z INFO orders-service cache hit ratio 0.94 over last 1000 requests
+2026-08-14T08:20:39Z INFO orders-service GET /v2/orders 200 in 189ms
+2026-08-14T08:22:13Z INFO orders-service POST /v2/orders 201 in 119ms
+2026-08-14T08:23:35Z INFO orders-service GET /v2/customers/cus_73 200 in 208ms
+2026-08-14T08:24:38Z INFO orders-service POST /v2/orders 201 in 213ms
+2026-08-14T08:26:45Z INFO orders-service GET /v2/customers/cus_63 200 in 150ms
+2026-08-14T08:28:24Z INFO orders-service GET /v2/orders 200 in 85ms
+2026-08-14T08:29:52Z INFO orders-service GET /v2/customers/cus_72 200 in 127ms
+2026-08-14T08:30:26Z INFO orders-service reconciliation batch 4 of 9 complete
+2026-08-14T08:31:49Z INFO orders-service webhook refund.settled accepted for ord_1326
+2026-08-14T08:31:39Z INFO orders-service GET /health 200 in 1ms
+2026-08-14T08:33:16Z INFO orders-service webhook refund.settled accepted for ord_1649
+2026-08-14T08:34:14Z INFO orders-service GET /v2/orders/ord_1451 200 in 114ms
+2026-08-14T08:35:48Z INFO orders-service POST /v2/orders 201 in 34ms
+2026-08-14T08:36:44Z INFO orders-service reconciliation batch 4 of 9 complete
+2026-08-14T08:36:14Z INFO orders-service reconciliation batch 4 of 9 complete
+2026-08-14T08:37:32Z INFO orders-service GET /v2/customers/cus_70 200 in 316ms
+2026-08-14T08:37:41Z INFO orders-service POST /v2/orders 201 in 246ms
+>>> 2026-08-14T08:38:15Z ERROR orders-service payment.capture failed for ord_1104: PAYMENT_PROVIDER_ERROR
+2026-08-14T08:39:40Z INFO orders-service GET /health 200 in 1ms
+2026-08-14T08:40:19Z INFO orders-service POST /v2/orders/ord_1936/cancel 200 in 286ms
+2026-08-14T08:41:51Z INFO orders-service payment.capture ok for ord_1712 in 54ms
+2026-08-14T08:42:20Z INFO orders-service payment.capture ok for ord_1790 in 190ms
+2026-08-14T08:43:50Z INFO orders-service payment.capture ok for ord_1627 in 122ms
+2026-08-14T08:45:57Z INFO orders-service POST /v2/orders/ord_1204/cancel 200 in 124ms
+2026-08-14T08:46:56Z INFO orders-service webhook refund.created accepted for ord_1028
+2026-08-14T08:47:22Z INFO orders-service webhook refund.created accepted for ord_1979
+2026-08-14T08:48:33Z INFO orders-service webhook refund.created accepted for ord_1225
+2026-08-14T08:50:22Z INFO orders-service POST /v2/orders/ord_1209/cancel 200 in 180ms
+2026-08-14T08:50:40Z INFO orders-service reconciliation batch 4 of 9 complete
+2026-08-14T08:50:34Z INFO orders-service POST /v2/orders 201 in 110ms
+2026-08-14T08:51:15Z INFO orders-service webhook refund.settled accepted for ord_1474
+2026-08-14T08:51:56Z INFO orders-service GET /health 200 in 1ms
+2026-08-14T08:52:47Z INFO orders-service GET /v2/orders/ord_1825 200 in 246ms
+2026-08-14T08:54:52Z INFO orders-service GET /v2/customers/cus_80 200 in 187ms
+2026-08-14T08:55:11Z INFO orders-service payment.capture ok for ord_1818 in 15ms
+2026-08-14T08:56:37Z INFO orders-service POST /v2/orders 201 in 107ms
+2026-08-14T08:57:23Z INFO orders-service GET /v2/orders/ord_1513 200 in 157ms
+2026-08-14T08:58:26Z INFO orders-service reconciliation batch 4 of 9 complete
+2026-08-14T08:59:39Z INFO orders-service GET /v2/orders/ord_1834 200 in 306ms
+2026-08-14T09:00:44Z INFO orders-service webhook refund.settled accepted for ord_1536
+2026-08-14T09:02:59Z INFO orders-service GET /v2/orders/ord_1623 200 in 101ms
+2026-08-14T09:03:19Z INFO orders-service GET /v2/customers/cus_25 200 in 250ms
+2026-08-14T09:03:30Z INFO orders-service payment.capture ok for ord_1543 in 273ms
+2026-08-14T09:03:45Z INFO orders-service webhook refund.created accepted for ord_1254
+2026-08-14T09:03:59Z INFO orders-service POST /v2/refunds 201 in 58ms
+2026-08-14T09:03:58Z INFO orders-service payment.capture ok for ord_1453 in 40ms
+2026-08-14T09:04:54Z INFO orders-service reconciliation batch 4 of 9 complete
+2026-08-14T09:06:42Z INFO orders-service payment.capture ok for ord_1715 in 134ms
+2026-08-14T09:07:38Z INFO orders-service POST /v2/refunds 201 in 78ms
+2026-08-14T09:09:30Z INFO orders-service webhook refund.settled accepted for ord_1687
+>>> 2026-08-14T09:11:14Z WARN orders-service provider latency above threshold, 2140ms on payment.capture
+2026-08-14T09:12:55Z INFO orders-service POST /v2/orders 201 in 195ms
+2026-08-14T09:14:24Z INFO orders-service GET /v2/customers/cus_72 200 in 56ms
+2026-08-14T09:15:20Z INFO orders-service GET /v2/customers/cus_61 200 in 228ms
+2026-08-14T09:17:22Z INFO orders-service GET /v2/orders 200 in 190ms
+2026-08-14T09:18:11Z INFO orders-service GET /health 200 in 1ms
+2026-08-14T09:18:34Z INFO orders-service webhook refund.created accepted for ord_1529
+2026-08-14T09:18:17Z INFO orders-service POST /v2/refunds 201 in 125ms
+2026-08-14T09:19:27Z INFO orders-service POST /v2/orders 201 in 28ms
+2026-08-14T09:20:37Z INFO orders-service POST /v2/refunds 201 in 140ms
+2026-08-14T09:22:54Z INFO orders-service payment.capture ok for ord_1091 in 175ms
+2026-08-14T09:23:37Z INFO orders-service GET /v2/orders/ord_1275 200 in 45ms
+2026-08-14T09:23:26Z INFO orders-service cache hit ratio 0.94 over last 1000 requests
+2026-08-14T09:24:17Z INFO orders-service POST /v2/orders 201 in 240ms
+2026-08-14T09:26:27Z INFO orders-service payment.capture ok for ord_1044 in 74ms
+2026-08-14T09:27:17Z INFO orders-service GET /health 200 in 1ms
+2026-08-14T09:28:29Z INFO orders-service GET /v2/customers/cus_36 200 in 164ms
+2026-08-14T09:30:42Z INFO orders-service POST /v2/refunds 201 in 99ms
+2026-08-14T09:31:12Z INFO orders-service GET /v2/orders/ord_1018 200 in 15ms
+2026-08-14T09:32:42Z INFO orders-service payment.capture ok for ord_1251 in 251ms
+2026-08-14T09:34:52Z INFO orders-service POST /v2/orders 201 in 261ms
+2026-08-14T09:35:54Z INFO orders-service payment.capture ok for ord_1235 in 118ms
+2026-08-14T09:36:35Z INFO orders-service POST /v2/orders/ord_1055/cancel 200 in 185ms
+2026-08-14T09:36:50Z INFO orders-service GET /v2/orders/ord_1441 200 in 138ms
+2026-08-14T09:36:52Z INFO orders-service GET /v2/orders/ord_1891 200 in 203ms
+2026-08-14T09:37:48Z INFO orders-service cache hit ratio 0.94 over last 1000 requests
+2026-08-14T09:39:21Z INFO orders-service GET /v2/orders/ord_1275 200 in 88ms
+2026-08-14T09:40:33Z INFO orders-service GET /v2/orders/ord_1995 200 in 176ms
+2026-08-14T09:41:12Z INFO orders-service GET /v2/orders 200 in 166ms
+2026-08-14T09:41:31Z INFO orders-service GET /v2/customers/cus_70 200 in 203ms
+2026-08-14T09:42:25Z INFO orders-service POST /v2/refunds 201 in 266ms
+2026-08-14T09:43:15Z INFO orders-service POST /v2/orders 201 in 81ms
+2026-08-14T09:45:11Z INFO orders-service GET /v2/orders/ord_1311 200 in 161ms
+>>> 2026-08-14T09:46:15Z ERROR orders-service refund ord_1980 failed: REFUND_FAILED after 3 attempts
+2026-08-14T09:48:58Z INFO orders-service GET /v2/customers/cus_73 200 in 174ms
+2026-08-14T09:49:56Z INFO orders-service GET /v2/customers/cus_75 200 in 82ms
+2026-08-14T09:51:56Z INFO orders-service cache hit ratio 0.94 over last 1000 requests
+2026-08-14T09:51:53Z INFO orders-service payment.capture ok for ord_1817 in 307ms
+2026-08-14T09:52:15Z INFO orders-service GET /health 200 in 1ms
+2026-08-14T09:53:16Z INFO orders-service cache hit ratio 0.94 over last 1000 requests
+2026-08-14T09:53:50Z INFO orders-service payment.capture ok for ord_1641 in 17ms
+2026-08-14T09:54:41Z INFO orders-service cache hit ratio 0.94 over last 1000 requests
+2026-08-14T09:54:52Z INFO orders-service POST /v2/orders 201 in 277ms
+2026-08-14T09:54:26Z INFO orders-service POST /v2/refunds 201 in 128ms
+2026-08-14T09:56:41Z INFO orders-service POST /v2/orders/ord_1078/cancel 200 in 203ms
+2026-08-14T09:57:59Z INFO orders-service cache hit ratio 0.94 over last 1000 requests
+2026-08-14T09:58:14Z INFO orders-service cache hit ratio 0.94 over last 1000 requests
+2026-08-14T09:59:49Z INFO orders-service POST /v2/refunds 201 in 298ms
+2026-08-14T09:59:41Z INFO orders-service webhook refund.created accepted for ord_1995
+2026-08-14T10:00:53Z INFO orders-service POST /v2/orders 201 in 258ms
+2026-08-14T10:02:39Z INFO orders-service POST /v2/refunds 201 in 246ms
+2026-08-14T10:03:29Z INFO orders-service payment.capture ok for ord_1958 in 51ms
+2026-08-14T10:04:39Z INFO orders-service GET /v2/orders/ord_1839 200 in 47ms
+2026-08-14T10:05:34Z INFO orders-service webhook refund.created accepted for ord_1938
+2026-08-14T10:05:19Z INFO orders-service POST /v2/orders 201 in 276ms
+2026-08-14T10:06:17Z INFO orders-service GET /v2/customers/cus_73 200 in 194ms
+2026-08-14T10:08:11Z INFO orders-service webhook refund.created accepted for ord_1003
+2026-08-14T10:10:35Z INFO orders-service cache hit ratio 0.94 over last 1000 requests
+2026-08-14T10:11:34Z INFO orders-service webhook refund.settled accepted for ord_1123
+2026-08-14T10:12:58Z INFO orders-service GET /v2/orders/ord_1859 200 in 181ms
+2026-08-14T10:13:55Z INFO orders-service POST /v2/orders 201 in 14ms
+2026-08-14T10:14:14Z INFO orders-service POST /v2/refunds 201 in 209ms
+2026-08-14T10:15:37Z INFO orders-service POST /v2/orders 201 in 148ms
+2026-08-14T10:15:13Z INFO orders-service POST /v2/refunds 201 in 154ms
+2026-08-14T10:16:37Z INFO orders-service POST /v2/orders/ord_1323/cancel 200 in 269ms
+2026-08-14T10:18:11Z INFO orders-service GET /v2/orders 200 in 212ms
+2026-08-14T10:19:56Z INFO orders-service payment.capture ok for ord_1050 in 49ms
+2026-08-14T10:20:51Z INFO orders-service webhook refund.created accepted for ord_1497
+2026-08-14T10:21:20Z INFO orders-service payment.capture ok for ord_1424 in 249ms
+2026-08-14T10:22:26Z INFO orders-service POST /v2/refunds 201 in 141ms
+2026-08-14T10:23:40Z INFO orders-service POST /v2/orders/ord_1684/cancel 200 in 293ms
+2026-08-14T10:24:51Z INFO orders-service POST /v2/orders 201 in 90ms
+>>> 2026-08-14T10:26:45Z ERROR orders-service webhook signature invalid from 203.0.113.44, rejected
+2026-08-14T10:28:18Z INFO orders-service webhook refund.created accepted for ord_1197
+2026-08-14T10:29:31Z INFO orders-service POST /v2/orders 201 in 292ms
+2026-08-14T10:30:26Z INFO orders-service POST /v2/orders/ord_1206/cancel 200 in 299ms
+2026-08-14T10:32:34Z INFO orders-service GET /health 200 in 1ms
+2026-08-14T10:34:27Z INFO orders-service POST /v2/orders/ord_1770/cancel 200 in 181ms
+2026-08-14T10:35:46Z INFO orders-service webhook refund.created accepted for ord_1128
+2026-08-14T10:36:15Z INFO orders-service payment.capture ok for ord_1918 in 146ms

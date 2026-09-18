@@ -1,0 +1,192 @@
+@meta
+id: 32-02
+title: Conflict — both sides were right
+chapter: 32
+type: scenario
+skills: conflict-resolution, search-slash, op-linewise
+par: 31
+minutes: 6
+vscode: click "Accept Both Changes", hope it guessed the spacing
+open: src/domain/customer/customer.provider.ts src/domain/customer/customer.entity.ts src/domain/customer/customer.repository.ts
+vimrc: set hidden
+
+@brief
+You pulled `main` before opening the MR and got this back:
+
+    Auto-merging src/domain/customer/customer.provider.ts
+    CONFLICT (content): Merge conflict in customer.provider.ts
+    Automatic merge failed; fix conflicts and then commit the result.
+
+Somebody landed `findByEmail` on `main` while you were writing
+`deactivate`. Both methods are wanted. Neither touches the other.
+
+Resolve it: both methods stay, `findByEmail` first, one blank line
+between them, and no trace of the markers. The file must read as though
+the conflict never happened — a stray `=======` gets through review more
+often than you would like, and it compiles in some languages.
+
+The entity and the repository are open because you should look at them
+before deciding: `active` and `findByEmail` both already exist there.
+Neither file changes.
+
+@keys
+| `dd` | delete the line under the cursor |
+| `cc` `Esc` | replace the line with an empty one |
+| `/^<<<` `Enter` | jump to the next marker |
+| `:g/^[<>=]\{7\}/d` | delete every marker line in the file |
+
+@hints
+A conflict is three lines of vandalism in a file that is otherwise fine.
+Deal with the three lines.
+--
+The `<<<<<<<` line and the `>>>>>>>` line are deletions. The `=======`
+line is not — it is sitting exactly where you want a blank line.
+--
+`/^<<<` `Enter` `dd`, then `/^=` `Enter` `cc` `Esc`, then `/^>>` `Enter`
+`dd`. Three searches, three edits, no scrolling.
+
+@solution
+`/^<<<` `Enter` `dd` `/^=` `Enter` `cc` `Esc` `/^>>` `Enter` `dd` `:wqa`.
+27 keystrokes.
+
+The insight worth keeping is that `=======` is not rubbish to be deleted,
+it is a line in the right place with the wrong content. Deleting all
+three markers and then opening a blank line back up is one edit more than
+changing the middle one in place. On a file with six conflicts that
+difference is real.
+
+You could also have written `:g/^[<>=]\{7\}/d`, which kills all three
+markers in one command. It is the right tool when the two sides are being
+merged into one block with no gap — a list of imports, a JSON object, a
+union type. It is the wrong tool here, because it takes your blank line
+with it.
+
+Two habits from real merges:
+
+`/^<<<` is the only search you need to find the next conflict. Anchoring
+it at the start of the line means it cannot match a shift operator or a
+heredoc inside the code.
+
+Read both sides before you delete either one. Vim makes "accept theirs"
+so cheap — `dd` a block, done — that it is tempting to resolve by
+picking. Most conflicts are like this one: two people added things next
+to each other and both things are wanted. A conflict is a question about
+intent, and no tool can answer it for you.
+
+@start src/domain/customer/customer.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { CustomerRepository } from './customer.repository';
+
+@injectable()
+export class CustomerProvider {
+  constructor(
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return customer;
+  }
+
+<<<<<<< HEAD
+  public async findByEmail(email: string) {
+    const customer = await this.customerRepository.findByEmail({ email });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return customer;
+  }
+=======
+  public async deactivate(id: string) {
+    const customer = await this.findOne(id);
+
+    return this.customerRepository.update({
+      where: { id: customer.id },
+      values: { active: false },
+    });
+  }
+>>>>>>> feature/deactivate-customer
+}
+
+@expected src/domain/customer/customer.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { CustomerRepository } from './customer.repository';
+
+@injectable()
+export class CustomerProvider {
+  constructor(
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return customer;
+  }
+
+  public async findByEmail(email: string) {
+    const customer = await this.customerRepository.findByEmail({ email });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return customer;
+  }
+
+  public async deactivate(id: string) {
+    const customer = await this.findOne(id);
+
+    return this.customerRepository.update({
+      where: { id: customer.id },
+      values: { active: false },
+    });
+  }
+}
+
+@start src/domain/customer/customer.entity.ts
+export type Customer = {
+  id: string;
+  email: string;
+  name: string;
+  active: boolean;
+};
+
+@start src/domain/customer/customer.repository.ts
+import { injectable } from 'tsyringe';
+import { Customer as CustomerRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Customer } from './customer.entity';
+
+@injectable()
+export class CustomerRepository extends BaseRepository<CustomerRecord, Customer> {
+  public async findByEmail(args: { email: string }) {
+    const record = await this.prisma.customer.findFirst({
+      where: { email: args.email, deleted: null },
+    });
+
+    return record ? this.toEntity(record) : null;
+  }
+
+  public toEntity(record: CustomerRecord): Customer {
+    return {
+      id: record.id,
+      email: record.email,
+      name: record.name,
+      active: record.active,
+    };
+  }
+}

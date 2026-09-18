@@ -1,0 +1,196 @@
+@meta
+id: 12-14
+title: Land on the end of the match
+chapter: 12
+type: lesson
+skills: search-offset
+par: 48
+minutes: 5
+vscode: find it, click just after it, type
+open: payout.provider.ts
+
+@brief
+Payout amounts are being sent to the ledger in pounds while the ledger
+counts in pence. In `quote`, the line
+
+    const amount = order.total;
+
+needs to become
+
+    const amount = order.total * 100;
+
+A search normally drops you on the *first* character of what you matched,
+which is the wrong end when the thing you want to do is add something
+after it. You can shuffle along with `e` or `$` afterwards, and on a
+one-word match that is fine — but `order.total` is not one word, and `$`
+would put you after the semicolon.
+
+A search can be told where to land.
+
+@keys
+| `/text/e` `Enter` | search, but put the cursor on the last character of the match |
+| `/text/b` `Enter` | on the first character — the default, spelled out |
+| `/text/e+1` `Enter` | one character past the end of the match |
+| `a` | append after the cursor |
+
+@hints
+The search itself is easy; the problem is where it leaves you. A search
+can carry an instruction about where to put the cursor.
+--
+Adding `/e` to the end of a pattern means "end of the match". So
+`/something/e` `Enter` lands on the last character of `something` rather
+than the first.
+--
+`/const amount = order.total/e` `Enter` leaves the cursor on the final
+`l`. From there `a` and the text you are adding.
+
+@solution
+/const amount = order.total/e<Enter>  a * 100<Esc>  :wq<Enter>
+
+An offset is the bit after the second slash. `/e` is the one you will use
+most: it means "having found the match, sit on its last character". `/b`
+means the beginning, which is the default and is worth knowing only so
+that `/b+2` and friends make sense — offsets take a number, so `/e+1` is
+one past the end and `/b+3` is three characters into the match.
+
+Why bother, when `e` or `w` would move you along afterwards? Two reasons.
+The first is that a match is not a word: `order.total` is three words to
+vim, and `https://payouts.internal` is a small crowd of them. Counting
+word motions to get to the end of a match is fiddly and breaks when the
+match changes. The offset always means the same thing.
+
+The second reason is the one that makes offsets worth a chapter slot at
+all, and it is the next lesson: an offset changes what an operator does,
+not just where the cursor stops.
+
+@start payout.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from '../order/order.repository';
+import { PayoutRepository } from './payout.repository';
+import { LedgerService } from '../../infrastructure/services/ledger.service';
+
+@injectable()
+export class PayoutProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PayoutRepository) protected payoutRepository: PayoutRepository,
+    @inject(LedgerService) protected ledgerService: LedgerService,
+  ) {}
+
+  public async findOne(args: { id: string }) {
+    const payout = await this.payoutRepository.findOne({ where: { id: args.id } });
+
+    if (!payout) {
+      throw exception('PAYOUT_NOT_FOUND');
+    }
+
+    return payout;
+  }
+
+  public async quote(args: { orderId: string }) {
+    const order = await this.orderRepository.findOne({ where: { id: args.orderId } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    const amount = order.total;
+    const fee = Math.round(amount * 0.029) + 25;
+
+    return { orderId: order.id, amount, fee, net: amount - fee };
+  }
+
+  public async schedule(args: { orderId: string; amount: number }) {
+    const payout = await this.payoutRepository.create({
+      values: { orderId: args.orderId, amount: args.amount, status: 'SCHEDULED' },
+    });
+
+    await this.ledgerService.record({
+      reference: payout.id,
+      amount: args.amount,
+      direction: 'CREDIT',
+    });
+
+    return payout;
+  }
+
+  public async cancel(args: { id: string }) {
+    const payout = await this.findOne({ id: args.id });
+
+    if (payout.status !== 'SCHEDULED') {
+      throw exception('PAYOUT_ALREADY_SENT');
+    }
+
+    return this.payoutRepository.update({
+      where: { id: payout.id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected payout.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from '../order/order.repository';
+import { PayoutRepository } from './payout.repository';
+import { LedgerService } from '../../infrastructure/services/ledger.service';
+
+@injectable()
+export class PayoutProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PayoutRepository) protected payoutRepository: PayoutRepository,
+    @inject(LedgerService) protected ledgerService: LedgerService,
+  ) {}
+
+  public async findOne(args: { id: string }) {
+    const payout = await this.payoutRepository.findOne({ where: { id: args.id } });
+
+    if (!payout) {
+      throw exception('PAYOUT_NOT_FOUND');
+    }
+
+    return payout;
+  }
+
+  public async quote(args: { orderId: string }) {
+    const order = await this.orderRepository.findOne({ where: { id: args.orderId } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    const amount = order.total * 100;
+    const fee = Math.round(amount * 0.029) + 25;
+
+    return { orderId: order.id, amount, fee, net: amount - fee };
+  }
+
+  public async schedule(args: { orderId: string; amount: number }) {
+    const payout = await this.payoutRepository.create({
+      values: { orderId: args.orderId, amount: args.amount, status: 'SCHEDULED' },
+    });
+
+    await this.ledgerService.record({
+      reference: payout.id,
+      amount: args.amount,
+      direction: 'CREDIT',
+    });
+
+    return payout;
+  }
+
+  public async cancel(args: { id: string }) {
+    const payout = await this.findOne({ id: args.id });
+
+    if (payout.status !== 'SCHEDULED') {
+      throw exception('PAYOUT_ALREADY_SENT');
+    }
+
+    return this.payoutRepository.update({
+      where: { id: payout.id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}

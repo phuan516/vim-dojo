@@ -1,0 +1,284 @@
+@meta
+id: 07-09
+title: Move by sentence, not by word
+chapter: 07
+type: lesson
+skills: paragraph-motion, goto-line
+par: 140
+minutes: 8
+vscode: click between two sentences and hope you got the space right
+open: refunds.md
+
+@brief
+Three sentences to insert into this 100 line reference page. Each goes
+between two existing sentences, and the sentence already there does not
+change.
+
+  1. The paragraph starting on line 24, after the second sentence:
+
+         The window is a configuration value.
+
+  2. The paragraph starting on line 33, after the third sentence:
+
+         Keys are opaque to the provider.
+
+  3. The last paragraph of the file, immediately before its last sentence:
+
+         Signature failures are counted.
+
+Mind the spacing: each inserted sentence needs one space after its full
+stop, exactly like its neighbours, and no other whitespace changes.
+
+Words are too small a unit here and paragraphs are too big. Prose has a unit
+in between and so does vim.
+
+@keys
+| `)` | forward to the start of the next sentence |
+| `(` | back to the start of this sentence |
+| `2)` | forward two sentences |
+| `$` | end of the line |
+| `24G` | line 24 |
+
+@hints
+A sentence ends at a full stop, a question mark or an exclamation mark.
+Vim knows that, and it has a pair of motions for it that sit next to the
+paragraph pair on the keyboard.
+--
+`)` goes to the start of the next sentence and `(` goes back to the start of
+the current one. Both take counts, so `2)` is two sentences forward. Landing
+on the start of a sentence and pressing `i` puts your text in front of it.
+--
+For the third one, `G` puts you in the last sentence of the file and `(`
+snaps you back to where that sentence begins. That is the trick worth
+having: you do not navigate to the start of a sentence, you land anywhere
+inside it and then say `(`.
+
+@solution
+    24G 2) i The window is a configuration value.  <Esc>
+    33G 3) i Keys are opaque to the provider.  <Esc>
+    G $ ( i Signature failures are counted.  <Esc>
+    :wq<Enter>
+
+About a hundred and twenty keystrokes and a hundred of them are the three
+sentences.
+
+Sentence motions are the reason vim is usable for prose, and they are badly
+under-used by people who only edit code. A paragraph of documentation is
+five or six sentences, so `)` and `(` cut it into pieces you can actually
+aim at, in the same way `w` cuts a line into words.
+
+What vim counts as a sentence is worth knowing exactly, because it will
+occasionally surprise you: a full stop, question mark or exclamation mark,
+optionally followed by closing brackets or quotes, then a space or the end
+of the line. That is why `2.7.0` in the middle of a line does not end a
+sentence but a version number at the end of one does. It is a simple rule
+rather than a clever one, and simple rules are the ones you can predict
+under pressure.
+
+The third edit is the pattern to remember. Getting to the last sentence of a
+document by moving forwards means counting sentences. Getting there by `G`
+and then `(` means not counting anything.
+
+@start refunds.md
+# Refunds
+
+This page describes how the orders service issues refunds and what the
+payment provider guarantees in return. It is written for engineers working
+on the service itself rather than for integrators. Everything here applies
+to the v2 payments endpoint. The v1 endpoint was removed in 2.7.0.
+
+## Creating a refund
+
+A refund is created against an order, never against a customer. The order
+must be in a terminal state, which in practice means `COMPLETED` or
+`CANCELLED`. A refund against a `PENDING` order is rejected with
+`ORDER_NOT_FOUND`, which is misleading and is tracked in ORD-391. The
+provider is called once the local record has been written. If the provider
+call fails the local record is marked `FAILED` and left in place for the
+reconciliation job to pick up.
+
+Amounts are given in minor units, so 4999 is £49.99. A refund may not
+exceed the amount of the order it is issued against. Partial refunds are
+allowed and may be repeated until the order total is reached.
+
+## The refund window
+
+Refunds are only issued for orders placed within the last thirty days.
+Outside that window the cancellation still succeeds. No money moves and a
+cancellation reason of `REFUND_WINDOW_EXPIRED` is written to the order.
+Finance asked for this in 2.7.0 after a run of refunds against orders more
+than a year old. The window is measured from `placedAt` and not from the
+time the order completed.
+
+## Idempotency
+
+Every call to the provider carries an idempotency key. The key is derived
+from the refund id rather than the order id. Two refunds against the same
+order therefore get different keys and both go through, which is what you
+want for partial refunds. A retry of the same refund reuses the key and the
+provider returns the original response. This is the mechanism that failed
+in the 2026-08-14 incident.
+
+## Failure modes
+
+A refund can fail in three places and the three are not equivalent. A
+validation failure happens before anything is written and is safe to retry
+immediately. A provider failure happens after the local record exists and
+must be retried by the reconciliation job rather than by the caller. A
+timeout is the difficult case, because the provider may or may not have
+accepted the refund. Timeouts are always resolved by reconciliation and
+never by retrying in the request path.
+
+## Reconciliation
+
+A job runs nightly and compares the local refund records against the
+provider ledger for the previous seven days. Anything present on one side
+and not the other is written to the reconciliation report. The report is
+delivered to finance at 06:00. Discrepancies older than seven days are not
+detected by this job at all.
+
+## Currencies
+
+A refund is always issued in the currency of the order. The provider will
+not convert, and an attempt to refund in another currency is rejected
+before it leaves the service. Orders created before 2.12.0 have no currency
+stored and are treated as sterling.
+
+## The admin tool
+
+Support can issue a refund from the admin tool without going through the
+API. Those refunds carry a source of `ADMIN` and a note naming the agent.
+They are otherwise identical and go through the same provider call. The
+reconciliation job does not distinguish between them.
+
+## Metrics
+
+Three counters matter. `refund_issued_total` counts successful refunds by
+currency. `refund_failed_total` counts failures by reason and is the one
+that should have been alerting on 2026-08-14. `refund_duration_seconds`
+is a histogram of the provider call and is the first place to look when
+support reports slowness.
+
+## Testing
+
+The provider is stubbed in unit tests and there is no sandbox call. The
+integration suite runs against the provider sandbox and is the only place a
+real idempotency key is exercised. Sandbox refunds settle instantly, which
+hides every timing bug the production provider will find for you.
+
+## Receipts
+
+A receipt is emailed for every refund that reaches a terminal state. The
+email is queued rather than sent inline, so a failure in the mail service
+cannot fail the refund. Receipts for partial refunds show the remaining
+order balance. A refund that fails never produces a receipt.
+
+## Webhooks
+
+The provider sends a webhook for every state change on a refund. Webhooks
+are signed and the signature is checked before the body is parsed. A replay
+of a webhook already seen is answered with a 200 and otherwise ignored.
+Unknown event types are logged and acknowledged, because the provider
+disables endpoints that return errors.
+
+@expected refunds.md
+# Refunds
+
+This page describes how the orders service issues refunds and what the
+payment provider guarantees in return. It is written for engineers working
+on the service itself rather than for integrators. Everything here applies
+to the v2 payments endpoint. The v1 endpoint was removed in 2.7.0.
+
+## Creating a refund
+
+A refund is created against an order, never against a customer. The order
+must be in a terminal state, which in practice means `COMPLETED` or
+`CANCELLED`. A refund against a `PENDING` order is rejected with
+`ORDER_NOT_FOUND`, which is misleading and is tracked in ORD-391. The
+provider is called once the local record has been written. If the provider
+call fails the local record is marked `FAILED` and left in place for the
+reconciliation job to pick up.
+
+Amounts are given in minor units, so 4999 is £49.99. A refund may not
+exceed the amount of the order it is issued against. Partial refunds are
+allowed and may be repeated until the order total is reached.
+
+## The refund window
+
+Refunds are only issued for orders placed within the last thirty days.
+Outside that window the cancellation still succeeds. The window is a configuration value. No money moves and a
+cancellation reason of `REFUND_WINDOW_EXPIRED` is written to the order.
+Finance asked for this in 2.7.0 after a run of refunds against orders more
+than a year old. The window is measured from `placedAt` and not from the
+time the order completed.
+
+## Idempotency
+
+Every call to the provider carries an idempotency key. The key is derived
+from the refund id rather than the order id. Two refunds against the same
+order therefore get different keys and both go through, which is what you
+want for partial refunds. Keys are opaque to the provider. A retry of the same refund reuses the key and the
+provider returns the original response. This is the mechanism that failed
+in the 2026-08-14 incident.
+
+## Failure modes
+
+A refund can fail in three places and the three are not equivalent. A
+validation failure happens before anything is written and is safe to retry
+immediately. A provider failure happens after the local record exists and
+must be retried by the reconciliation job rather than by the caller. A
+timeout is the difficult case, because the provider may or may not have
+accepted the refund. Timeouts are always resolved by reconciliation and
+never by retrying in the request path.
+
+## Reconciliation
+
+A job runs nightly and compares the local refund records against the
+provider ledger for the previous seven days. Anything present on one side
+and not the other is written to the reconciliation report. The report is
+delivered to finance at 06:00. Discrepancies older than seven days are not
+detected by this job at all.
+
+## Currencies
+
+A refund is always issued in the currency of the order. The provider will
+not convert, and an attempt to refund in another currency is rejected
+before it leaves the service. Orders created before 2.12.0 have no currency
+stored and are treated as sterling.
+
+## The admin tool
+
+Support can issue a refund from the admin tool without going through the
+API. Those refunds carry a source of `ADMIN` and a note naming the agent.
+They are otherwise identical and go through the same provider call. The
+reconciliation job does not distinguish between them.
+
+## Metrics
+
+Three counters matter. `refund_issued_total` counts successful refunds by
+currency. `refund_failed_total` counts failures by reason and is the one
+that should have been alerting on 2026-08-14. `refund_duration_seconds`
+is a histogram of the provider call and is the first place to look when
+support reports slowness.
+
+## Testing
+
+The provider is stubbed in unit tests and there is no sandbox call. The
+integration suite runs against the provider sandbox and is the only place a
+real idempotency key is exercised. Sandbox refunds settle instantly, which
+hides every timing bug the production provider will find for you.
+
+## Receipts
+
+A receipt is emailed for every refund that reaches a terminal state. The
+email is queued rather than sent inline, so a failure in the mail service
+cannot fail the refund. Receipts for partial refunds show the remaining
+order balance. A refund that fails never produces a receipt.
+
+## Webhooks
+
+The provider sends a webhook for every state change on a refund. Webhooks
+are signed and the signature is checked before the body is parsed. A replay
+of a webhook already seen is answered with a 200 and otherwise ignored.
+Signature failures are counted. Unknown event types are logged and acknowledged, because the provider
+disables endpoints that return errors.

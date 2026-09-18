@@ -1,0 +1,181 @@
+@meta
+id: 27-20
+title: Scenario — the inherited config
+chapter: 27
+type: scenario
+skills: set-option, set-local, verbose-set, filetype, autocmd, buffer-switch
+par: 274
+minutes: 18
+vscode: a settings.json you did not write, and four tabs
+vimrc: source config.vim|e
+open: CHANGELOG.md refund.provider.ts migrations/2026_09_17_refund_reason.sql after/ftplugin/sql.vim
+
+@brief
+A ticket, and a vim you did not configure.
+
+    ORD-431  Ship the refund-reason column. Migration, provider, changelog.
+             And sort out whatever the shared vim config is doing, because
+             the last three people to touch this repo all left the same
+             mess behind.
+
+`config.vim` in this directory is sourced into every session on this
+machine. It is somebody else's file. Read it, work around it, and do not
+change it — the check will fail if you do.
+
+Four buffers, in this order.
+
+  1. **CHANGELOG.md** — add one line to the end, as a single unwrapped
+     line, and keep every bullet in the file a `-`:
+
+         - Refunds outside the window now record a reason.
+
+     Two different things in that config will stop you.
+
+  2. **refund.provider.ts** — rename `refund_reason` to `reason`. Three
+     occurrences, two of them on the same line.
+
+  3. **migrations/2026_09_17_refund_reason.sql** — the three continuation
+     lines want the database team's four-space indent. Only this buffer.
+
+  4. **after/ftplugin/sql.vim** — does not exist yet. Create it with the
+     three lines that make every SQL buffer behave that way from now on:
+
+         setlocal shiftwidth=4
+         setlocal tabstop=4
+         setlocal expandtab
+
+Four buffers open, so finish with `:wqa`.
+
+@keys
+| `:verbose set opt?` | the value, the file and the line |
+| `:verbose nmap <key>` | the same for a key that has been taken |
+| `:autocmd BufWritePre` | what is registered, and in which group |
+| `:autocmd! <group>` | delete a group's autocommands |
+| `:setlocal opt=…` | change this buffer and no other |
+| `:set opt&` | back to vim's default |
+| `:bn` `:wqa` | next buffer, write and quit everything |
+
+@hints
+Do not guess at any of it. Four commands will tell you everything:
+`:autocmd BufWritePre`, `:verbose setlocal textwidth?`,
+`:verbose set gdefault?` and `:set shiftwidth?`. Read `config.vim` if you
+would rather see it all at once — it is only nine lines.
+--
+The changelog has two problems, not one. Something breaks the line you
+type as you type it, and something else rewrites the bullets a moment
+before the file is written. The first is an option on the buffer; the
+second is an autocommand in a group.
+--
+The rename looks like a job for `:%s/refund_reason/reason/g`, and it is —
+once the `g` means what you think it means. The option involved is
+`gdefault`. `config.vim` also takes the underscore out of `iskeyword`,
+which is why `ciw` is no use to you on these identifiers.
+--
+The SQL indent is `:setlocal shiftwidth=4` and then `2G3>>`. Use
+`setlocal`, not `set`: the ftplugin file you are about to write is the
+permanent version, and it would be a poor advertisement to leak four
+spaces into the other three buffers on the way.
+
+@solution
+A route that measures 238 keystrokes.
+
+**CHANGELOG.md**, already the current buffer. `:autocmd! dojo` clears the
+group, which stops the bullet rewrite on write. That does not undo the
+`textwidth=48` the same group already put on this buffer when it loaded,
+so `:setlocal textwidth=0` as well. Then `G`, `o`, the line, `Esc`.
+
+Worth noticing: had the changelog been the *last* file rather than the
+first, clearing the group early would have prevented the `FileType`
+autocommand ever running on it, and the `textwidth` step would have been
+unnecessary. Autocommands only apply to what happens after they exist.
+
+**refund.provider.ts** — `:bn`, then `:set nogdefault` and
+`:%s/refund_reason/reason/g`. With `gdefault` left on, that command
+replaces the first match on each line and leaves the second, and the file
+looks nearly right.
+
+**migrations/…sql** — `:bn`, `:setlocal shiftwidth=4`, `2G3>>`.
+
+**after/ftplugin/sql.vim** — `:bn` into the empty buffer, `i`, the three
+lines, `Esc`. Then `:wqa`.
+
+Four buffers, four different mechanisms, and one habit that covered all of
+them: ask vim who did it before deciding what to do about it. Every
+surprise in this lesson is one `:verbose` away from a file name and a line
+number, and none of them is guessable from the symptom.
+
+The fourth file is the part that outlives the ticket. `:setlocal
+shiftwidth=4` fixes this session; `after/ftplugin/sql.vim` fixes every
+session anybody has on this repo, without an autocommand, an `if`, or a
+line in anyone's `.vimrc`. That is the shape of a good config change, and
+it is where the next chapter starts.
+
+@start config.vim
+" team defaults, inherited from the old tech lead
+set hidden
+set ignorecase
+set gdefault
+set iskeyword-=_
+augroup dojo
+  autocmd!
+  autocmd FileType markdown setlocal textwidth=48
+  autocmd BufWritePre *.md %s/^- /* /e
+augroup END
+
+@start CHANGELOG.md
+# Changelog
+
+## 2026.09.2
+
+- The export job streams instead of buffering.
+- Customer search includes archived records.
+
+@expected CHANGELOG.md
+# Changelog
+
+## 2026.09.2
+
+- The export job streams instead of buffering.
+- Customer search includes archived records.
+- Refunds outside the window now record a reason.
+
+@start refund.provider.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class RefundProvider {
+  public async record(orderId: string, refund_reason: string) {
+    return this.refundRepository.create({
+      values: { orderId, refund_reason, note: refund_reason },
+    });
+  }
+}
+
+@expected refund.provider.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class RefundProvider {
+  public async record(orderId: string, reason: string) {
+    return this.refundRepository.create({
+      values: { orderId, reason, note: reason },
+    });
+  }
+}
+
+@start migrations/2026_09_17_refund_reason.sql
+ALTER TABLE refunds
+ADD COLUMN reason VARCHAR(64) NULL,
+ADD COLUMN recorded_at DATETIME NOT NULL,
+ALGORITHM=INPLACE;
+
+@expected migrations/2026_09_17_refund_reason.sql
+ALTER TABLE refunds
+    ADD COLUMN reason VARCHAR(64) NULL,
+    ADD COLUMN recorded_at DATETIME NOT NULL,
+    ALGORITHM=INPLACE;
+
+@expected after/ftplugin/sql.vim
+setlocal shiftwidth=4
+setlocal tabstop=4
+setlocal expandtab

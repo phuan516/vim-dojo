@@ -1,0 +1,121 @@
+@meta
+id: 16-11
+title: Side by side
+chapter: 16
+type: lesson
+skills: split-window, window-nav
+par: 120
+minutes: 6
+vscode: drag the tab to the right half of the editor
+open: payment.service.ts
+
+@brief
+`:sp` stacks windows. `:vs` puts them side by side, which is the better
+shape for code: lines are wide and screens are wider. `:vs errors.json`
+opens the errors file in a new window on the left, cursor in it, with
+the service still on the right. `Ctrl-W l` moves right, `Ctrl-W h` moves
+left, `Ctrl-W w` cycles to the next window whichever way it is.
+
+The payment service is the job. It throws `REFUND_DECLINED` on a 402,
+and that code does not exist yet; it also throws `REFUND_FAILD`, which
+is a typo for a code that does. With the two files beside each other
+both problems are visible at once.
+
+  1. `errors.json`: add a line directly above `REFUND_FAILED`:
+
+         "REFUND_DECLINED": { "statusCode": 402, "sentry": false },
+
+  2. `payment.service.ts`: `REFUND_FAILD` becomes `REFUND_FAILED`.
+
+@keys
+| `:vs name` | open `name` in a new window to the left |
+| `:vs` | split this window vertically, same buffer in both |
+| `Ctrl-W v` | the same, as a chord |
+| `Ctrl-W h` `Ctrl-W l` | window to the left, window to the right |
+| `Ctrl-W w` | next window, wrapping round; `Ctrl-W p` the previous one |
+
+@hints
+`:vs errors.json`. You are in the left window. `/FAILED`, `O` to open a
+line above, the new entry, `Esc`.
+--
+`Ctrl-W l` puts you in the service. `/FAILD`, then `cw` replaces
+`FAILD` because the cursor is on its first letter and the word ends at
+the quote.
+--
+`:wqa` writes both and closes both windows.
+
+@solution
+    :vs errors.json<Enter>  /FAILED<Enter>  O "REFUND_DECLINED": { "statusCode": 402, "sentry": false }, <Esc>
+    Ctrl-W l  /FAILD<Enter>  cw FAILED <Esc>  :wqa<Enter>
+
+About a hundred and five keystrokes; the JSON line is sixty of them.
+
+Two files side by side is the layout for almost every cross-file edit:
+the type and the code that uses it, the error table and the throw, the
+test and the thing under test. `:vs name` builds it in one command
+from wherever you are, and you did not have to leave the service or
+put it in the buffer list first; it was there when you came back.
+
+Which side the new window lands on is the `splitright` option, off by
+default, so new vertical windows open on the left. Many people set it
+in their vimrc because a new window on the right feels more natural.
+Chapter 27 is where you decide.
+
+@start payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string) {
+    const response = await this.http.post(`/refunds`, { orderId });
+
+    if (response.status === 402) {
+      throw exception('REFUND_DECLINED');
+    }
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILD');
+    }
+
+    return response.data;
+  }
+}
+
+@expected payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string) {
+    const response = await this.http.post(`/refunds`, { orderId });
+
+    if (response.status === 402) {
+      throw exception('REFUND_DECLINED');
+    }
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@expected errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_DECLINED": { "statusCode": 402, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}

@@ -1,0 +1,188 @@
+@meta
+id: 29-09
+title: Brackets that change the answer
+chapter: 29
+type: lesson
+skills: surround
+par: 52
+minutes: 6
+vscode: click before, type a bracket, click after, type the other one, re-read it four times
+open: pricing.ts
+vimrc: set packpath^=. | packloadall!
+
+@brief
+The surround plugin is shipped with this lesson, same place as before.
+
+Two functions in `pricing.ts` return the wrong number, and both bugs are
+the same bug: operator precedence. Nothing has to be retyped; each one
+needs a pair of brackets around a range that is already correct.
+
+  1. `totalWithTax` should round the whole total, not just the tax rate.
+     `.toFixed(2)` must apply to `subtotal + subtotal * taxRate`.
+
+  2. `discountedTotal` should divide the discount by 100, not the percent
+     alone before multiplying. `total * percent` is the part that needs
+     grouping.
+
+Two different routes are worth having in your hands here: a motion when
+the range ends at something you can name, and a visual selection when it
+does not.
+
+@keys
+| `ys{motion})` | surround what the motion covers with brackets |
+| `t.` | up to, not including, the next dot |
+| `{Visual}S{char}` | surround whatever is selected |
+| `v3e` | visual, then three word-ends |
+
+@hints
+The first range ends just before `.toFixed`. There is a motion that means
+"up to the next dot".
+--
+`yst.)` from the start of `subtotal`. For the second, select
+`total * percent` visually first and then ask for the brackets.
+--
+`/return sub` `Enter`, `w`, `yst.)`. Then `/total \* percent` `Enter`,
+`v3e`, `S)`.
+
+@solution
+    /return sub<Enter>  w  yst.)
+    /total \* percent<Enter>  v3e  S)
+    :wq<Enter>
+
+`ys` takes a motion, so `t.` — a motion you learned in chapter 5 and have
+used a thousand times since — becomes a way of saying "bracket this
+expression up to the method call". No counting, no clicking, and if the
+expression grows a term tomorrow the same keys still work.
+
+The second one has no landmark to aim at: `total * percent` ends in the
+middle of an expression with a `/` after it. That is what visual mode is
+for. Select it however you like — `v3e` here, but `v` and then `f%` or
+`ve` three times are all the same selection — and `S` puts the pair round
+whatever is highlighted. Select, then act, instead of predicting.
+
+That pairing is the general shape. `ys` when you can name the end of the
+range, `S` when you have to look at it. Both are the same function inside
+the plugin; only the way the range arrives differs.
+
+Worth saying plainly: neither of these bugs is findable by searching. The
+code compiles, the tests that exist pass, and the number is quietly wrong
+by a few pence per order. You find them by reading. All the editor can do
+is make the fix cheap enough that you make it the moment you see it
+instead of writing a ticket.
+
+@start pack/dojo/start/surround/plugin/surround.vim
+" dojo-surround.vim - a small, honest surround plugin.
+" Shipped inside this lesson. You did not install it; the dojo did.
+"
+"   ds{char}           delete the surrounding pair
+"   cs{old}{new}       change one surrounding pair into another
+"   ys{motion}{char}   surround the text the motion covers
+"   {Visual}S{char}    surround the selection
+"
+" Brackets come in pairs: ( [ { < all give you the matching closer.
+" Anything else is used on both sides, so " gives "..." and ` gives `...`.
+
+if exists('g:loaded_dojo_surround')
+  finish
+endif
+let g:loaded_dojo_surround = 1
+
+let s:pairs = {
+      \ '(': '()', ')': '()',
+      \ '[': '[]', ']': '[]',
+      \ '{': '{}', '}': '{}',
+      \ '<': '<>', '>': '<>',
+      \ }
+
+function! s:delims(char) abort
+  return get(s:pairs, a:char, a:char . a:char)
+endfunction
+
+" The text between the pair, without the pair itself.
+function! s:inner(char) abort
+  let save = @z
+  let @z = ''
+  silent execute 'normal! "zyi' . a:char
+  let text = @z
+  let @z = save
+  return text
+endfunction
+
+" A visual selection covering the pair AND what is between it. vi" selects
+" the inside; o h o l then walks each end out by one character onto the
+" delimiters. Doing it this way rather than with va" matters: va" also
+" swallows the whitespace next to the string.
+function! s:select(char) abort
+  return 'vi' . a:char . 'ohol'
+endfunction
+
+function! s:replace(char, text) abort
+  let save = @z
+  let @z = a:text
+  silent execute 'normal! ' . s:select(a:char) . '"zp'
+  let @z = save
+endfunction
+
+function! s:ds(char) abort
+  let inner = s:inner(a:char)
+  if inner ==# ''
+    return
+  endif
+  call s:replace(a:char, inner)
+endfunction
+
+function! s:cs(old, new) abort
+  let inner = s:inner(a:old)
+  if inner ==# ''
+    return
+  endif
+  let d = s:delims(a:new)
+  call s:replace(a:old, d[0] . inner . d[1])
+endfunction
+
+function! s:ys(type) abort
+  let d = s:delims(nr2char(getchar()))
+  let save = @z
+  if a:type ==# 'line'
+    silent execute "normal! '[V']\"zy"
+    call setreg('z', d[0] . "\n" . @z . d[1], 'V')
+    silent execute "normal! '[V']\"zp"
+  else
+    silent execute "normal! `[v`]\"zy"
+    let @z = d[0] . @z . d[1]
+    silent execute "normal! `[v`]\"zp"
+  endif
+  let @z = save
+endfunction
+
+function! s:vs(char) abort
+  let d = s:delims(a:char)
+  let save = @z
+  silent execute 'normal! gv"zy'
+  let @z = d[0] . @z . d[1]
+  silent execute 'normal! gv"zp'
+  let @z = save
+endfunction
+
+nnoremap <silent> ds :<C-u>call <SID>ds(nr2char(getchar()))<CR>
+nnoremap <silent> cs :<C-u>call <SID>cs(nr2char(getchar()), nr2char(getchar()))<CR>
+nnoremap <silent> ys :<C-u>set operatorfunc=<SID>ys<CR>g@
+xnoremap <silent> S :<C-u>call <SID>vs(nr2char(getchar()))<CR>
+
+@start pricing.ts
+export function totalWithTax(subtotal: number, taxRate: number) {
+  return subtotal + subtotal * taxRate.toFixed(2);
+}
+
+export function discountedTotal(total: number, percent: number) {
+  return total - total * percent / 100;
+}
+
+@expected pricing.ts
+export function totalWithTax(subtotal: number, taxRate: number) {
+  return (subtotal + subtotal * taxRate).toFixed(2);
+}
+
+export function discountedTotal(total: number, percent: number) {
+  return total - (total * percent) / 100;
+}

@@ -1,0 +1,69 @@
+@meta
+id: 08-06
+title: Take the whole line
+chapter: 08
+type: lesson
+skills: delete-d
+par: 13
+minutes: 3
+vscode: click the line, Home, Shift-Down, Delete
+open: order.provider.test.ts
+
+@brief
+Deleting a line in VS Code is a small ceremony: click somewhere on it,
+make sure the selection covers the newline as well, delete, then check
+you have not left a blank line behind.
+
+In vim it is one key pressed twice, from anywhere on the line. The column
+does not matter. Nothing has to be selected first.
+
+This test has a stale TODO comment on it and a debug log that was never
+meant to be committed. Both lines go. Nothing else in the file changes.
+
+@keys
+| `dd` | delete the whole line the cursor is on |
+| `j` | down a line |
+
+@hints
+The verb for delete is `d`, and on its own it waits for you to say how
+much. Doubling it means "this line".
+--
+`dd` deletes the line under the cursor, newline and all, and lands you on
+the line that takes its place.
+--
+`j` then `dd` clears the comment. You are now on the `it(` line, so `j`
+again and `dd` clears the log.
+
+@solution
+    j dd  j dd  :wq<Enter>
+
+Six keystrokes. The detail to notice is where the cursor ends up: after
+`dd` it is on the line that moved up into the gap, in the same column.
+That is why deleting several separate lines is `dd`, move, `dd` — you
+never have to re-establish where you are.
+
+Doubling is how every operator in vim says "this whole line". `dd`, `cc`,
+`yy`, `>>`, `==`. Learn the pattern once and the rest of them come free.
+
+And `d` on its own is not a command. It is a verb waiting for an object.
+Chapter 9 is entirely about what you can put after it.
+
+@start order.provider.test.ts
+describe('OrderProvider', () => {
+  // TODO: unskip once the gateway stub lands
+  it('cancels an order', async () => {
+    console.log('running cancel test');
+    await provider.cancel('ord_1042');
+
+    expect(payment.refund).toHaveBeenCalledWith('ord_1042');
+  });
+});
+
+@expected order.provider.test.ts
+describe('OrderProvider', () => {
+  it('cancels an order', async () => {
+    await provider.cancel('ord_1042');
+
+    expect(payment.refund).toHaveBeenCalledWith('ord_1042');
+  });
+});

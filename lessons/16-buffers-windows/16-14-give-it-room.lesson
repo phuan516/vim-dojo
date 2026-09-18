@@ -1,0 +1,199 @@
+@meta
+id: 16-14
+title: Give it room
+chapter: 16
+type: lesson
+skills: window-resize, split-window, window-nav
+par: 150
+minutes: 6
+vscode: drag the divider between the editors until it looks right
+open: order.provider.ts
+
+@brief
+A split gives each window half the screen, which is the wrong answer
+almost every time. A six-line JSON file does not need twenty rows, and
+the sixty-line provider under it does. The `Ctrl-W` family resizes
+too, and it takes a count.
+
+`Ctrl-W _` makes the current window as tall as it can be; with a count
+in front, `6 Ctrl-W _` makes it exactly six lines. `Ctrl-W |` is the
+same for width. `Ctrl-W =` puts everything back to equal. `Ctrl-W +`
+and `Ctrl-W -` grow and shrink by a line, or by a count. `:resize 6`
+does what `6 Ctrl-W _` does if you prefer to see it written down.
+
+Open `errors.json` above the provider, shrink it to six lines so the
+provider gets the rest, and make both changes.
+
+  1. `errors.json`: directly under `ORDER_ALREADY_SHIPPED`, add
+
+         "ORDER_NOT_PENDING": { "statusCode": 409, "sentry": false },
+
+  2. `order.provider.ts`: `ship` throws `ORDER_ALREADY_SHIPPED` when
+     the status is not pending, which is the wrong code. Make it throw
+     `ORDER_NOT_PENDING`. The `cancel` method's throw is correct and
+     stays.
+
+@keys
+| `Ctrl-W _` | this window as tall as possible |
+| `6 Ctrl-W _` | this window exactly six lines tall |
+| `Ctrl-W \|` | this window as wide as possible; takes a count the same way |
+| `Ctrl-W =` | all windows equal again |
+| `Ctrl-W +` `Ctrl-W -` | one line taller, one line shorter; take a count |
+| `:resize 6` | the command form |
+
+@hints
+`:sp errors.json` puts the errors file on top with the cursor in it.
+`6 Ctrl-W _` while you are there.
+--
+`/SHIPPED`, `o`, the new entry, `Esc`. Then `Ctrl-W j` down to the
+provider, which now has most of the screen.
+--
+`/ALREADY_SHIPPED` finds the wrong throw first because `ship` comes
+before `cancel`. `cw` from there replaces `ALREADY_SHIPPED` and leaves
+`ORDER_` alone; type `NOT_PENDING`. `:wqa`.
+
+@solution
+    :sp errors.json<Enter>  6 Ctrl-W _
+    /SHIPPED<Enter>  o "ORDER_NOT_PENDING": { "statusCode": 409, "sentry": false }, <Esc>
+    Ctrl-W j  /ALREADY_SHIPPED<Enter>  cw NOT_PENDING <Esc>  :wqa<Enter>
+
+Around a hundred and thirty keystrokes. The resize is three of them,
+and it is the difference between seeing eight lines of the provider
+and seeing forty.
+
+Sizing is not graded and cannot be, but it is the difference between a
+layout you keep and one you tear down out of irritation. The pattern
+that sticks: open the reference, give it the few lines it needs, work
+in the big window, `Ctrl-W =` or `Ctrl-W o` when you are done. Mouse
+users drag dividers for the same result and take longer to get there;
+`mouse=a` lets you do that in vim too, if you want to feel the
+difference.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(customerId: string) {
+    return this.orderRepository.findByCustomer({ customerId });
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(customerId: string) {
+    return this.orderRepository.findByCustomer({ customerId });
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_NOT_PENDING');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@expected errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "ORDER_NOT_PENDING": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}

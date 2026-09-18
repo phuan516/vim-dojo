@@ -1,0 +1,72 @@
+@meta
+id: 08-03
+title: Overwrite a character in place
+chapter: 08
+type: lesson
+skills: replace-r
+par: 18
+minutes: 3
+vscode: double-click the value and retype it
+open: order.repository.ts
+
+@brief
+Deleting a wrong character and typing the right one is two operations and
+a trip through insert mode. When the replacement is exactly one character
+long there is a key that does the whole thing without ever leaving normal
+mode.
+
+The page size and the offset in this repository were typed with the
+letter `O` where a zero belongs. `take: 5O` is not a number.
+
+Fix both. You should not see `-- INSERT --` at any point.
+
+@keys
+| `r` | replace the character under the cursor with the next one you type |
+| `fO` | forward to the next capital `O` |
+| `j` | down a line |
+
+@hints
+You are swapping one character for one character. That is a single
+command, not a delete followed by an insert.
+--
+`r` waits for one more keypress and writes it over the character under
+the cursor. It does not enter insert mode, so there is no `Esc`.
+--
+Get onto the `O` with `fO`, then `r0`. The next one is one line down.
+
+@solution
+    4j fO r0  j fO r0  :wq<Enter>
+
+`r` is the answer to "that one character is wrong". It costs two
+keystrokes, it leaves you in normal mode, and — the part that matters
+later — it is one undo step and one repeatable command.
+
+The rule of thumb for the next few lessons: one character for one
+character is `r`. One character for several characters, or for nothing at
+all, is a different key, and that is the next lesson.
+
+`R` is its big sibling: it enters an overwrite mode where everything you
+type replaces what is there until you press `Esc`. It is occasionally
+right for ASCII tables and almost never right for code.
+
+@start order.repository.ts
+export class OrderRepository {
+  public async findMany(customerId: string) {
+    return this.prisma.order.findMany({
+      where: { customerId },
+      take: 5O,
+      skip: 1O,
+    });
+  }
+}
+
+@expected order.repository.ts
+export class OrderRepository {
+  public async findMany(customerId: string) {
+    return this.prisma.order.findMany({
+      where: { customerId },
+      take: 50,
+      skip: 10,
+    });
+  }
+}

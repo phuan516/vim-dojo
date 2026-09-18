@@ -1,0 +1,75 @@
+@meta
+id: 22-01
+title: See it, then delete it
+chapter: 22
+type: lesson
+skills: visual-char
+par: 20
+minutes: 4
+vscode: click before the bracket, drag to the closing one, Delete
+open: refunds.md
+
+@brief
+Chapter 1 let you look at visual mode. This chapter puts it to work,
+and starts by being honest about where it belongs.
+
+`v` starts a character-wise selection at the cursor. Every motion you
+already know — `w`, `f`, `$`, `}`, a search — now extends the selection
+instead of just moving. When the region is what you want, press an
+operator. `d` deletes it, `c` changes it, `y` yanks it. The same letters
+as always, just pressed *after* the region instead of before it.
+
+The runbook has a parenthetical that runs over a line break and adds
+nothing. Remove it, including the space before the opening bracket, so
+the sentence reads:
+
+    Refunds older than thirty days are refused by the payments service and
+    the order is marked with a reason code instead.
+
+@keys
+| `v` | start a character-wise selection |
+| `/pattern` | in visual mode, extends the selection to the match |
+| `d` | delete the selection |
+| `Esc` | drop the selection, change nothing |
+
+@hints
+Search your way to the space before `(this`. Start the selection there.
+--
+In visual mode a search is just another motion. `/)` extends the
+selection to the closing bracket, and because visual selections are
+inclusive, the bracket itself is in.
+--
+`/ (this` `Enter`, `v`, `/)` `Enter`, `d`. Then save.
+
+@solution
+    / (this<Enter> v /)<Enter> d :wq<Enter>
+
+Seventeen keystrokes. `d/)` from normal mode would have stopped one
+character short — the search motion is exclusive — and the fix for that
+(`d/)/e`) is the kind of thing nobody remembers at 11pm. In visual mode
+you watched the highlight reach the bracket and then pressed `d`. That
+is the honest case for `v`: when the region is easier to see than to
+name, select it, check it, act.
+
+The rest of the chapter is about knowing when that is true and when it
+is not. Most of the time an operator plus a motion or a text object says
+the same thing in fewer keys, and lesson 11 measures the difference.
+
+@start refunds.md
+# Refund runbook
+
+Refunds older than thirty days are refused by the payments service (this
+was the behaviour of the legacy gateway too, before the migration) and
+the order is marked with a reason code instead.
+
+The reason code is `REFUND_WINDOW_EXPIRED` and finance can see it on
+the order.
+
+@expected refunds.md
+# Refund runbook
+
+Refunds older than thirty days are refused by the payments service and
+the order is marked with a reason code instead.
+
+The reason code is `REFUND_WINDOW_EXPIRED` and finance can see it on
+the order.

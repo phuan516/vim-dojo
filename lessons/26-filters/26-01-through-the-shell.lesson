@@ -1,0 +1,90 @@
+@meta
+id: 26-01
+title: Send the file through a shell command
+chapter: 26
+type: lesson
+skills: filter-bang
+par: 15
+minutes: 4
+vscode: an extension for sorting, and nothing at all for the rest
+open: routing-keys.txt
+
+@brief
+Every routing key the order service subscribes to lives in this file, and
+it has been appended to for a year. Consumers do not care about the order,
+but people reading it do. Sort it.
+
+You could do this with `:sort`, which chapter 24 gave you. Do it the other
+way instead, because the other way is the door to everything the shell can
+do and vim cannot.
+
+A filter hands a stretch of your buffer to a command on standard input,
+waits, and replaces those lines with whatever the command wrote to
+standard output. That is the whole mechanism. The command never sees the
+file on disk, only the lines you gave it, and the lines you gave it are
+gone the moment it answers.
+
+@keys
+| `:%!cmd` | send the whole file through `cmd`, replace it with the output |
+| `:{range}!cmd` | the same, for a range of lines |
+| `u` | undo the filter — one step, however many lines changed |
+
+@hints
+`%` is the range meaning the whole file, the same `%` you have been using
+with `:s` and `:g`. What comes after the range is a `!`.
+--
+`!` on the ex command line means "run this in the shell". With a range in
+front of it, the range goes in and the output comes back.
+--
+`:%!sort` and Enter, then `:wq`.
+
+@solution
+    :%!sort<Enter>  :wq<Enter>
+
+Twelve keystrokes, and eleven of them would be the same for any command
+you can name.
+
+Say the shape out loud once, because the rest of the chapter is variations
+on it: **range, bang, command**. `:%!sort`. `:1,20!sort`. `:'<,'>!column -t`.
+The range is which lines get fed in. The command is anything on your
+PATH. The output takes their place.
+
+Two consequences, both worth internalising now.
+
+The first is that the replacement is total. The command's stdout becomes
+those lines, exactly, whatever it is. Nothing is merged, nothing is kept.
+If `sort` printed one line, you would have one line.
+
+The second is that this costs you nothing to try. A filter is a single
+undoable change, so `u` puts every line back the way it was, and you can
+run another. Filtering is not a careful operation. Try it, look at the
+result, undo if it was not what you meant.
+
+`:sort` would have been shorter here. It is also the only one of these
+vim has. There is no `:jq`, no `:column`, no `:awk`, no in-house
+`:base64 -d`, and there never will be — but they are all already
+installed on the machine, and `!` is how you reach them.
+
+@start routing-keys.txt
+order.shipped
+payment.captured
+customer.created
+order.cancelled
+payment.refunded
+customer.merged
+order.placed
+payment.failed
+refund.requested
+order.refunded
+
+@expected routing-keys.txt
+customer.created
+customer.merged
+order.cancelled
+order.placed
+order.refunded
+order.shipped
+payment.captured
+payment.failed
+payment.refunded
+refund.requested

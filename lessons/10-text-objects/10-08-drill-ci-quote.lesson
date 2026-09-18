@@ -1,0 +1,56 @@
+@meta
+id: 10-08
+title: Drill — ci" on a config value
+chapter: 10
+type: drill
+skills: obj-quote
+par: 27
+minutes: 5
+reps: 8
+vscode: double-click, discover it only took one word, drag instead
+open: database.json
+
+@brief
+Eight times: the database host should be `db.internal`, not the staging
+one. Replace the value, save, quit.
+
+The value has dots in it, so a double-click would only ever get you part
+of it. The object does not care.
+
+@keys
+| `ci"` | change what is between the quotes |
+| `f.` | a cheap way to land inside the value |
+
+@hints
+Get the cursor somewhere inside the value first — anywhere will do.
+--
+`ci"` then type the new host.
+
+@solution
+    2j f. ci" db.internal <Esc> :wq<Enter>
+
+Twenty-three keystrokes, eleven of them the new host name.
+
+The reason to drill this one rather than just read it: config files are
+where you spend a surprising amount of your editing life, and they are
+almost entirely strings. Once `ci"` is in your fingers you stop thinking
+of a config value as text to be selected and start thinking of it as a
+slot to be filled.
+
+@start database.json
+{
+  "database": {
+    "host": "db.staging.internal",
+    "port": 5432,
+    "pool": 10
+  }
+}
+
+@expected database.json
+{
+  "database": {
+    "host": "db.internal",
+    "port": 5432,
+    "pool": 10
+  }
+}

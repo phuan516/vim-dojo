@@ -1,0 +1,72 @@
+@meta
+id: 05-14
+title: Word motions ignore line ends
+chapter: 05
+type: lesson
+skills: word-e, word-counts
+par: 19
+minutes: 5
+vscode: Ctrl-Right stops dead at the end of the line
+open: refund.types.ts
+
+@brief
+Every word motion runs off the end of one line and onto the start of the
+next. `w` on the last word of a line lands on the first word of the line
+below; `e` and `b` do the same in their own directions. The file is one
+long stream of words to them, and the newlines are just more whitespace.
+
+VS Code does not do this — Ctrl-Right parks at the end of the line and
+you press it again to move on. That difference is why a count can cross
+lines here and cannot there.
+
+Two fields on `RefundInput` are optional now. Both `amount` and `reason`
+should carry a `?`:
+
+    amount?: number;
+    reason?: string;
+
+@keys
+| `e` | end of the current or next word, across line ends |
+| `4e` | four of those |
+| `a` | append after the cursor |
+| `2j` | down two lines |
+
+@hints
+The two edits are `ea?` twice. The interesting part is getting from the
+first one to the second.
+--
+After the first `?`, keep pressing `e` and watch it walk off the end of
+the line onto `reason` without you touching `j`.
+--
+`2j` `ea?` `Esc`, then `4e` — over `:`, `string`, `;` and onto the end of
+`reason` — then `a?` `Esc` `:wq`.
+
+@solution
+    2j  ea?<Esc>  4e  a?<Esc>  :wq<Enter>
+
+Fifteen keystrokes for both fields, and no vertical motion at all after
+the first jump. `4e` crossed a line boundary as if it were a space.
+
+This is worth internalising because it changes how you aim. For anything
+within a line or two, you do not need to move down and then across. You
+count word-ends and go, which is one motion instead of two and no chance
+of landing in the wrong column.
+
+The counterweight: because they run on, an over-large count silently
+carries you into the next function. Word motions are for short hops. Once
+the target is more than a line or two away, you want `}`, a search or a
+line jump, and chapters six, seven and twelve hand you all three.
+
+@start refund.types.ts
+export type RefundInput = {
+  orderId: string;
+  amount: number;
+  reason: string;
+};
+
+@expected refund.types.ts
+export type RefundInput = {
+  orderId: string;
+  amount?: number;
+  reason?: string;
+};

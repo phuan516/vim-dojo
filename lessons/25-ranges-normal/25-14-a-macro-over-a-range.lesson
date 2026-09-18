@@ -1,0 +1,91 @@
+@meta
+id: 25-14
+title: A macro over a marked range
+chapter: 25
+type: lesson
+skills: ex-normal, range-syntax
+par: 33
+minutes: 7
+vscode: five careful multi-cursor edits, then the same again for the next block
+open: customers.fixture.ts
+vimrc: let @q="0f;s', name: '\<Esc>f;s', country: '\<Esc>0i  { id: '\<Esc>A' },\<Esc>"
+
+@brief
+Register `q` already holds a macro. Played on a semicolon-separated line
+it produces the object literal the fixture wants:
+
+    cus_501;Ada Lovelace;GB   →     { id: 'cus_501', name: 'Ada Lovelace', country: 'GB' },
+
+Run it over the five rows of the `customers` array. The two rows in
+`archived` below are staying as they are — that array is fed to a
+different loader and the raw form is deliberate.
+
+`@q` is a normal-mode command like any other, so `:normal @q` plays it on
+every line of a range. Mark the two ends of the block and use the marks
+as the range.
+
+@keys
+| `ma` | set mark `a` on this line |
+| `:'a,'bnormal @q` | play macro `q` on every line from mark `a` to mark `b` |
+| `:'<,'>normal @q` | the same over the last visual selection |
+
+@hints
+Marks were chapter 17. Put `a` on the first row and `b` on the last row
+of the `customers` array, then write the range with them.
+--
+A mark used as an address is `'a` — apostrophe, then the letter.
+--
+`2Gma`, `6Gmb`, then `:'a,'bnormal @q` Enter, then `:wq`.
+
+@solution
+    2G ma   6G mb   :'a,'bnormal @q<Enter>   :wq<Enter>
+
+Twenty-eight keystrokes, five rows converted, and the `archived` rows
+untouched.
+
+`5@q` from the first row would have done the same work. Two reasons to
+prefer this shape. First, `5@q` needs you to count the rows and to trust
+that the macro lands on the next line every time — a macro that ends
+somewhere unexpected takes the remaining plays with it. `:normal` puts
+the cursor at the start of each line in the range itself, so a macro that
+wanders cannot run off into the rest of the file. Second, a count that is
+one too high eats a line of the next array; a range cannot, because you
+said where it ends.
+
+Marks rather than line numbers because you set them while you were
+looking at the block. `2G` and `6G` here were only to get there; in a
+real file you search to the top row, `ma`, search to the last, `mb`, and
+the range is `'a,'b` without a number anywhere. The marks also move with
+the lines if something above them changes.
+
+Ranges take every other kind of mark too: `'<` and `'>` are the ends of
+the last visual selection, which is what chapter 22's `:'<,'>` was all
+along, and `` `` `` is where you jumped from.
+
+@start customers.fixture.ts
+export const customers = [
+cus_501;Ada Lovelace;GB
+cus_502;Grace Hopper;US
+cus_503;Alan Turing;GB
+cus_504;Edsger Dijkstra;NL
+cus_505;Barbara Liskov;US
+];
+
+export const archived = [
+cus_601;Ken Thompson;US
+cus_602;Dennis Ritchie;US
+];
+
+@expected customers.fixture.ts
+export const customers = [
+  { id: 'cus_501', name: 'Ada Lovelace', country: 'GB' },
+  { id: 'cus_502', name: 'Grace Hopper', country: 'US' },
+  { id: 'cus_503', name: 'Alan Turing', country: 'GB' },
+  { id: 'cus_504', name: 'Edsger Dijkstra', country: 'NL' },
+  { id: 'cus_505', name: 'Barbara Liskov', country: 'US' },
+];
+
+export const archived = [
+cus_601;Ken Thompson;US
+cus_602;Dennis Ritchie;US
+];

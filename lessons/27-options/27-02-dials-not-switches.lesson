@@ -1,0 +1,79 @@
+@meta
+id: 27-02
+title: Dials, not switches
+chapter: 27
+type: lesson
+skills: set-option
+par: 32
+minutes: 4
+vscode: Settings, "Editor: Tab Size", type 4
+open: schema.sql
+
+@brief
+Not every option is a yes or a no. Plenty of them hold a number or a
+string, and those take an `=` and a value.
+
+`shiftwidth` is a number: it is how far `>>` and `<<` move a line, and how
+much indent `o` gives you inside a block. Your setup has it at 2, which is
+right for the TypeScript in this repo.
+
+This is not TypeScript. The SQL in `schema.sql` follows the database
+team's convention of four spaces inside a `CREATE TABLE`. Set the dial to
+4 for this session and indent the four column lines.
+
+No spaces around the `=`, and no quotes around the value. Vim's command
+line is not a shell.
+
+@keys
+| `:set shiftwidth=4` | a number option takes `=` and a value |
+| `:set shiftwidth?` | what is it right now |
+| `:set sw=4` | the short name, for live use |
+| `:set sw=4 et` | several options in one command, separated by spaces |
+
+@hints
+`>>` moves a line by `shiftwidth`. You do not need a different indent
+command, you need a different `shiftwidth`.
+--
+Number options are set with `=`. `:set shiftwidth=` and the number.
+--
+`:set shiftwidth=4` then Enter, then `2G` and `4>>`.
+
+@solution
+    :set shiftwidth=4<Enter>  2G  4>>  :wq<Enter>
+
+Twenty-seven keystrokes.
+
+The syntax rules for values are short and worth knowing exactly, because
+vim will not warn you when you get them wrong — it will usually just
+throw an error you then have to read:
+
+- No spaces around `=`. `:set sw = 4` is three separate arguments and an
+  error.
+- No quotes. `:set backupdir='/tmp'` puts literal quote characters in the
+  path.
+- A space inside a string value has to be escaped with a backslash:
+  `:set makeprg=npm\ run\ build`.
+- Several options can share one `:set`: `:set sw=4 ts=4 et` sets three.
+
+If you want to know what a number option is holding, `:set sw?` tells you.
+If you want to know what *every* option is holding, `:options` opens a
+browsable window of the lot, grouped by subject, with each option's value
+and one line of description. It is slow to read and occasionally exactly
+what you want when you know the behaviour you are chasing but not the
+name.
+
+@start schema.sql
+CREATE TABLE orders (
+id CHAR(26) NOT NULL,
+customer_id CHAR(26) NOT NULL,
+total_pence INTEGER NOT NULL,
+PRIMARY KEY (id)
+);
+
+@expected schema.sql
+CREATE TABLE orders (
+    id CHAR(26) NOT NULL,
+    customer_id CHAR(26) NOT NULL,
+    total_pence INTEGER NOT NULL,
+    PRIMARY KEY (id)
+);

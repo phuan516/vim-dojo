@@ -1,0 +1,131 @@
+@meta
+id: 29-14
+title: Drill — open it without the path
+chapter: 29
+type: drill
+skills: fuzzy-finder
+par: 23
+minutes: 5
+reps: 8
+vscode: Ctrl-P, type three letters, Enter — the same muscle, a different key
+open: notes.md
+vimrc: set packpath^=. | packloadall!
+
+@brief
+Eight times: open `src/infrastructure/services/refund.service.ts` without
+typing its path, delete the leftover `DEBUG` flag on its first line, save,
+quit. The finder plugin ships with the lesson, in `pack/dojo/start/files/`.
+
+The point of the drill is the fragment, not the edit. Pick three or four
+letters that pin the file down and stop thinking about directories.
+
+@keys
+| `:Files {fragment}` | open the best fuzzy match |
+| `dd` | delete the line |
+
+@hints
+`refsvc` is four letters of `refund.service` and matches nothing else in
+this tree.
+--
+`:Files refsvc` `Enter`, `dd`, `:wq` `Enter`.
+
+@solution
+    :Files refsvc<Enter>  dd  :wq<Enter>
+
+Twenty keystrokes.
+
+By rep four you should have stopped composing the fragment carefully and
+started throwing letters at it. That is the right instinct: a fuzzy
+finder is cheap to be wrong with, because a bad guess costs you one Esc.
+The expensive habit is the one it replaces — opening a file tree, finding
+the folder, scrolling, clicking.
+
+The fragment that works is usually the initials of the words in the name,
+with the directory implied: `refsvc`, `ordprov`, `custrepo`. If two files
+collide, add a letter from the directory.
+
+@start pack/dojo/start/files/plugin/files.vim
+" dojo-files.vim - a fuzzy file finder in thirty lines.
+" Shipped inside this lesson. You did not install it; the dojo did.
+"
+"   :Files {pattern}   open the file whose path best matches {pattern}
+"   :Files <Tab>       cycle the candidates on the command line
+"
+" The ranking is matchfuzzy(), which vim has had built in since 8.2. The
+" letters you type have to appear in the path in order, and nothing else.
+" `opr` finds order.provider.ts. That is the whole trick fzf sells.
+
+if exists('g:loaded_dojo_files')
+  finish
+endif
+let g:loaded_dojo_files = 1
+
+function! s:index() abort
+  let all = split(globpath('.', '**/*'), "\n")
+  call filter(all, 'filereadable(v:val)')
+  call map(all, 'substitute(v:val, "^\\./", "", "")')
+  " A real finder skips .git, node_modules and build output. This one skips
+  " the package directory, so the list is the project and nothing else.
+  return filter(all, 'v:val !~# "^pack/"')
+endfunction
+
+function! s:matches(pat) abort
+  let all = s:index()
+  return a:pat ==# '' ? all : matchfuzzy(all, a:pat)
+endfunction
+
+function! s:complete(lead, line, pos) abort
+  return s:matches(a:lead)
+endfunction
+
+function! s:files(pat) abort
+  let hits = s:matches(a:pat)
+  if empty(hits)
+    echohl ErrorMsg
+    echo 'Files: nothing matches ' . a:pat
+    echohl NONE
+    return
+  endif
+  execute 'edit ' . fnameescape(hits[0])
+endfunction
+
+command! -nargs=? -complete=customlist,s:complete Files call s:files(<q-args>)
+
+@start notes.md
+Standing job: strip debug flags before the release branch is cut.
+
+@start src/domain/order/order.provider.ts
+export class OrderProvider {
+  public async list(customerId: string) {
+    return this.orderRepository.findMany({ where: { customerId } });
+  }
+}
+
+@start src/domain/order/order.repository.ts
+export class OrderRepository {
+  public async findMany(args: FindManyArgs) {
+    return this.prisma.order.findMany(args);
+  }
+}
+
+@start src/infrastructure/services/payment.service.ts
+export class PaymentService {
+  public async capture(orderId: string) {
+    return this.client.post('/captures', { orderId });
+  }
+}
+
+@start src/infrastructure/services/refund.service.ts
+const DEBUG = true;
+export class RefundService {
+  public async settle(refundId: string) {
+    return this.client.post('/refunds/' + refundId + '/settle', {});
+  }
+}
+
+@expected src/infrastructure/services/refund.service.ts
+export class RefundService {
+  public async settle(refundId: string) {
+    return this.client.post('/refunds/' + refundId + '/settle', {});
+  }
+}

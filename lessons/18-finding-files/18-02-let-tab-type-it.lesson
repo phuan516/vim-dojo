@@ -1,0 +1,116 @@
+@meta
+id: 18-02
+title: Let Tab type the path
+chapter: 18
+type: lesson
+skills: edit-file, wildmenu
+par: 35
+minutes: 4
+vscode: Ctrl+P and a few letters
+vimrc: set wildmenu wildmode=longest:full,full
+open: README.md
+
+@brief
+The payment gateway has moved its refund endpoint. In the payment
+service, the call to `/refunds` must become `/v2/refunds`. Nothing else
+in that file changes.
+
+The service lives under `src/infrastructure/services/`. Last lesson you
+typed a path like that in full. This time, type one letter of each
+directory and let Tab finish it. This lesson turns on `wildmenu` with
+`wildmode=longest:full,full` for you; chapter 28 shows you how to keep
+it.
+
+Tab completes as much as is unambiguous. When only one entry matches, it
+completes the whole thing and moves on. When several match, it fills in
+the common prefix and shows the candidates in a bar along the bottom.
+
+You may notice a couple of dot-files at the root that the dojo uses for
+bookkeeping. Ignore them.
+
+@keys
+| `Tab` | complete the path on the command line |
+| `Tab` again | cycle to the next candidate when several match |
+| `Shift-Tab` | cycle back |
+| `Ctrl-U` | clear the command line and start over |
+
+@hints
+`:e s` then Tab. Watch `src/` appear. Keep going: one letter, one Tab,
+one directory deeper.
+--
+`s` Tab, `i` Tab, `s` Tab, `p` Tab. Four letters, four Tabs, one
+Enter. Then search for `refunds`.
+--
+`:e s<Tab>i<Tab>s<Tab>p<Tab>` and Enter. `/refunds` lands on the word;
+`iv2/` and `Esc` slot the prefix in. `:wq`.
+
+@solution
+    :e s<Tab>i<Tab>s<Tab>p<Tab><Enter>
+    /refunds<Enter> iv2/ <Esc> :wq<Enter>
+
+Twelve keystrokes for a forty-five character path. That is the whole
+trick, and it works everywhere on the command line: `:w`, `:r`, `:sp`,
+`:args`, `:cd`, `:set` values, `:help` topics.
+
+`longest:full` is the setting that makes the first Tab conservative: it
+only types what every candidate agrees on, then shows you the rest. The
+second `full` means a further Tab walks through the candidates one at a
+time. Without `wildmenu` you get the same completion but no bar, so you
+cannot see what the choices were. Turn the bar on and leave it on.
+
+@start README.md
+# Orders service
+
+Handles orders, customers and refunds for the storefront.
+
+## Layout
+
+    src/domain/<name>/<name>.entity.ts       the shape of a record
+    src/domain/<name>/<name>.repository.ts   how it is loaded and saved
+    src/domain/<name>/<name>.provider.ts     the business rules
+    src/infrastructure/services/             calls to other systems
+    src/configuration/errors/default.json    every error code we can throw
+
+@start src/infrastructure/services/payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string) {
+    const response = await this.http.post(`/refunds`, { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@expected src/infrastructure/services/payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string) {
+    const response = await this.http.post(`/v2/refunds`, { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@start src/infrastructure/services/email.service.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class EmailService {
+  public async send(args: { to: string; template: string }) {
+    return this.http.post(`/send`, args);
+  }
+}

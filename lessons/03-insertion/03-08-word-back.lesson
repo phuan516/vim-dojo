@@ -1,0 +1,70 @@
+@meta
+id: 03-08
+title: Take back the word you just typed
+chapter: 03
+type: lesson
+skills: insert-ctrl-w
+par: 24
+minutes: 4
+vscode: double-click the word, type over it
+open: standup.md
+
+@brief
+The refund window went to production yesterday, not to preproduction. Fix
+the last word of the Yesterday line.
+
+You have no delete commands yet — chapter 8 gives you those. What you do
+have is insert mode, and insert mode has a small set of editing keys of
+its own. One of them removes the word behind the cursor in a single press,
+which is what Backspace held down thirteen times is trying to be.
+
+@keys
+| `A` | append at the end of the line |
+| `Backspace` | one character back |
+| `Ctrl-W` | delete the word before the cursor |
+| `Esc` | out |
+
+@hints
+Get to the end of the line in insert mode first — you know the key for
+that. Then deal with the wrong word without pressing Backspace fourteen
+times.
+--
+`Ctrl-W` in insert mode deletes the whole word before the cursor. Hold
+Ctrl and press w. One press takes `preproduction` with it.
+--
+`jj` to the Yesterday line, `A`, `Ctrl-W`, type `production`, `Esc`, `:wq`.
+
+@solution
+    j j A <Ctrl-W> production <Esc> :wq<Enter>
+
+Nineteen keystrokes. The Backspace version is twelve extra presses and
+you have to watch the screen while you do them, because nothing tells you
+when to stop.
+
+`Ctrl-W` is the most useful of the insert-mode editing keys, and it is not
+a vim invention — it works in bash, in most terminals, and in a lot of
+text fields in a browser. Learn it once, use it everywhere.
+
+Two things it is worth knowing about its idea of a word. It stops at
+punctuation, so in `payments.refund.legacy` one press takes `legacy` and
+leaves the dot. And it only deletes backwards from the cursor, never
+forwards — it is a typing-correction key, not an editing key.
+
+That distinction matters. When you are mid-sentence and get a word wrong,
+`Ctrl-W` is right. When you are looking at an existing word in a file you
+have not just typed, the right answer is a normal-mode command like `ciw`
+in chapter 10, not a trip into insert mode to Backspace over it.
+
+@start standup.md
+## Thursday
+
+Yesterday: refund window shipped to preproduction
+Today: reviewing the payments PR
+Blocked: waiting on the finance sign-off
+
+@expected standup.md
+## Thursday
+
+Yesterday: refund window shipped to production
+Today: reviewing the payments PR
+Blocked: waiting on the finance sign-off

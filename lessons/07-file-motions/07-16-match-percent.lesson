@@ -1,0 +1,276 @@
+@meta
+id: 07-16
+title: Jump to the bracket that closes it
+chapter: 07
+type: lesson
+skills: match-percent, goto-line
+par: 30
+minutes: 5
+vscode: click the opening brace, read the highlight, scroll down, click again
+open: settlement.provider.ts
+
+@brief
+Three calls in this provider are not terminated. Their opening lines are 19,
+40 and 72, and each call runs for another ten or fifteen lines before it
+closes. Put a semicolon after the closing bracket of each.
+
+Do not count lines to find the closing bracket. Do not scroll looking for
+the indentation to line up. Vim has already matched the brackets in this
+file and will take you straight there.
+
+@keys
+| `%` | jump to the matching bracket |
+| `19G` | line 19 |
+| `A` | append at the end of the line |
+
+@hints
+Brackets come in pairs and vim knows which pairs with which. One key asks it
+to take you to the other end.
+--
+`%` jumps between a bracket and its match. It works on `(`, `[` and `{`, in
+both directions. You do not even have to be sitting on the bracket: from
+anywhere on the line, `%` takes the first bracket at or after the cursor
+and jumps to its partner.
+--
+`19G` `%` and you are on the closing bracket, however many lines down it is.
+Then `A` `;` `Esc` and on to the next one.
+
+@solution
+    19G % A ; <Esc>
+    40G % A ; <Esc>
+    72G % A ; <Esc>
+    :wq<Enter>
+
+Twenty-five keystrokes, and three of them crossed a total of forty lines.
+
+`%` is the first motion in the dojo that understands the structure of the
+text rather than its shape. `}` knows about blank lines, `w` knows about
+punctuation, `f` knows about a character you named. `%` knows that this
+`(` on line 19 belongs to that `)` on line 30, that the eight brackets in
+between are balanced, and that none of them is the answer.
+
+That last part is what makes it trustworthy on real code. The call on line
+40 has nested objects three deep inside it, and `%` walks past all of them
+without you having to think about it. Counting braces by eye is exactly the
+kind of work you should never be doing, and it is the kind that goes wrong
+quietly.
+
+Three things worth knowing now. `%` works on `[` and `]` and on `{` and `}`
+as well as parens. It works backwards, so from a closing bracket it takes
+you to the opening one and pressing it twice returns you to where you
+started. And it is a motion like any other, so from chapter 8 it takes an
+operator, and `d%` deletes an entire balanced block in two keystrokes.
+
+@start settlement.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { SettlementRepository } from './settlement.repository';
+import { OrderRepository } from '../order/order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { ReportService } from '../../infrastructure/services/report.service';
+import { SettleBatchArgs, SettlementReportArgs } from './settlement.types';
+
+@injectable()
+export class SettlementProvider {
+  constructor(
+    @inject(SettlementRepository) protected settlementRepository: SettlementRepository,
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(ReportService) protected reportService: ReportService,
+  ) {}
+
+  public async settleBatch(args: SettleBatchArgs) {
+    const orders = await this.orderRepository.findMany({
+      where: {
+        status: 'COMPLETED',
+        settledAt: null,
+        placedAt: {
+          gte: args.from,
+          lte: args.to,
+        },
+      },
+      orderBy: { placedAt: 'asc' },
+      take: args.take ?? 500,
+    })
+
+    if (!orders.length) {
+      throw exception('SETTLEMENT_BATCH_EMPTY');
+    }
+
+    return orders;
+  }
+
+  public async recordSettlement(orderId: string, reference: string) {
+    const settlement = await this.settlementRepository.create({
+      data: {
+        orderId,
+        reference,
+        status: 'SETTLED',
+        settledAt: new Date(),
+        provider: {
+          name: 'acme-payments',
+          environment: process.env.PAYMENTS_ENV ?? 'production',
+        },
+        amounts: {
+          gross: 0,
+          fees: 0,
+          net: 0,
+        },
+      },
+    })
+
+    return settlement;
+  }
+
+  public async publishReport(args: SettlementReportArgs) {
+    const rows = await this.settlementRepository.findMany({
+      where: {
+        settledAt: {
+          gte: args.from,
+          lte: args.to,
+        },
+      },
+      orderBy: { settledAt: 'asc' },
+    });
+
+    return this.reportService.deliver({
+      name: `settlement-${args.from.toISOString()}`,
+      recipients: [
+        'finance@acme.dev',
+        'payments@acme.dev',
+      ],
+      format: 'csv',
+      rows: rows.map((row) => ({
+        order: row.orderId,
+        reference: row.reference,
+        amount: row.amounts.net,
+        settled: row.settledAt,
+      })),
+    })
+  }
+
+  public async markFailed(orderId: string, reason: string) {
+    return this.settlementRepository.update({
+      where: { orderId },
+      values: { status: 'FAILED', reason },
+    });
+  }
+
+  public async summary(args: SettlementReportArgs) {
+    const rows = await this.settlementRepository.findMany({
+      where: { settledAt: { gte: args.from, lte: args.to } },
+    });
+
+    return {
+      count: rows.length,
+      net: rows.reduce((total, row) => total + row.amounts.net, 0),
+    };
+  }
+}
+
+@expected settlement.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { SettlementRepository } from './settlement.repository';
+import { OrderRepository } from '../order/order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { ReportService } from '../../infrastructure/services/report.service';
+import { SettleBatchArgs, SettlementReportArgs } from './settlement.types';
+
+@injectable()
+export class SettlementProvider {
+  constructor(
+    @inject(SettlementRepository) protected settlementRepository: SettlementRepository,
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(ReportService) protected reportService: ReportService,
+  ) {}
+
+  public async settleBatch(args: SettleBatchArgs) {
+    const orders = await this.orderRepository.findMany({
+      where: {
+        status: 'COMPLETED',
+        settledAt: null,
+        placedAt: {
+          gte: args.from,
+          lte: args.to,
+        },
+      },
+      orderBy: { placedAt: 'asc' },
+      take: args.take ?? 500,
+    });
+
+    if (!orders.length) {
+      throw exception('SETTLEMENT_BATCH_EMPTY');
+    }
+
+    return orders;
+  }
+
+  public async recordSettlement(orderId: string, reference: string) {
+    const settlement = await this.settlementRepository.create({
+      data: {
+        orderId,
+        reference,
+        status: 'SETTLED',
+        settledAt: new Date(),
+        provider: {
+          name: 'acme-payments',
+          environment: process.env.PAYMENTS_ENV ?? 'production',
+        },
+        amounts: {
+          gross: 0,
+          fees: 0,
+          net: 0,
+        },
+      },
+    });
+
+    return settlement;
+  }
+
+  public async publishReport(args: SettlementReportArgs) {
+    const rows = await this.settlementRepository.findMany({
+      where: {
+        settledAt: {
+          gte: args.from,
+          lte: args.to,
+        },
+      },
+      orderBy: { settledAt: 'asc' },
+    });
+
+    return this.reportService.deliver({
+      name: `settlement-${args.from.toISOString()}`,
+      recipients: [
+        'finance@acme.dev',
+        'payments@acme.dev',
+      ],
+      format: 'csv',
+      rows: rows.map((row) => ({
+        order: row.orderId,
+        reference: row.reference,
+        amount: row.amounts.net,
+        settled: row.settledAt,
+      })),
+    });
+  }
+
+  public async markFailed(orderId: string, reason: string) {
+    return this.settlementRepository.update({
+      where: { orderId },
+      values: { status: 'FAILED', reason },
+    });
+  }
+
+  public async summary(args: SettlementReportArgs) {
+    const rows = await this.settlementRepository.findMany({
+      where: { settledAt: { gte: args.from, lte: args.to } },
+    });
+
+    return {
+      count: rows.length,
+      net: rows.reduce((total, row) => total + row.amounts.net, 0),
+    };
+  }
+}

@@ -1,0 +1,124 @@
+@meta
+id: 28-05
+title: Search that guesses the case right
+chapter: 28
+type: lesson
+skills: vimrc-structure
+par: 98
+minutes: 6
+vscode: the Aa toggle in the find widget, clicked on and off all day
+open: .vimrc payment.service.ts
+vimrc: set ignorecase | set smartcase
+
+@brief
+Two settings, and they only make sense together.
+
+    set ignorecase            " /refund finds Refund
+    set smartcase             " ...but /Refund finds only Refund
+
+On its own `ignorecase` is annoying: you can no longer search for an
+exact capitalised name. `smartcase` fixes that by reading your pattern —
+all lowercase means you did not care about case, a single capital means
+you did. The result is that you stop thinking about case at all, which is
+the point of a good default.
+
+Add both to the Searching section of the vimrc. Then use them: the second
+buffer has a method called `legacyRefund` that finance now call the
+reversal. Rename that one method to `reverseCharge`, both where it is
+declared and where it is called, and find it by typing the name in
+lowercase. Nothing else in either file changes.
+
+Both settings are already live in this session, so the search works
+before you save anything. That is deliberate — you are writing down a
+behaviour you have just felt.
+
+@keys
+| `/pattern` `Enter` | search forward |
+| `n` | next match |
+| `ciw` | change the word under the cursor |
+| `:bn` | next buffer |
+| `:wqa` | write everything and quit |
+
+@hints
+Write the config first, `:w`, then `:bn` to the TypeScript file.
+--
+`/legacyrefund` finds `legacyRefund` because of `ignorecase`. `ciw`
+replaces the word under the cursor; `n` gets you to the second one.
+--
+Two occurrences: the declaration and the call inside `reverse`. `ciw`
+the first, `n` to the next, then `.` repeats the change.
+
+@solution
+    /hlsearch<Enter> o set ignorecase<Enter> set smartcase <Esc> :w<Enter>
+    :bn<Enter> /legacyrefund<Enter> ciw reverseCharge <Esc> n . :wqa<Enter>
+
+`.` repeats the whole change, which is why the second rename costs one
+keystroke. That combination — search, change, `n`, `.` — is the reason
+`ignorecase` earns its place. You type the name the way it sounds in your
+head rather than the way the codebase capitalised it.
+
+`smartcase` has one edge that surprises people: it applies to `/` and `?`,
+but not to `:substitute`. `:%s/refund/x/g` still ignores case if
+`ignorecase` is on, regardless of the capitals in your pattern. When a
+substitution must be exact, put `\C` in the pattern. Chapter 13 made you
+learn `\C` for exactly this moment.
+
+@start .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Searching ---
+set incsearch
+set hlsearch
+
+@expected .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Searching ---
+set incsearch
+set hlsearch
+set ignorecase
+set smartcase
+
+@start payment.service.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string) {
+    return this.gateway.post(`/refunds`, { orderId });
+  }
+
+  public async legacyRefund(orderId: string, amount: number) {
+    return this.gateway.post(`/v1/reversals`, { orderId, amount });
+  }
+
+  public async reverse(orderId: string, amount: number) {
+    return this.legacyRefund(orderId, amount);
+  }
+}
+
+@expected payment.service.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string) {
+    return this.gateway.post(`/refunds`, { orderId });
+  }
+
+  public async reverseCharge(orderId: string, amount: number) {
+    return this.gateway.post(`/v1/reversals`, { orderId, amount });
+  }
+
+  public async reverse(orderId: string, amount: number) {
+    return this.reverseCharge(orderId, amount);
+  }
+}

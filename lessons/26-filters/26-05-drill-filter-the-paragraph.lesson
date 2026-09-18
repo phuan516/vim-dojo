@@ -1,0 +1,55 @@
+@meta
+id: 26-05
+title: Drill — filter the paragraph
+chapter: 26
+type: drill
+skills: filter-bang
+par: 19
+minutes: 5
+reps: 8
+vscode: select the block, retype it in order, delete the repeats
+open: migration-notes.txt
+
+@brief
+Eight times: sort the block of table names at the top and drop the
+repeats, without looking at a single line number. Leave the sentence
+below the blank line alone.
+
+@keys
+| `!ip` | filter the paragraph under the cursor |
+| `sort -u` | sorted, one of each |
+
+@hints
+The cursor already starts in the block, so the paragraph object covers
+exactly the lines you want.
+--
+`!ip` then `sort -u` then Enter.
+
+@solution
+    !ip sort -u<Enter>  :wq<Enter>
+
+Fifteen keystrokes and no counting. The reason to drill the object form
+rather than the range form is that the object form does not care where
+the block is or how long it is, so it survives the block growing by four
+lines next week — and a filter applied to the wrong range is a worse
+mistake than most, because the command rewrites everything it is handed.
+
+@start migration-notes.txt
+orders
+customers
+payments
+orders
+refunds
+customers
+invoices
+
+Every table above is locked for the duration of the migration.
+
+@expected migration-notes.txt
+customers
+invoices
+orders
+payments
+refunds
+
+Every table above is locked for the duration of the migration.

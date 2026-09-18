@@ -1,0 +1,63 @@
+@meta
+id: 04-17
+title: Drill — jump, then multiply
+chapter: 04
+type: drill
+skills: count-prefix, relativenumber
+par: 35
+minutes: 5
+reps: 8
+vscode: click at the bottom, type, copy, paste twice
+open: incident.md
+vimrc: set relativenumber
+
+@brief
+Eight times: get to the last line of the file with one counted jump, then
+add three identical lines under it, each reading `- [ ] owner: payments`,
+typing the text once. Save, quit, repeat.
+
+Two counts per rep. One moves you, one multiplies you.
+
+@keys
+| `8j` | down eight lines |
+| `3o` | open three lines, repeating what you type on each |
+
+@hints
+Read the distance to `## Actions` off the margin — do not count it.
+--
+The second count goes in front of `o`, before any typing happens.
+
+@solution
+    8j 3o - [ ] owner: payments <Esc> :wq<Enter>
+
+Thirty keystrokes for three lines and a jump.
+
+By now the two uses of a count should feel like the same thing, because
+they are: a number in front of a command means do it that many times. It
+moved you eight lines, and it wrote three lines. Nothing else about the
+command changed.
+
+@start incident.md
+# Incident 2024-03-11
+
+## Timeline
+
+- 09:14 first declined charge
+- 09:22 alert fires
+- 09:31 provider status page updated
+
+## Actions
+
+@expected incident.md
+# Incident 2024-03-11
+
+## Timeline
+
+- 09:14 first declined charge
+- 09:22 alert fires
+- 09:31 provider status page updated
+
+## Actions
+- [ ] owner: payments
+- [ ] owner: payments
+- [ ] owner: payments

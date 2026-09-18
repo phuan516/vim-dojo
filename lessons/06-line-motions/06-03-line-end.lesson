@@ -1,0 +1,64 @@
+@meta
+id: 06-03
+title: The last character, not past it
+chapter: 06
+type: lesson
+skills: line-end
+par: 36
+minutes: 4
+vscode: End, then Left, then type
+open: CHANGELOG.md
+
+@brief
+Release notes. Each bullet ends with a ticket reference in brackets, and the
+team has decided the reference should also carry the owning function:
+
+    (ORD-418, finance)
+    (ORD-431, support)
+
+Add those owners. The text goes inside the brackets, so the closing bracket
+has to stay where it is and you have to land just short of the end of the
+line rather than past it.
+
+@keys
+| `$` | the last character of the line |
+| `i` | insert to the left of the cursor |
+| `a` | insert to the right of the cursor |
+| `A` | the same as `$` then `a` |
+
+@hints
+`$` takes you to the last character on the line however long the line is.
+Whether you then press `i` or `a` decides which side of that character your
+text lands on.
+--
+The last character is the closing bracket. You want your text before it, so
+`i` rather than `a`.
+--
+`2j` to the first bullet, `$`, `i`, type `, finance`, `Esc`. Then `j`, `$`,
+`i`, `, support`, `Esc`.
+
+@solution
+    2j $ i , finance <Esc> j $ i , support <Esc> :wq<Enter>
+
+`A` — the key chapter 3 gave you — is precisely `$a`, and it is the right
+choice when you are adding to the end of a line. It is the wrong choice
+here, because the end of the line is already correct and the gap you want is
+one character to its left.
+
+That is the whole of `$`: it is a motion, so you get to choose what happens
+when you arrive. Landing on the last character and pressing `i` is how you
+add an argument inside a closing paren, a property inside a closing brace, a
+word inside a closing quote. From chapter 8 onwards `$` also becomes the
+target of an operator, and then it does far more than travel.
+
+@start CHANGELOG.md
+## 2024.3.2
+
+- Refunds outside the 30 day window are now rejected (ORD-418)
+- Cancelling a shipped order returns a 409 instead of a 500 (ORD-431)
+
+@expected CHANGELOG.md
+## 2024.3.2
+
+- Refunds outside the 30 day window are now rejected (ORD-418, finance)
+- Cancelling a shipped order returns a 409 instead of a 500 (ORD-431, support)

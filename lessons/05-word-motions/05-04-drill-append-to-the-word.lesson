@@ -1,0 +1,54 @@
+@meta
+id: 05-04
+title: Drill — append to the word
+chapter: 05
+type: drill
+skills: word-e
+par: 12
+minutes: 4
+reps: 10
+vscode: click after the identifier, type
+open: order.entity.ts
+
+@brief
+Ten times: make `customerId` optional by putting a `?` after it. Down two
+lines, end of the word, append, out, save.
+
+There is nothing to work out. `ea` should stop being two keys and start
+being one movement of the hand.
+
+@keys
+| `e` | end of the word |
+| `a` | append after the cursor |
+| `2j` | down two lines |
+
+@hints
+`2j` then `e` lands on the `d` of `customerId` — `e` from the indent runs
+to the end of the first word on the line.
+--
+Do not look at the screen between `e` and `a`. If you are checking where
+you landed, the drill has not worked yet.
+
+@solution
+    2j  ea?<Esc>  :wq<Enter>
+
+Ten keystrokes, four of which are the save.
+
+The reason this is worth drilling rather than reading: appending to the
+end of a word is one of the two or three most common edits in typed code.
+Optional fields, plural names, a trailing comma on the last property. If
+`ea` is automatic, all of those are free.
+
+@start order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+};
+
+@expected order.entity.ts
+export type Order = {
+  id: string;
+  customerId?: string;
+  status: OrderStatus;
+};

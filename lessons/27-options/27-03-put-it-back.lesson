@@ -1,0 +1,82 @@
+@meta
+id: 27-03
+title: Put it back the way you found it
+chapter: 27
+type: lesson
+skills: set-option
+par: 51
+minutes: 5
+vscode: nothing — VS Code has no word-character setting to break
+open: order.repository.ts
+vimrc: set iskeyword-=_
+
+@brief
+Somebody in this session has been clever with `iskeyword`.
+
+`iskeyword` is the list of characters vim counts as part of a word. It is
+what `w`, `*`, `diw` and `ciw` all consult, and by default it includes the
+underscore — which is why `ciw` on `customer_id` changes the whole
+identifier and not just the first half of it.
+
+Here it has had the underscore taken out. Every word motion in this buffer
+now stops at an underscore, and `ciw` on `customer_id` will give you
+`buyer_id` when you wanted `buyer`.
+
+Rename `customer_id` to `buyer` in both places. Get the option back to
+vim's own default first — you are not guessing at a value here, you are
+asking vim to forget the change.
+
+@keys
+| `:set iskeyword&` | reset an option to vim's built-in default |
+| `:set iskeyword?` | show what it is holding now |
+| `:set iskeyword-=_` | remove an item from a list option |
+| `:set all&` | reset every option — the panic button |
+
+@hints
+Your word motions are lying to you. Fix the option before you touch the
+text; do it the other way round and you will be repairing two identifiers
+by hand.
+--
+`&` after an option name resets it. `:verbose set iskeyword?` will also
+tell you the value it currently holds.
+--
+`:set iskeyword&`, then `/customer_id` `Enter`, `ciwbuyer` `Esc`, then
+`n` and `.` for the second one.
+
+@solution
+    :set iskeyword&<Enter>  /customer_id<Enter>  ciwbuyer<Esc>  n.  :wq<Enter>
+
+Forty-four keystrokes.
+
+`&` is the third thing you can do to an option, after setting it and
+asking about it: `:set opt&` throws away whatever anyone did to it and
+restores vim's compiled-in default.
+
+Read that last sentence again, because it is the trap. `&` restores
+*vim's* default, not *your* default. Your `.vimrc` says `shiftwidth=2`;
+vim's built-in default is 8. `:set shiftwidth&` leaves you on 8, which is
+almost certainly not what you meant. There is `:set opt&vim` for "the
+default vim would use in nocompatible mode", and there is no form at all
+that means "whatever my config said" — for that you re-source your config.
+
+`&` is at its best exactly where it was used here: an option you did not
+set, whose correct value you do not remember, that something has bent out
+of shape. `iskeyword`, `formatoptions`, `comments` and `path` all qualify.
+For anything your own config sets on purpose, type the value.
+
+`:set all&` resets everything at once. Keep it in mind for the day a
+half-loaded plugin leaves you in a vim that does not behave.
+
+@start order.repository.ts
+export class OrderRepository {
+  public findByCustomer(customer_id: string) {
+    return this.prisma.order.findMany({ where: { customer_id } });
+  }
+}
+
+@expected order.repository.ts
+export class OrderRepository {
+  public findByCustomer(buyer: string) {
+    return this.prisma.order.findMany({ where: { buyer } });
+  }
+}

@@ -1,0 +1,43 @@
+@meta
+id: 23-12
+title: Drill — next typo, first suggestion
+chapter: 23
+type: drill
+skills: spell
+par: 22
+minutes: 3
+reps: 8
+vscode: hover each squiggle, click the fix
+open: standup.md
+vimrc: set spell
+
+@brief
+Three typos in three lines. Eight times: jump to each and take the
+first suggestion. Never look for the typo yourself and never type the
+correction.
+
+@keys
+| `]s` | next misspelled word |
+| `1z=` | first suggestion |
+
+@hints
+`]s` then `1z=`, three times over.
+--
+You do not need to read the file. `]s` knows where the typos are.
+
+@solution
+    ]s1z= ]s1z= ]s1z= :wq<Enter>
+
+Nineteen keystrokes. After a few reps `]s1z=` is one motion in your
+hand, and that is the state to be in for commit messages and docs:
+write, then sweep.
+
+@start standup.md
+Yesterday: shipped the refund fix and updated the relase notes.
+Today: reviewing the payments PR and tidying the enviroment variables.
+Blocked: waiting on finance to confirm the thirty day window is definately final.
+
+@expected standup.md
+Yesterday: shipped the refund fix and updated the release notes.
+Today: reviewing the payments PR and tidying the environment variables.
+Blocked: waiting on finance to confirm the thirty day window is definitely final.

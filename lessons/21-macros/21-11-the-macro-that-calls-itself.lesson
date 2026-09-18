@@ -1,0 +1,124 @@
+@meta
+id: 21-11
+title: The macro that calls itself
+chapter: 21
+type: lesson
+skills: macro-recursive
+par: 72
+minutes: 8
+vscode: a regex replace with three groups, once you have worked out the escaping
+open: customers.fixture.ts
+
+@brief
+The customer fixture came out of a wiki table, one customer per line,
+fields separated by pipes. Each becomes a record:
+
+    cus_1|Alice Anderson|alice.anderson@example.com
+    { id: 'cus_1', name: 'Alice Anderson', email: 'alice.anderson@example.com' },
+
+Twenty-four lines and then `];`.
+
+You could count them, or throw `99@a` at it. There is a third way that
+needs no number at all: a macro whose last keystroke is `@a`. It plays
+itself, which plays itself, until something fails. This lesson is
+about how to record one without it running away from you.
+
+@keys
+| `qaq` | record nothing into `a`, which empties it |
+| `qa` … `@a` `q` | record, ending with a call to the macro itself |
+| `@a` | run it; it stops when something fails |
+
+@hints
+Empty the register first with `qaq`. While you are recording, the `@a`
+at the end plays an empty register, which does nothing, so you can
+record calmly on one line and stop.
+--
+The guard comes first: `^f|` fails on `];`, which has no pipe, and
+that failure is what ends the loop. Then `s', name: '` `Esc`, `f|` and
+`s', email: '` `Esc`, `^i{ id: '` `Esc`, `A' },` `Esc`, `j`, and
+finally `@a` before the `q`.
+--
+`j` `qaq` then `qa^f|s', name: '<Esc>f|s', email: '<Esc>^i{ id: '<Esc>A' },<Esc>j@aq`, then `@a`.
+
+@solution
+    j  qaq   qa ^f| s', name: ' <Esc> f| s', email: ' <Esc> ^i{ id: ' <Esc> A' }, <Esc> j @a q   @a   :wq<Enter>
+
+Sixty-two keystrokes, and the run was one `@a`.
+
+Three moving parts. `qaq` is a recording that contains nothing, and it
+matters: if register `a` still held last week's macro, the `@a` you
+type inside the new recording would play the old one, in the middle of
+the new one, on the line you are looking at. Empty it first, every
+time.
+
+The `@a` at the end is a call to the macro itself. While recording, it
+calls an empty register and nothing happens. When you play the
+finished macro it calls the finished macro, which calls it again, and
+the only way out is for a keystroke to fail. That is the same safety
+property as the count, with the count removed. The macro runs until
+the data runs out.
+
+Which means the guard is not optional. `^f|` is the first thing the
+macro does on every line, and on `];` it fails, and the loop ends
+there, before anything on that line is changed. Put the guard first
+and you can stop thinking about how many lines there are. Forget the
+guard, and the loop reaches the end of the file and stops only when
+`j` fails, with every line in between edited.
+
+If it does run away, `Ctrl-C` stops it and `u` puts the file back.
+
+@start customers.fixture.ts
+export const customers = [
+  cus_1|Alice Anderson|alice.anderson@example.com
+  cus_2|Ben Okafor|ben.okafor@example.com
+  cus_3|Chloe Martin|chloe.martin@example.com
+  cus_4|Dev Patel|dev.patel@example.com
+  cus_5|Emma Walsh|emma.walsh@example.com
+  cus_6|Farid Haddad|farid.haddad@example.com
+  cus_7|Grace Lin|grace.lin@example.com
+  cus_8|Hugo Silva|hugo.silva@example.com
+  cus_9|Isla Murray|isla.murray@example.com
+  cus_10|Jonas Weber|jonas.weber@example.com
+  cus_11|Kate Novak|kate.novak@example.com
+  cus_12|Liam Byrne|liam.byrne@example.com
+  cus_13|Maya Chen|maya.chen@example.com
+  cus_14|Noah Fischer|noah.fischer@example.com
+  cus_15|Olivia Rossi|olivia.rossi@example.com
+  cus_16|Priya Nair|priya.nair@example.com
+  cus_17|Quinn Doyle|quinn.doyle@example.com
+  cus_18|Rosa Alvarez|rosa.alvarez@example.com
+  cus_19|Sam Kowalski|sam.kowalski@example.com
+  cus_20|Tara Osei|tara.osei@example.com
+  cus_21|Umar Khan|umar.khan@example.com
+  cus_22|Vera Lund|vera.lund@example.com
+  cus_23|Will Hart|will.hart@example.com
+  cus_24|Yuki Tanaka|yuki.tanaka@example.com
+];
+
+@expected customers.fixture.ts
+export const customers = [
+  { id: 'cus_1', name: 'Alice Anderson', email: 'alice.anderson@example.com' },
+  { id: 'cus_2', name: 'Ben Okafor', email: 'ben.okafor@example.com' },
+  { id: 'cus_3', name: 'Chloe Martin', email: 'chloe.martin@example.com' },
+  { id: 'cus_4', name: 'Dev Patel', email: 'dev.patel@example.com' },
+  { id: 'cus_5', name: 'Emma Walsh', email: 'emma.walsh@example.com' },
+  { id: 'cus_6', name: 'Farid Haddad', email: 'farid.haddad@example.com' },
+  { id: 'cus_7', name: 'Grace Lin', email: 'grace.lin@example.com' },
+  { id: 'cus_8', name: 'Hugo Silva', email: 'hugo.silva@example.com' },
+  { id: 'cus_9', name: 'Isla Murray', email: 'isla.murray@example.com' },
+  { id: 'cus_10', name: 'Jonas Weber', email: 'jonas.weber@example.com' },
+  { id: 'cus_11', name: 'Kate Novak', email: 'kate.novak@example.com' },
+  { id: 'cus_12', name: 'Liam Byrne', email: 'liam.byrne@example.com' },
+  { id: 'cus_13', name: 'Maya Chen', email: 'maya.chen@example.com' },
+  { id: 'cus_14', name: 'Noah Fischer', email: 'noah.fischer@example.com' },
+  { id: 'cus_15', name: 'Olivia Rossi', email: 'olivia.rossi@example.com' },
+  { id: 'cus_16', name: 'Priya Nair', email: 'priya.nair@example.com' },
+  { id: 'cus_17', name: 'Quinn Doyle', email: 'quinn.doyle@example.com' },
+  { id: 'cus_18', name: 'Rosa Alvarez', email: 'rosa.alvarez@example.com' },
+  { id: 'cus_19', name: 'Sam Kowalski', email: 'sam.kowalski@example.com' },
+  { id: 'cus_20', name: 'Tara Osei', email: 'tara.osei@example.com' },
+  { id: 'cus_21', name: 'Umar Khan', email: 'umar.khan@example.com' },
+  { id: 'cus_22', name: 'Vera Lund', email: 'vera.lund@example.com' },
+  { id: 'cus_23', name: 'Will Hart', email: 'will.hart@example.com' },
+  { id: 'cus_24', name: 'Yuki Tanaka', email: 'yuki.tanaka@example.com' },
+];

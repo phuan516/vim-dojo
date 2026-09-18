@@ -1,0 +1,320 @@
+@meta
+id: 21-21
+title: Scenario — the audit trail
+chapter: 21
+type: scenario
+skills: macro-across-files, macro-edit, macro-record, macro-count
+par: 170
+minutes: 15
+vscode: search across files, open six results, paste a line above each, then a spreadsheet for the fixture
+open: order.provider.ts
+vimrc: set hidden | let @a="Oawait this.auditlog.record(id);\<Esc>"
+
+@brief
+A ticket, not an exercise.
+
+    PAY-212  Every repository update in the providers must be
+             preceded by an audit record. Dana's macro is in the
+             ticket. Convert the audit fixture while you are there.
+
+  1. Every `this.<something>Repository.update({` call in the three
+     providers gets this line directly above it, at the same indent:
+
+         await this.auditLog.record(id);
+
+     Six calls: two each in `order.provider.ts`, `refund.provider.ts`
+     and `shipment.provider.ts`. Only the first is open.
+
+     Dana's macro is already in register `a`; `:reg a` shows it. She
+     typed `auditlog`. The property is `auditLog`. Fix the macro
+     before you run it anywhere.
+
+  2. `audit.fixture.ts` has eight rows pasted as `orderId,action`.
+     Each becomes `{ orderId: 'ord_101', action: 'cancel' },`.
+
+  3. `order.repository.ts` and `audit.service.ts` are in the
+     directory. Neither changes. The repository defines `update`; it
+     does not call it.
+
+Finish with `:wqa`.
+
+@keys
+| `:reg a` | look at the macro first |
+| `"ap`, fix, `0"ay$`, `dd` | paste it, correct it, yank it back |
+| `:let @a="..."` | or just retype it |
+| `:vimgrep /pattern/ *.provider.ts` | the six calls, and nothing in the repository |
+| `:cdo normal @a` | the corrected macro at each of them |
+| `:e file` | open the fixture |
+
+@hints
+Look at the macro before you touch anything. A one-letter fix to a
+macro is a paste, a change and a yank, or a retyped `:let`. Either is
+faster than recording it from nothing.
+--
+The grep pattern has to match the *calls*, not the method definition
+in the repository. `Repository\.update(` does that: the definition is
+`async update(` with no receiver in front of it.
+--
+`:cdo` puts the cursor on the hit; the macro's `O` opens a line above
+it and autoindent handles the spacing. Nothing in the macro depends on
+the column.
+--
+The fixture is lesson 3: `:e audit.fixture.ts`, record on the first
+row, count the rest. Use a different register so `a` is still
+available if you need it again.
+
+@solution
+One route.
+
+**Fix the macro.** `Go<Esc>"ap` puts it on a scratch line. `0fl` lands
+on the only lowercase `l` in it, `rL`. `0"ay$` then `dd`. Or, since it
+is short, `:let @a="Oawait this.auditLog.record(id);\<Esc>"`.
+
+Do not search for the typo. `/auditl` from the scratch line wraps to
+the top of the file, and with `ignorecase` on it lands on `auditLog`
+in the constructor. The fix goes on the wrong line and the macro stays
+wrong. Chapter 12's warning about case-insensitive search, again.
+
+**Run it everywhere.** `:vimgrep /Repository\.update(/ *.provider.ts`
+then `:cdo normal @a`. Six hits, six new lines, three files, and you
+never opened two of them.
+
+**The fixture.** `:e audit.fixture.ts`, `j`, then
+`qb^i{ orderId: '<Esc>f,s', action: '<Esc>A' },<Esc>jq` and `7@b`.
+
+`:wqa`. About a hundred and fifty keystrokes.
+
+Two things from the chapter meet here. The first is that a macro is
+text, and someone else's macro is text you can read and correct
+before trusting it. Read `:reg a` the way you would read a diff. The
+second is that a macro plus a list is a refactor across the repo, and
+the list can come from a grep. Nothing in the macro knew about files.
+
+The habit worth keeping: a macro handed to you by a ticket, a
+colleague or a blog post goes through `:reg` and a single test replay
+before it goes through `:cdo`. `u` fixes one line. `:cdo` on a wrong
+macro is six files of `u`.
+
+@start order.provider.ts
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { AuditService } from '../../infrastructure/services/audit.service';
+
+export class OrderProvider {
+  constructor(
+    protected orderRepository: OrderRepository,
+    protected auditLog: AuditService,
+  ) {}
+
+  public async cancel(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async markShipped(id: string) {
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { AuditService } from '../../infrastructure/services/audit.service';
+
+export class OrderProvider {
+  constructor(
+    protected orderRepository: OrderRepository,
+    protected auditLog: AuditService,
+  ) {}
+
+  public async cancel(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.auditLog.record(id);
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+
+  public async markShipped(id: string) {
+    await this.auditLog.record(id);
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'SHIPPED' },
+    });
+  }
+}
+
+@start refund.provider.ts
+import { RefundRepository } from './refund.repository';
+import { AuditService } from '../../infrastructure/services/audit.service';
+
+export class RefundProvider {
+  constructor(
+    protected refundRepository: RefundRepository,
+    protected auditLog: AuditService,
+  ) {}
+
+  public async issue(id: string) {
+    return this.refundRepository.update({
+      where: { id },
+      values: { status: 'ISSUED' },
+    });
+  }
+
+  public async reverse(id: string) {
+    return this.refundRepository.update({
+      where: { id },
+      values: { status: 'REVERSED' },
+    });
+  }
+}
+
+@expected refund.provider.ts
+import { RefundRepository } from './refund.repository';
+import { AuditService } from '../../infrastructure/services/audit.service';
+
+export class RefundProvider {
+  constructor(
+    protected refundRepository: RefundRepository,
+    protected auditLog: AuditService,
+  ) {}
+
+  public async issue(id: string) {
+    await this.auditLog.record(id);
+    return this.refundRepository.update({
+      where: { id },
+      values: { status: 'ISSUED' },
+    });
+  }
+
+  public async reverse(id: string) {
+    await this.auditLog.record(id);
+    return this.refundRepository.update({
+      where: { id },
+      values: { status: 'REVERSED' },
+    });
+  }
+}
+
+@start shipment.provider.ts
+import { ShipmentRepository } from './shipment.repository';
+import { AuditService } from '../../infrastructure/services/audit.service';
+
+export class ShipmentProvider {
+  constructor(
+    protected shipmentRepository: ShipmentRepository,
+    protected auditLog: AuditService,
+  ) {}
+
+  public async dispatch(id: string) {
+    const shipment = await this.shipmentRepository.findOne({ where: { id } });
+
+    await this.shipmentRepository.update({
+      where: { id },
+      values: { status: 'DISPATCHED', dispatchedAt: new Date() },
+    });
+
+    return shipment;
+  }
+
+  public async deliver(id: string) {
+    return this.shipmentRepository.update({
+      where: { id },
+      values: { status: 'DELIVERED', deliveredAt: new Date() },
+    });
+  }
+}
+
+@expected shipment.provider.ts
+import { ShipmentRepository } from './shipment.repository';
+import { AuditService } from '../../infrastructure/services/audit.service';
+
+export class ShipmentProvider {
+  constructor(
+    protected shipmentRepository: ShipmentRepository,
+    protected auditLog: AuditService,
+  ) {}
+
+  public async dispatch(id: string) {
+    const shipment = await this.shipmentRepository.findOne({ where: { id } });
+
+    await this.auditLog.record(id);
+    await this.shipmentRepository.update({
+      where: { id },
+      values: { status: 'DISPATCHED', dispatchedAt: new Date() },
+    });
+
+    return shipment;
+  }
+
+  public async deliver(id: string) {
+    await this.auditLog.record(id);
+    return this.shipmentRepository.update({
+      where: { id },
+      values: { status: 'DELIVERED', deliveredAt: new Date() },
+    });
+  }
+}
+
+@start audit.fixture.ts
+export const auditEvents = [
+  ord_101,cancel
+  ord_102,markShipped
+  ord_103,cancel
+  ord_104,issue
+  ord_105,reverse
+  ord_106,dispatch
+  ord_107,deliver
+  ord_108,cancel
+];
+
+@expected audit.fixture.ts
+export const auditEvents = [
+  { orderId: 'ord_101', action: 'cancel' },
+  { orderId: 'ord_102', action: 'markShipped' },
+  { orderId: 'ord_103', action: 'cancel' },
+  { orderId: 'ord_104', action: 'issue' },
+  { orderId: 'ord_105', action: 'reverse' },
+  { orderId: 'ord_106', action: 'dispatch' },
+  { orderId: 'ord_107', action: 'deliver' },
+  { orderId: 'ord_108', action: 'cancel' },
+];
+
+@start order.repository.ts
+import { PrismaClient, Order as OrderRecord } from '@prisma/client';
+
+export class OrderRepository {
+  constructor(protected prisma: PrismaClient) {}
+
+  public async findOne(args: { where: { id: string } }) {
+    return this.prisma.order.findFirst(args);
+  }
+
+  public async update(args: { where: { id: string }; values: Partial<OrderRecord> }) {
+    return this.prisma.order.update({ where: args.where, data: args.values });
+  }
+}
+
+@start audit.service.ts
+export class AuditService {
+  public async record(entityId: string) {
+    await this.http.post('/audit', { entityId, at: new Date().toISOString() });
+  }
+}

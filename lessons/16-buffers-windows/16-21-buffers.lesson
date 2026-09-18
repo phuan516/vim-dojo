@@ -1,0 +1,351 @@
+@meta
+id: 16-21
+title: Capstone — many files, one window
+chapter: 16
+type: scenario
+skills: buffer-switch, buffer-list, split-window, window-nav
+par: 134
+minutes: 10
+vscode: tabs, Ctrl+Tab, split editor
+open: src/domain/order/order.provider.ts src/configuration/errors/default.json
+
+@brief
+VS Code has tabs. Vim has BUFFERS: every file you open stays loaded,
+whether or not it is on screen. Windows (splits) are just viewports
+onto buffers. The two ideas are separate, which is why closing a
+split does not close the file.
+
+Two files are already open as buffers. Make this change across both:
+
+  1. In default.json, add an error code, keeping the file valid JSON
+     and the same formatting as its neighbours:
+       "ORDER_ALREADY_CANCELLED": { "statusCode": 409, "sentry": false }
+     Put it directly after the ORDER_ALREADY_SHIPPED line.
+
+  2. In order.provider.ts, in cancel(), add a second guard directly
+     below the SHIPPED one:
+
+       if (order.status === 'CANCELLED') {
+         throw exception('ORDER_ALREADY_CANCELLED');
+       }
+
+     with a blank line between the two guards, matching the file's
+     existing spacing.
+
+Do it with the two files in a vertical split so you can see both.
+
+@keys
+:e path/to/file    open a file into a new buffer
+:ls               list the buffers, each with a number
+:b 3              switch to buffer 3
+:b order.prov     switch by partial name - no number needed
+:bn  :bp          next / previous buffer
+Ctrl-^            flip to the previous buffer - the one you use most
+:bd               close this buffer (the file, not the window)
+
+:vs path          open a file in a VERTICAL split
+:sp path          horizontal split
+Ctrl-W  then h j k l    move between splits
+Ctrl-W  then =          make the splits equal size
+Ctrl-W  then o          close every split but this one
+Ctrl-W  then q          close this split
+
+:w    save this file       :wa   save every changed file
+:qa   quit everything      :wqa  save everything and quit
+
+@hints
+:ls shows you what is loaded. The % marks the buffer you are looking
+at, the # marks the one Ctrl-^ will flip you to.
+--
+:vs then Ctrl-W l puts you in the right-hand split. Then :b default
+switches that split to the JSON file - the split shows a different
+buffer from the left one.
+--
+In the JSON, put the cursor on the ORDER_ALREADY_SHIPPED line and
+press yy p to duplicate it, then edit the copy. Same trick as level 3
+and it keeps the formatting identical for free.
+--
+In the provider, the whole SHIPPED guard is four lines. V3j y is
+"select this line and three more, yank". Then p, then fix the two
+words on the copy.
+
+@solution
+:ls                       see both buffers
+:vs                       split the window
+Ctrl-W l                  move into the right split
+:b default                show default.json there
+
+In the JSON:  /ALREADY_SHIPPED Enter  yy p
+              then ciw or ci" the copied key to ORDER_ALREADY_CANCELLED
+
+Ctrl-W h                  back to the left split
+/SHIPPED' Enter           the guard in cancel()
+V2j y                     yank the three-line if block
+}p  or  jjp               paste it below, keeping the blank line
+then change SHIPPED to CANCELLED in both places on the copy
+
+:wa                       write both
+:qa
+
+Mental model: buffers are the files, windows are the panes, and
+:b <a few letters of the name> is the fastest way between them.
+
+@start src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@start src/configuration/registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderResolver } from '../domain/order/order.resolver';
+import { CustomerRepository } from '../domain/customer/customer.repository';
+import { CustomerProvider } from '../domain/customer/customer.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+import { EmailService } from '../infrastructure/services/email.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('CustomerRepository', { useClass: CustomerRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('CustomerProvider', { useClass: CustomerProvider });
+container.register('PaymentService', { useClass: PaymentService });
+container.register('EmailService', { useClass: EmailService });
+container.register('OrderResolver', { useClass: OrderResolver });
+
+@start src/domain/customer/customer.entity.ts
+export type Customer = {
+  id: string;
+  email: string;
+  name: string;
+};
+
+@start src/domain/customer/customer.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { CustomerRepository } from './customer.repository';
+
+@injectable()
+export class CustomerProvider {
+  constructor(
+    @inject(CustomerRepository) protected customerRepository: CustomerRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const customer = await this.customerRepository.findOne({ where: { id } });
+
+    if (!customer) {
+      throw exception('CUSTOMER_NOT_FOUND');
+    }
+
+    return customer;
+  }
+}
+
+@start src/domain/customer/customer.repository.ts
+import { injectable } from 'tsyringe';
+import { Customer as CustomerRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Customer } from './customer.entity';
+
+@injectable()
+export class CustomerRepository extends BaseRepository<CustomerRecord, Customer> {
+  public toEntity(record: CustomerRecord): Customer {
+    return {
+      id: record.id,
+      email: record.email,
+      name: record.name,
+    };
+  }
+}
+
+@start src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+  cancellationReason?: string;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(args: { customerId: string }) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId: args.customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@start src/infrastructure/base.repository.ts
+export abstract class BaseRepository<TRecord, TEntity> {
+  protected prisma: any;
+
+  public async findOne(args: { where: object }) {
+    return null;
+  }
+
+  public async update(args: { where: object; values: object }) {
+    return null;
+  }
+
+  public abstract toEntity(record: TRecord): TEntity;
+}
+
+@start src/infrastructure/services/email.service.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class EmailService {
+  public async send(args: { to: string; template: string }) {
+    return this.http.post(`/send`, args);
+  }
+}
+
+@start src/infrastructure/services/payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string) {
+    const response = await this.http.post(`/refunds`, { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@expected src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "ORDER_ALREADY_CANCELLED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    if (order.status === 'CANCELLED') {
+      throw exception('ORDER_ALREADY_CANCELLED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}

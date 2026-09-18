@@ -1,0 +1,91 @@
+@meta
+id: 08-18
+title: Where p puts things, and why
+chapter: 08
+type: lesson
+skills: delete-d, put-p
+par: 23
+minutes: 6
+vscode: two drags, two cuts, two clicks, two pastes
+open: webhook.config.ts
+
+@brief
+Everything in this chapter comes together in one rule, and it is the rule
+that makes people distrust paste in vim until somebody explains it.
+
+The register remembers *how* text was taken, not just what was taken.
+Take whole lines — `dd`, `3dd`, `yy` — and the register is linewise: `p`
+opens a new line below the cursor and drops them in, whatever column you
+are standing in. Take part of a line — `x`, `D`, `C` — and the register
+is charwise: `p` inserts it into the current line, immediately after the
+cursor, creating no new line at all.
+
+Same key, two behaviours, decided entirely by the delete that filled the
+register. Nothing you press at paste time changes it.
+
+Two fixes here, one of each kind.
+
+A merge left the timeout comment attached to `retries`. It describes the
+timeout. Move it onto the end of the `timeoutMs` line — the text lands
+inside that line.
+
+The dead letter queue belongs with the retry settings, not after the
+secret. Move that whole line up so it sits directly under `retries` — the
+text lands as its own line.
+
+Do both without retyping either piece.
+
+@keys
+| `D` | delete to the end of the line — charwise |
+| `dd` | delete the whole line — linewise |
+| `p` | put: inline after the cursor, or as a new line below |
+| `$` | end of the line |
+| `f/` `h` | forward to the slash, then one back |
+
+@hints
+Do the comment first. There is one register, and the second delete will
+overwrite whatever the first one left in it.
+--
+For the comment, start on the space *before* the `//` so the space
+travels with it — then `D`, and put it at the `$` of the timeout line.
+For the line move, `dd` and `p` are already familiar; the only question
+is which line you are standing on when you put.
+--
+`j f/ h D` lifts the comment. `j $ p` drops it on the end of the next
+line. Then `2j dd` lifts the queue line, `3k` gets you to `retries`, and
+`p` puts it underneath.
+
+@solution
+    j f/h D  j $ p  2j dd  3k p  :wq<Enter>
+
+Fifteen keystrokes, two moves, two completely different results from the
+same `p`.
+
+Watch what the charwise put did with the cursor: `p` placed the text
+*after* the character you were on, which is why you went to `$` first. If
+you want it before the cursor instead, that is `P` — and on a linewise
+register `P` means above rather than below. One pair of keys, the same
+meaning in both shapes: `p` is after, `P` is before.
+
+This is the answer to the question every VS Code refugee eventually asks:
+"why did my paste land on its own line when I wanted it inside the line?"
+Because you filled the register with `dd`. If you want charwise text, take
+it charwise — `D`, `x`, or in the next chapter `dw` and `d$`. There is a
+way to force a linewise register to paste inline, and it is ugly enough
+that nobody uses it. Take the text the shape you want it.
+
+@start webhook.config.ts
+export const webhookConfig = {
+  retries: 5, // keep this under the gateway's own budget
+  timeoutMs: 2000,
+  secretEnv: 'WEBHOOK_SECRET',
+  deadLetterQueue: 'webhook-dlq',
+};
+
+@expected webhook.config.ts
+export const webhookConfig = {
+  retries: 5,
+  deadLetterQueue: 'webhook-dlq',
+  timeoutMs: 2000, // keep this under the gateway's own budget
+  secretEnv: 'WEBHOOK_SECRET',
+};

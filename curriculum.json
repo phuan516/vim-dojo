@@ -1,0 +1,532 @@
+{
+  "title": "vim-dojo",
+  "subtitle": "a year of deliberate practice",
+  "pace": {
+    "lessons_per_day": 2,
+    "review_per_day": 8,
+    "drill_minutes": 5
+  },
+  "belts": [
+    {
+      "belt": "white",
+      "name": "Survival",
+      "premise": "Stop being afraid of the editor. Modes, saving, undo, and typing text on purpose.",
+      "chapters": [
+        {
+          "n": "01",
+          "slug": "modes",
+          "title": "Modes and the escape hatch",
+          "target": 15,
+          "teaches": "normal vs insert vs command, Esc, why letters are commands; hjkl/0/$ are allowed here as survival tools only",
+          "skills": [
+            "esc",
+            "insert-i",
+            "insert-a",
+            "mode-awareness",
+            "cmdline",
+            "survival-motion"
+          ]
+        },
+        {
+          "n": "02",
+          "slug": "save-quit-undo",
+          "title": "Saving, quitting, undoing",
+          "target": 15,
+          "teaches": ":w :q :wq :q! ZZ, u, Ctrl-R, undo tree basics",
+          "skills": [
+            "write",
+            "quit",
+            "undo",
+            "redo",
+            "undo-branches"
+          ]
+        },
+        {
+          "n": "03",
+          "slug": "insertion",
+          "title": "Getting into insert mode well",
+          "target": 15,
+          "teaches": "i a I A o O, insert-mode editing keys, when not to stay in insert",
+          "skills": [
+            "insert-I",
+            "insert-A",
+            "open-o",
+            "open-O",
+            "insert-ctrl-w"
+          ]
+        }
+      ]
+    },
+    {
+      "belt": "yellow",
+      "name": "Movement",
+      "premise": "Never touch an arrow key again. Move by meaning, not by distance.",
+      "chapters": [
+        {
+          "n": "04",
+          "slug": "hjkl-counts",
+          "title": "hjkl and the count prefix",
+          "target": 18,
+          "teaches": "hjkl, counts, relative line numbers, why 5j beats holding a key",
+          "skills": [
+            "hjkl",
+            "count-prefix",
+            "relativenumber",
+            "gj-gk"
+          ]
+        },
+        {
+          "n": "05",
+          "slug": "word-motions",
+          "title": "Word motions",
+          "target": 18,
+          "teaches": "w b e ge, WORD vs word, counts with words",
+          "skills": [
+            "word-w",
+            "word-b",
+            "word-e",
+            "WORD-motions",
+            "word-counts"
+          ]
+        },
+        {
+          "n": "06",
+          "slug": "line-motions",
+          "title": "Inside a line: 0 ^ $ f t",
+          "target": 18,
+          "teaches": "0 ^ $ g_ f F t T ; , as precision instruments",
+          "skills": [
+            "line-start",
+            "line-end",
+            "find-f",
+            "find-t",
+            "repeat-semicolon"
+          ]
+        },
+        {
+          "n": "07",
+          "slug": "file-motions",
+          "title": "Across the file and the screen",
+          "target": 19,
+          "teaches": "gg G nG, { } ( ) , H M L, Ctrl-D/U/F/B, zz zt zb, %",
+          "skills": [
+            "goto-line",
+            "paragraph-motion",
+            "screen-HML",
+            "scroll-half",
+            "zz-center",
+            "match-percent"
+          ]
+        }
+      ]
+    },
+    {
+      "belt": "orange",
+      "name": "The grammar",
+      "premise": "Verb plus object. Learn ten verbs and twenty objects and you get two hundred edits for free.",
+      "chapters": [
+        {
+          "n": "08",
+          "slug": "operators",
+          "title": "Delete, change, yank, put",
+          "target": 21,
+          "teaches": "d c y p P x s r, doubled operators dd cc yy, linewise vs charwise",
+          "skills": [
+            "delete-d",
+            "change-c",
+            "yank-y",
+            "put-p",
+            "replace-r",
+            "substitute-s"
+          ]
+        },
+        {
+          "n": "09",
+          "slug": "verb-object",
+          "title": "Operator + motion = edit",
+          "target": 21,
+          "teaches": "dw d$ c3w y}, counts on either side, the composition rule",
+          "skills": [
+            "op-motion",
+            "op-counts",
+            "op-linewise",
+            "op-to-mark"
+          ]
+        },
+        {
+          "n": "10",
+          "slug": "text-objects",
+          "title": "Text objects: inner and around",
+          "target": 23,
+          "teaches": "iw aw i\" a\" i( a( i{ it at ip, and picking the right one",
+          "skills": [
+            "obj-word",
+            "obj-quote",
+            "obj-paren",
+            "obj-brace",
+            "obj-tag",
+            "obj-paragraph",
+            "inner-vs-around"
+          ]
+        },
+        {
+          "n": "11",
+          "slug": "dot",
+          "title": "The dot command",
+          "target": 17,
+          "teaches": ". as repeat, designing edits to be dot-repeatable, cgn",
+          "skills": [
+            "dot-repeat",
+            "dot-design",
+            "cgn",
+            "amp-repeat-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "belt": "green",
+      "name": "Search and replace",
+      "premise": "Find and change things you cannot see, safely, across thousands of lines.",
+      "chapters": [
+        {
+          "n": "12",
+          "slug": "search",
+          "title": "Searching inside a file",
+          "target": 18,
+          "teaches": "/ ? n N * #, incsearch hlsearch, search as a motion, offsets",
+          "skills": [
+            "search-slash",
+            "search-next",
+            "search-star",
+            "search-motion",
+            "search-offset"
+          ]
+        },
+        {
+          "n": "13",
+          "slug": "regex",
+          "title": "Regex for people who edit code",
+          "target": 22,
+          "teaches": "vim regex dialect, magic levels, classes, anchors, groups, \\zs \\ze",
+          "skills": [
+            "regex-classes",
+            "regex-anchors",
+            "regex-groups",
+            "regex-verymagic",
+            "regex-zs-ze",
+            "regex-quantifiers"
+          ]
+        },
+        {
+          "n": "14",
+          "slug": "substitute",
+          "title": "Substitute with judgement",
+          "target": 24,
+          "teaches": ":s ranges flags, gc, backreferences, \\=, case tricks, & and :&&",
+          "skills": [
+            "sub-basic",
+            "sub-range",
+            "sub-confirm",
+            "sub-backref",
+            "sub-expression",
+            "sub-case"
+          ]
+        },
+        {
+          "n": "15",
+          "slug": "global",
+          "title": "The global command",
+          "target": 18,
+          "teaches": ":g and :v, :g//d, :g//normal, :g//m0, :g//t$, the power tool",
+          "skills": [
+            "global-delete",
+            "global-normal",
+            "global-move",
+            "global-invert",
+            "global-copy"
+          ]
+        }
+      ]
+    },
+    {
+      "belt": "blue",
+      "name": "Many files",
+      "premise": "A real change is never in one file. Move through a codebase without losing your place.",
+      "chapters": [
+        {
+          "n": "16",
+          "slug": "buffers-windows",
+          "title": "Buffers, windows and tabs",
+          "target": 21,
+          "teaches": "buffer list, :b :bn :bd, splits, Ctrl-W family, tabs and when they are wrong",
+          "skills": [
+            "buffer-switch",
+            "buffer-list",
+            "split-window",
+            "window-nav",
+            "window-resize",
+            "tabpages"
+          ]
+        },
+        {
+          "n": "17",
+          "slug": "jumps-marks",
+          "title": "Getting back where you were",
+          "target": 19,
+          "teaches": "Ctrl-O Ctrl-I, jumplist, changelist g; g,, marks m ' `, '' and `.",
+          "skills": [
+            "jump-back",
+            "jumplist",
+            "changelist",
+            "marks-set",
+            "marks-jump",
+            "mark-backtick"
+          ]
+        },
+        {
+          "n": "18",
+          "slug": "finding-files",
+          "title": "Opening a file by name",
+          "target": 17,
+          "teaches": ":e :find with path, wildmenu, netrw, :Explore, argument list",
+          "skills": [
+            "edit-file",
+            "find-path",
+            "wildmenu",
+            "netrw",
+            "arglist"
+          ]
+        },
+        {
+          "n": "19",
+          "slug": "quickfix",
+          "title": "Quickfix: fix every hit in the repo",
+          "target": 21,
+          "teaches": ":vimgrep :grep, :copen :cn :cp, :cdo :cfdo, location lists",
+          "skills": [
+            "vimgrep",
+            "quickfix-nav",
+            "cdo",
+            "cfdo",
+            "location-list",
+            "make-errorformat"
+          ]
+        }
+      ]
+    },
+    {
+      "belt": "purple",
+      "name": "Power tools",
+      "premise": "The features that make people watching you ask what just happened.",
+      "chapters": [
+        {
+          "n": "20",
+          "slug": "registers",
+          "title": "Registers",
+          "target": 20,
+          "teaches": "named registers, append, yank register 0, black hole, system clipboard, :reg",
+          "skills": [
+            "register-named",
+            "register-append",
+            "register-zero",
+            "register-blackhole",
+            "register-clipboard",
+            "register-expression"
+          ]
+        },
+        {
+          "n": "21",
+          "slug": "macros",
+          "title": "Record once, replay forever",
+          "target": 23,
+          "teaches": "q recording, @ @@, counts, recursive macros, editing a macro, macros over quickfix",
+          "skills": [
+            "macro-record",
+            "macro-play",
+            "macro-count",
+            "macro-recursive",
+            "macro-edit",
+            "macro-across-files"
+          ]
+        },
+        {
+          "n": "22",
+          "slug": "visual",
+          "title": "Visual mode and the column trick",
+          "target": 21,
+          "teaches": "v V Ctrl-V, gv, o, visual text objects, blockwise I A $, :'<,'>",
+          "skills": [
+            "visual-char",
+            "visual-line",
+            "visual-block",
+            "block-insert",
+            "block-append",
+            "gv-reselect"
+          ]
+        },
+        {
+          "n": "23",
+          "slug": "assists",
+          "title": "Completion, folding, spelling, formatting",
+          "target": 18,
+          "teaches": "Ctrl-N Ctrl-P Ctrl-X family, folds, spell, gq gw, = indenting",
+          "skills": [
+            "complete-keyword",
+            "complete-line",
+            "complete-file",
+            "folds",
+            "spell",
+            "format-gq",
+            "indent-equals"
+          ]
+        }
+      ]
+    },
+    {
+      "belt": "brown",
+      "name": "Ex and automation",
+      "premise": "The command line under the editor. Where repetitive work goes to die.",
+      "chapters": [
+        {
+          "n": "24",
+          "slug": "ex-language",
+          "title": "The ex command language",
+          "target": 20,
+          "teaches": ":d :m :t :y :pu :j :>, :sort, addressing, command-line editing and history, q:",
+          "skills": [
+            "ex-delete",
+            "ex-move",
+            "ex-copy",
+            "ex-join",
+            "ex-shift",
+            "ex-sort",
+            "cmdline-edit",
+            "cmdline-window"
+          ]
+        },
+        {
+          "n": "25",
+          "slug": "ranges-normal",
+          "title": "Ranges and :normal",
+          "target": 18,
+          "teaches": "line ranges, . $ % marks patterns, :normal, :g with :normal, argdo bufdo windo",
+          "skills": [
+            "range-syntax",
+            "range-pattern",
+            "ex-normal",
+            "bufdo",
+            "argdo"
+          ]
+        },
+        {
+          "n": "26",
+          "slug": "filters",
+          "title": "Talking to the shell",
+          "target": 16,
+          "teaches": "!motion, :r !, :w !, filtering through sort/jq/prettier, :term",
+          "skills": [
+            "filter-bang",
+            "read-shell",
+            "write-shell",
+            "terminal"
+          ]
+        },
+        {
+          "n": "27",
+          "slug": "options",
+          "title": "Options and how vim is configured",
+          "target": 20,
+          "teaches": ":set, local vs global, :verbose set, filetype, autocmds, mappings, leader",
+          "skills": [
+            "set-option",
+            "set-local",
+            "verbose-set",
+            "filetype",
+            "autocmd",
+            "mapping",
+            "leader-key"
+          ]
+        }
+      ]
+    },
+    {
+      "belt": "black",
+      "name": "Mastery",
+      "premise": "Make it yours, then use it for a living.",
+      "chapters": [
+        {
+          "n": "28",
+          "slug": "vimrc",
+          "title": "Building your own vimrc",
+          "target": 16,
+          "teaches": "growing a config one line at a time, sensible defaults, debugging a config",
+          "skills": [
+            "vimrc-structure",
+            "vimrc-mappings",
+            "vimrc-debug",
+            "vimrc-filetype"
+          ]
+        },
+        {
+          "n": "29",
+          "slug": "plugins",
+          "title": "Plugins and the ecosystem",
+          "target": 16,
+          "teaches": "packages, plugin managers, fuzzy finders, surround, commentary, fugitive",
+          "skills": [
+            "packadd",
+            "plugin-manager",
+            "fuzzy-finder",
+            "surround",
+            "commentary",
+            "fugitive"
+          ]
+        },
+        {
+          "n": "30",
+          "slug": "ide-workflows",
+          "title": "IDE workflows without an IDE",
+          "target": 16,
+          "teaches": "LSP, go-to-definition, rename symbol, diagnostics, tags, git inside vim",
+          "skills": [
+            "lsp-setup",
+            "goto-definition",
+            "rename-symbol",
+            "diagnostics",
+            "ctags",
+            "git-in-vim"
+          ]
+        },
+        {
+          "n": "31",
+          "slug": "neovim",
+          "title": "Where Neovim differs",
+          "target": 14,
+          "teaches": "what changes, lua config, built-in lsp and treesitter, when to switch",
+          "skills": [
+            "nvim-differences",
+            "lua-config",
+            "nvim-lsp",
+            "treesitter"
+          ]
+        },
+        {
+          "n": "32",
+          "slug": "engagements",
+          "title": "Boss fights: real engineering work",
+          "target": 21,
+          "teaches": "multi-file features, refactors, code review, merge conflicts, under time pressure; reading a log or stack trace back to a cause",
+          "skills": [
+            "multi-file-refactor",
+            "feature-implementation",
+            "conflict-resolution",
+            "code-review",
+            "speed-under-pressure",
+            "diagnose-from-logs"
+          ]
+        }
+      ]
+    }
+  ]
+}

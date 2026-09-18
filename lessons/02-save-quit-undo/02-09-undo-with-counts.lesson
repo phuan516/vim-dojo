@@ -1,0 +1,87 @@
+@meta
+id: 02-09
+title: Undoing several changes at once
+chapter: 02
+type: lesson
+skills: undo, redo
+par: 55
+minutes: 5
+vscode: holding Ctrl+Z and hoping
+open: release-plan.md
+
+@brief
+Almost every normal mode command takes a number in front of it, and it
+means what you would guess: do this that many times. `u` is no exception.
+`3u` undoes three changes. `2` then `Ctrl-R` redoes two.
+
+That sounds like a small convenience. It is really about precision —
+`3u` lands on a state you chose, where holding `u` down lands wherever
+your reflexes let go.
+
+The release plan is being ticked off as the deploy runs. In order:
+
+  1. Append `: done` to each of the four bullets, top to bottom, as four
+     separate edits.
+
+  2. The deploy is rolled back at the announcement step. Take the last
+     three ticks off in one command.
+
+  3. It restarts, and migration, feature flag and smoke tests all pass
+     again. Put two ticks back in one command.
+
+Save. The first three bullets end with `: done`, the announcement does
+not.
+
+@keys
+| `3u` | undo three changes |
+| `2` `Ctrl-R` | redo two changes |
+| `u` `Ctrl-R` | one at a time |
+
+@hints
+Four separate edits means four entries in the undo history, so the counts
+line up with the bullets exactly.
+--
+The count goes before the letter: `3u`, not `u3`. For redo, type the
+count and then press `Ctrl-R`.
+--
+After `3u` only the Migration tick survives. `2` then `Ctrl-R` replays
+the feature flag and smoke test ticks, in that order.
+
+@solution
+    jj $ a : done <Esc>
+    j $ a : done <Esc>
+    j $ a : done <Esc>
+    j $ a : done <Esc>
+    3u
+    2<Ctrl-R>
+    ZZ
+
+`3u` is one byte shorter than `uuu`, which is not the reason to use it.
+The reason is that you can count the changes you regret, then undo
+exactly that many, and know where you have landed without reading the
+file to check.
+
+Counts are not special to undo. `3j` moves down three lines, `3dd`
+deletes three lines, `3.` repeats an edit three times. You have just met
+the general rule a chapter early, on the safest possible command.
+
+If you ever lose track of how far back you have gone, vim tells you.
+After each `u` the message line reports the change number and how long
+ago it happened: `3 changes; before #4  12 seconds ago`. Read it instead
+of guessing.
+
+@start release-plan.md
+# 2.14 release plan
+
+- Migration
+- Feature flag
+- Smoke tests
+- Announcement
+
+@expected release-plan.md
+# 2.14 release plan
+
+- Migration: done
+- Feature flag: done
+- Smoke tests: done
+- Announcement

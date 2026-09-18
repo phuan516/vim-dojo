@@ -1,0 +1,84 @@
+@meta
+id: 23-13
+title: Reflow a paragraph to the margin
+chapter: 23
+type: lesson
+skills: format-gq
+par: 19
+minutes: 4
+vscode: Rewrap extension, Alt-Q
+open: refund-window.md
+vimrc: set textwidth=72
+
+@brief
+Two paragraphs in this doc were pasted in as single 250-character
+lines. The project wraps prose at 72 columns. Rewrap both paragraphs
+to that width. The indented code line and the last paragraph are
+already fine and must not change.
+
+Do not break the lines by hand. Vim knows the margin — `textwidth` is
+72 for this lesson — and it has an operator that reflows text to it.
+
+@keys
+| `gq{motion}` | reformat the lines the motion covers to `textwidth` |
+| `gqip` | reformat the paragraph |
+| `gqq` | reformat the current line |
+| `gw{motion}` | the same, but leave the cursor where it was |
+
+@hints
+`gq` is an operator. Give it a paragraph: `gqip`.
+--
+`3G` puts you on the first long line. `gqip`, then `}` to the blank
+line after it, `j` onto the next paragraph, `gqip` again.
+--
+`3Ggqip}jgqip:wq`.
+
+@solution
+    3G gqip }j gqip :wq<Enter>
+
+Sixteen keystrokes for two paragraphs.
+
+`gq` takes a motion or text object, joins the lines it covers into
+one and breaks them again at the last space before `textwidth`. It is
+the reverse of typing carefully. With `textwidth` at zero — the
+default — it uses the screen width minus one, which is why setting it
+explicitly for prose file types is worth a line in your vimrc.
+
+`gw` is `gq` that puts the cursor back where it was. Use it when you
+are in the middle of writing and want to tidy the paragraph without
+losing your place; `gq` leaves you on the last line it formatted,
+which is the better choice when you are about to continue below.
+
+`gq` respects paragraph boundaries and existing structure: a blank
+line ends the reflow, list items keep their bullets and, in the next
+lesson, comment markers stay in front of every line. `gqap` includes
+the blank line after the paragraph; `gqip` does not, and is the one to
+reach for.
+
+@start refund-window.md
+# Refund window
+
+Orders can be refunded for thirty days after they are placed. Past that point cancelling still works, but no money moves and the reason is recorded on the order as REFUND_WINDOW_EXPIRED so that finance can reconcile it at the end of the month.
+
+The window is measured from the moment the order was placed, not from the last status change. A shipped order that is cancelled on day twenty-nine is refunded; the same order cancelled on day thirty-one is not, even if it only shipped yesterday.
+
+    const days = (Date.now() - order.placedAt.getTime()) / 86_400_000;
+
+Finance own this number. Do not change it without a ticket from them.
+
+@expected refund-window.md
+# Refund window
+
+Orders can be refunded for thirty days after they are placed. Past that
+point cancelling still works, but no money moves and the reason is
+recorded on the order as REFUND_WINDOW_EXPIRED so that finance can
+reconcile it at the end of the month.
+
+The window is measured from the moment the order was placed, not from
+the last status change. A shipped order that is cancelled on day
+twenty-nine is refunded; the same order cancelled on day thirty-one is
+not, even if it only shipped yesterday.
+
+    const days = (Date.now() - order.placedAt.getTime()) / 86_400_000;
+
+Finance own this number. Do not change it without a ticket from them.

@@ -1,0 +1,258 @@
+@meta
+id: 32-07
+title: Incident — the refund that retried forever
+chapter: 32
+type: scenario
+skills: diagnose-from-logs, feature-implementation, multi-file-refactor, obj-paren, obj-quote, buffer-switch
+par: 275
+minutes: 14
+vscode: scroll the log in one tab, guess in two others
+open: logs/api-2024-09-12.log src/infrastructure/services/payment.service.ts src/consumers/refund.consumer.ts src/configuration/errors/default.json src/domain/order/order.provider.ts
+vimrc: set hidden
+
+@brief
+    INC-77  Paged at 02:14. One order pinned a consumer for seventy
+            seconds and filled Sentry with the same stack trace
+            twenty-five times. Refunds for everyone else were delayed
+            behind it. Nothing is on fire now; the order is still
+            unrefunded.
+
+The log is the first buffer. Read it before you touch anything. It
+contains the cause, the file and the line.
+
+What you will find: the payment gateway answers `200` with a null refund
+when it does not know the order. We read `.amount` off that null, get a
+`TypeError`, and the consumer treats a `TypeError` like any other failure
+and retries it twenty-five times. A `TypeError` will never succeed on the
+second attempt.
+
+Two fixes and a registration:
+
+  1. payment.service.ts — a null refund is a known failure, not a crash.
+     Directly under the existing status guard, separated by a blank line
+     and in the same shape, throw `REFUND_ORDER_UNKNOWN` when
+     `!response.data.refund`.
+
+  2. refund.consumer.ts — do not retry that one. The retry condition
+     becomes `error.code !== 'REFUND_ORDER_UNKNOWN' && message.attempt < 25`.
+
+  3. errors/default.json — register `REFUND_ORDER_UNKNOWN` directly under
+     `ORDER_NOT_FOUND`. It is a 404 and it is not our bug, so it does not
+     go to Sentry.
+
+The log and order.provider.ts are evidence. Neither changes.
+
+@keys
+| `4Y` `3j` `p` | copy a guard with its blank line and put it below |
+| `ci(` | change the whole condition inside the brackets |
+| `ci'` `ci"` | change inside the quotes |
+| `:bn` | next buffer |
+
+@hints
+Start in the log and read down. The interesting lines are the gateway
+response body, the stack frame with the file and line number in it, and
+the attempt counter climbing.
+--
+Once you know the cause, all three edits are small. The new guard in the
+service is the guard above it with a different condition and a different
+code, so copy it. Yank four lines — the guard and the blank line — so
+the spacing comes with it.
+--
+In the service: `/response.status !== 200` `Enter`, `4Y` `3j` `p`, then
+`f(` `ci(!response.data.refund` `Esc` and `j0f'` `ci'REFUND_ORDER_UNKNOWN`
+`Esc`. In the consumer the whole change is one `ci(` on the retry
+condition. In the JSON it is `yyp` and a `ci"`.
+
+@solution
+A route that measures 225 keystrokes once you have read the log. Par
+leaves room for the reading.
+
+**payment.service.ts** — `:bn`, `/response.status !== 200` `Enter`,
+`4Y` `3j` `p`, `f(` `ci(!response.data.refund` `Esc`,
+`j0f'` `ci'REFUND_ORDER_UNKNOWN` `Esc`.
+
+**refund.consumer.ts** — `:bn`, `/attempt < 25` `Enter`,
+`ci(error.code !== 'REFUND_ORDER_UNKNOWN' && message.attempt < 25` `Esc`.
+
+**errors/default.json** — `:bn`, `/ORDER_NOT_FOUND` `Enter`, `yyp`,
+`ci"REFUND_ORDER_UNKNOWN` `Esc`. Then `:wqa`.
+
+The editing here is easy. What the lesson is actually about is the two
+minutes before it.
+
+**The log is a file, so read it like one.** `/error` `Enter` and `n` walk
+the failures. `/attempt=` shows you the retry counter climbing, which is
+what tells you the loop is the second bug rather than a symptom of the
+first. `G` gets you to the end, where the consumer gives up. None of this
+needs a log viewer, and searching a log in the same editor as the code
+means the file and line in a stack frame are two keystrokes from being
+open.
+
+**Fix both bugs.** The instinct under pressure is to fix the crash and
+close the incident. The crash cost one order. The retry loop cost every
+other customer in the queue seventy seconds, and it will do it again for
+the next unrecoverable error, whatever that turns out to be. An incident
+almost always has a failure and an amplifier, and the amplifier is the
+one that wakes you up.
+
+**A new failure mode needs a name.** `REFUND_ORDER_UNKNOWN` in the error
+file is what makes the consumer's condition readable and what stops the
+next person adding a second special case by hand. Registering the code
+is not paperwork; it is the part of the fix the next incident depends on.
+
+@start logs/api-2024-09-12.log
+2024-09-12T02:14:07.114Z info  refund.consumer  consuming ord_7f3a attempt=1
+2024-09-12T02:14:07.402Z debug payment.service  POST /refunds orderId=ord_7f3a amount=4500
+2024-09-12T02:14:07.981Z debug payment.service  gateway 200 body={"refund":null,"error":"unknown_order"}
+2024-09-12T02:14:07.982Z error refund.consumer  TypeError: Cannot read properties of null (reading 'amount')
+2024-09-12T02:14:07.982Z error refund.consumer      at PaymentService.refund (payment.service.ts:14:33)
+2024-09-12T02:14:07.983Z error refund.consumer      at RefundConsumer.consume (refund.consumer.ts:10:21)
+2024-09-12T02:14:10.984Z info  refund.consumer  consuming ord_7f3a attempt=2
+2024-09-12T02:14:11.702Z debug payment.service  gateway 200 body={"refund":null,"error":"unknown_order"}
+2024-09-12T02:14:11.703Z error refund.consumer  TypeError: Cannot read properties of null (reading 'amount')
+2024-09-12T02:14:14.704Z info  refund.consumer  consuming ord_7f3a attempt=3
+2024-09-12T02:14:15.318Z debug payment.service  gateway 200 body={"refund":null,"error":"unknown_order"}
+2024-09-12T02:14:15.319Z error refund.consumer  TypeError: Cannot read properties of null (reading 'amount')
+2024-09-12T02:14:18.320Z warn  refund.consumer  queue depth 41, oldest message 11s
+2024-09-12T02:14:18.321Z info  refund.consumer  consuming ord_7f3a attempt=4
+2024-09-12T02:14:18.944Z error refund.consumer  TypeError: Cannot read properties of null (reading 'amount')
+2024-09-12T02:14:48.112Z warn  refund.consumer  queue depth 96, oldest message 41s
+2024-09-12T02:15:19.006Z info  refund.consumer  consuming ord_7f3a attempt=25
+2024-09-12T02:15:19.771Z error refund.consumer  TypeError: Cannot read properties of null (reading 'amount')
+2024-09-12T02:15:19.772Z error refund.consumer  giving up on ord_7f3a after 25 attempts
+2024-09-12T02:15:22.104Z info  refund.consumer  queue drained, depth 0
+2024-09-12T02:15:23.002Z info  order.provider   cancel ord_91bd ok
+
+@start src/infrastructure/services/payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string, amount: number) {
+    const response = await this.http.post(`/refunds`, { orderId, amount });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data.refund.amount;
+  }
+}
+
+@expected src/infrastructure/services/payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string, amount: number) {
+    const response = await this.http.post(`/refunds`, { orderId, amount });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    if (!response.data.refund) {
+      throw exception('REFUND_ORDER_UNKNOWN');
+    }
+
+    return response.data.refund.amount;
+  }
+}
+
+@start src/consumers/refund.consumer.ts
+import { injectable, inject } from 'tsyringe';
+import { PaymentService } from '../infrastructure/services/payment.service';
+
+@injectable()
+export class RefundConsumer {
+  constructor(@inject(PaymentService) protected paymentService: PaymentService) {}
+
+  public async consume(message: { orderId: string; amount: number; attempt: number }) {
+    try {
+      return await this.paymentService.refund(message.orderId, message.amount);
+    } catch (error) {
+      if (message.attempt < 25) {
+        return this.requeue(message);
+      }
+
+      throw error;
+    }
+  }
+
+  public async requeue(message: { orderId: string; amount: number; attempt: number }) {
+    return this.queue.publish('refund', { ...message, attempt: message.attempt + 1 });
+  }
+}
+
+@expected src/consumers/refund.consumer.ts
+import { injectable, inject } from 'tsyringe';
+import { PaymentService } from '../infrastructure/services/payment.service';
+
+@injectable()
+export class RefundConsumer {
+  constructor(@inject(PaymentService) protected paymentService: PaymentService) {}
+
+  public async consume(message: { orderId: string; amount: number; attempt: number }) {
+    try {
+      return await this.paymentService.refund(message.orderId, message.amount);
+    } catch (error) {
+      if (error.code !== 'REFUND_ORDER_UNKNOWN' && message.attempt < 25) {
+        return this.requeue(message);
+      }
+
+      throw error;
+    }
+  }
+
+  public async requeue(message: { orderId: string; amount: number; attempt: number }) {
+    return this.queue.publish('refund', { ...message, attempt: message.attempt + 1 });
+  }
+}
+
+@start src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@expected src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_ORDER_UNKNOWN": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async cancel(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    await this.paymentService.refund(order.id, order.total);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}

@@ -1,0 +1,67 @@
+@meta
+id: 01-04
+title: The colon key is a place you go
+chapter: 01
+type: lesson
+skills: cmdline, insert-i, esc, survival-motion
+par: 16
+minutes: 3
+vscode: Ctrl-S, and the command palette
+open: release-notes.md
+
+@brief
+`:wq` is not one key. It is three things: a colon that takes you to the
+command line, a `w` that writes, and a `q` that quits. Once you see it
+that way you can take it apart.
+
+The colon puts the cursor on the last line of the screen, where vim keeps
+its command line. That is a third mode. Everything typed there is a
+command, not text, and nothing happens until you press Enter.
+
+The first bullet in release-notes.md lost its `- ` marker. Put it back.
+Then save the file with `:w` on its own, look at the file still sitting
+there open, and only then quit with `:q`.
+
+@keys
+| `:` | go to the command line |
+| `:w` | write the file, stay in it |
+| `:q` | quit |
+| `:wq` | both at once |
+| `Esc` | abandon a command line you have started typing |
+
+@hints
+`j` moves down a line. The bullet you want is the first one under the
+heading. `0` puts you in the first column if you have drifted right.
+--
+The marker is two characters, `-` and a space, and they go to the left of
+what is already there. `i` inserts to the left.
+--
+`i- ` then `Esc`. Then `:w` and Enter — the file is written and you are
+still in it. Then `:q` and Enter.
+
+@solution
+    j j i - <space> <Esc> :w<Enter> :q<Enter>
+
+Writing and quitting are separate on purpose. Most of a day's vim is
+`:w` — save, keep working, save again. `:q` is what you type when you are
+finished with the file, which is much rarer.
+
+Two things worth knowing now. A command line you have started and thought
+better of is cancelled with `Esc`; nothing runs. And `:q` refuses to quit
+when the file has unsaved changes — it stops you and says so. Vim is not
+trying to trap you, it is trying not to lose your work. Lesson 01-12 is
+about the way out.
+
+@start release-notes.md
+# Release 2.4.0
+
+Refunds now respect the 30 day window
+- Payment retries capped at three
+- Customer emails moved to the queue
+
+@expected release-notes.md
+# Release 2.4.0
+
+- Refunds now respect the 30 day window
+- Payment retries capped at three
+- Customer emails moved to the queue

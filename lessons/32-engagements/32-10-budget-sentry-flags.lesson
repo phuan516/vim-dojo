@@ -1,0 +1,148 @@
+@meta
+id: 32-10
+title: Budget — twenty-two error codes
+chapter: 32
+type: scenario
+skills: speed-under-pressure, sub-basic, sub-backref, global-normal
+par: 62
+minutes: 8
+vscode: twenty-two lines, twenty-two end-of-line clicks
+open: src/configuration/errors/default.json src/configuration/errors/index.ts
+vimrc: set hidden
+
+@brief
+    OPS-140  The error registry predates the Sentry integration and
+             none of the codes say whether they should be reported.
+             Sentry is now reading the flag and defaulting it to true,
+             so every 4xx in here is paging somebody at night.
+
+             Every entry needs a `"sentry"` flag after its status code.
+             4xx is a client mistake: false. 5xx is ours: true.
+
+    "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+    "PAYMENT_GATEWAY_TIMEOUT": { "statusCode": 504, "sentry": true },
+
+Twenty-two entries, five of them 5xx.
+
+**The budget for this one is 62 keystrokes, including `:wqa`.** Editing
+the lines one at a time costs about five hundred, so the budget is not
+there to make you hurry. It is there to rule out the route where you
+hurry.
+
+index.ts is open and does not change.
+
+@keys
+| `:%s/ }/, "sentry": false }/` | every line, in one pass |
+| `:g/pat/s/old/new/` | run a substitution only on the lines that match |
+| `:%s/\v(pat) \}/\1 … }/` | keep part of the match with a backreference |
+
+@hints
+Twenty-two lines, two different values. You are not going to find one
+command that does both, so stop looking for it. Two commands is the
+answer; the question is which two.
+--
+Most of the entries want the same flag. Give every line that one, then
+correct the minority. Correcting the minority is a substitution that only
+runs on lines you can describe — and you can describe them: their status
+code starts with a 5.
+--
+`:%s/ }/, "sentry": false }/` then `:g/: 5/s/false/true/`.
+
+@solution
+`:%s/ }/, "sentry": false }/` `:g/: 5/s/false/true/` `:wqa`. 54
+keystrokes.
+
+The idea is worth more than the two commands: **do the common case
+everywhere, then fix the exceptions.** Seventeen of the twenty-two want
+`false` and five want `true`, so writing one rule that handles both costs
+more thought and more characters than writing the majority rule and then
+a correction. The correction is cheap because the exceptions are
+describable — every one of them has `: 5` in it.
+
+The same shape turns up constantly: set every field to the default, then
+override the three that differ; add the import to every file, then remove
+it from the one that does not need it. The instinct to write a single
+perfectly-conditional command is the expensive one.
+
+The version with a backreference is also fine:
+
+    :%s/\v(: 4\d\d) \}/\1, "sentry": false }/
+    :%s/\v(: 5\d\d) \}/\1, "sentry": true }/
+
+It is more precise — it cannot touch a line that does not have a status
+code on it — and it costs about thirty keystrokes more, which is over
+today's budget. On a file this size the first version is right. On a file where you are not sure every
+line has the same shape, the second is, and the extra thirty keystrokes
+are the price of not having to read the diff.
+
+What both versions have in common: neither one involves pressing `j`.
+Twenty-two lines is exactly the size where hand-editing feels
+manageable — it is only a couple of minutes — and that feeling is the
+trap the budget is here to catch.
+
+@start src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404 },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409 },
+  "ORDER_ALREADY_CANCELLED": { "statusCode": 409 },
+  "ORDER_NOT_CANCELLED": { "statusCode": 409 },
+  "ORDER_LINE_NOT_FOUND": { "statusCode": 404 },
+  "ORDER_TOTAL_MISMATCH": { "statusCode": 422 },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404 },
+  "CUSTOMER_SUSPENDED": { "statusCode": 403 },
+  "CUSTOMER_EMAIL_TAKEN": { "statusCode": 409 },
+  "ADDRESS_NOT_FOUND": { "statusCode": 404 },
+  "ADDRESS_UNVERIFIED": { "statusCode": 422 },
+  "PAYMENT_DECLINED": { "statusCode": 402 },
+  "PAYMENT_METHOD_EXPIRED": { "statusCode": 402 },
+  "PAYMENT_GATEWAY_TIMEOUT": { "statusCode": 504 },
+  "PAYMENT_GATEWAY_UNAVAILABLE": { "statusCode": 503 },
+  "REFUND_FAILED": { "statusCode": 502 },
+  "REFUND_EXCEEDS_TOTAL": { "statusCode": 409 },
+  "REFUND_WINDOW_EXPIRED": { "statusCode": 409 },
+  "INVOICE_NOT_FOUND": { "statusCode": 404 },
+  "INVOICE_RENDER_FAILED": { "statusCode": 500 },
+  "EMAIL_SEND_FAILED": { "statusCode": 502 },
+  "WEBHOOK_SIGNATURE_INVALID": { "statusCode": 401 }
+}
+
+@expected src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "ORDER_ALREADY_CANCELLED": { "statusCode": 409, "sentry": false },
+  "ORDER_NOT_CANCELLED": { "statusCode": 409, "sentry": false },
+  "ORDER_LINE_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_TOTAL_MISMATCH": { "statusCode": 422, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "CUSTOMER_SUSPENDED": { "statusCode": 403, "sentry": false },
+  "CUSTOMER_EMAIL_TAKEN": { "statusCode": 409, "sentry": false },
+  "ADDRESS_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ADDRESS_UNVERIFIED": { "statusCode": 422, "sentry": false },
+  "PAYMENT_DECLINED": { "statusCode": 402, "sentry": false },
+  "PAYMENT_METHOD_EXPIRED": { "statusCode": 402, "sentry": false },
+  "PAYMENT_GATEWAY_TIMEOUT": { "statusCode": 504, "sentry": true },
+  "PAYMENT_GATEWAY_UNAVAILABLE": { "statusCode": 503, "sentry": true },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true },
+  "REFUND_EXCEEDS_TOTAL": { "statusCode": 409, "sentry": false },
+  "REFUND_WINDOW_EXPIRED": { "statusCode": 409, "sentry": false },
+  "INVOICE_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "INVOICE_RENDER_FAILED": { "statusCode": 500, "sentry": true },
+  "EMAIL_SEND_FAILED": { "statusCode": 502, "sentry": true },
+  "WEBHOOK_SIGNATURE_INVALID": { "statusCode": 401, "sentry": false }
+}
+
+@start src/configuration/errors/index.ts
+import codes from './default.json';
+
+type ErrorCode = keyof typeof codes;
+
+export const exception = (code: ErrorCode) => {
+  const definition = codes[code];
+
+  return Object.assign(new Error(code), {
+    code,
+    statusCode: definition.statusCode,
+    sentry: definition.sentry,
+  });
+};

@@ -1,0 +1,63 @@
+@meta
+id: 09-06
+title: Put a count on the motion
+chapter: 09
+type: lesson
+skills: op-counts, op-motion
+par: 24
+minutes: 4
+vscode: drag-select three words, Delete, drag-select two more, type
+open: policy.md
+
+@brief
+A policy note is being tightened before it goes to finance. Two edits:
+
+    Finance want a hard and fast thirty day refund window.
+    The window is thirty calendar days long.
+
+The first line loses `hard and fast` — the sentence reads fine without
+it. On the second line, `thirty calendar` becomes `30`, so it ends up as
+`The window is 30 days long.`
+
+@keys
+| `d3w` | delete three words |
+| `c2w` | change two words |
+| `3w` | move three words — the same motion, without an operator |
+
+@hints
+A motion takes a count. That does not stop being true when there is an
+operator in front of it.
+--
+`d3w` deletes the ground that `3w` would have covered. `c2w` changes the
+ground `2w` covers and leaves you typing.
+--
+`3w` to reach `hard`, then `d3w`. Then `j0`, `3w` to reach `thirty`, then
+`c2w` and type `30`.
+
+@solution
+    3w d3w    j 0 3w c2w 30 <Esc>    :wq<Enter>
+
+The count sits with the motion because it belongs to the motion. `d3w` is
+`d` applied to `3w`, in the same way `dw` is `d` applied to `w`. There is
+no separate "delete three words" command to learn, and there is no list to
+memorise — anything you can count as a movement, you can count as an edit.
+
+Watch what `c2w` did on that second line. It ran from `thirty` over
+`calendar` and stopped dead before `days`, leaving the space and the rest
+of the sentence untouched. The `w` on the end of a count still lands where
+`w` lands.
+
+One warning that will save you a `u` later: the count is a number of
+*motions*, not a number of things that look like words to a human. In code
+a dot, a bracket and a comma are each a word. `d3w` on `order.total,` eats
+`order`, `.` and `total` and stops. Counting words in prose is reliable.
+Counting words in code is a coin toss, which is why the next few lessons
+move on to motions that do not need counting at all.
+
+@start policy.md
+Finance want a hard and fast thirty day refund window.
+The window is thirty calendar days long.
+
+@expected policy.md
+Finance want a thirty day refund window.
+The window is 30 days long.

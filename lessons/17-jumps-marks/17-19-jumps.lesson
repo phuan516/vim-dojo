@@ -1,0 +1,117 @@
+@meta
+id: 17-19
+title: Capstone — getting back where you were
+chapter: 17
+type: scenario
+skills: jump-back, jumplist, marks-set, marks-jump, match-percent
+par: 90
+minutes: 6
+vscode: Alt+Left, F12, Ctrl+Shift+Backslash
+open: order.provider.ts answers.txt
+vimrc: set number
+
+@brief
+Every jump you make - a search, a G, a % - is recorded. Ctrl-O walks
+back through that history and Ctrl-I walks forward again. It is
+Alt+Left / Alt+Right, and it works across files.
+
+This is the fix for "I jumped to look at something and now I have
+lost my place".
+
+In order.provider.ts, answer the three bracket questions.
+
+Then, for practice that nobody is grading: put the cursor somewhere
+in the middle, press ma to drop a mark called a, press G to go to
+the bottom, then 'a to come back. Do it a few times. Marks and
+Ctrl-O are what let you roam a file fearlessly.
+
+@keys
+%            jump to the matching bracket  ( ) [ ] { }
+Ctrl-O       go back to where I just was      (works across files)
+Ctrl-I       go forward again
+``           back to the exact spot before the last big jump
+''           back to the LINE before the last big jump
+ma           drop a mark named a here     'a  jump back to it
+'A           marks with capital letters work across files
+gd           go to the local definition of the word under the cursor
+gf           open the file whose name is under the cursor
+Ctrl-^       flip between this file and the one before it
+:jumps       show the jump history
+zz  zt  zb   redraw with the current line centred / at top / bottom
+
+@hints
+:set number , then 8G to land on line 8, then f( to get onto the
+bracket, then % .
+--
+% only works when the cursor is actually on a bracket. If nothing
+happens, you are on the wrong character - use f( or f{ to land on it.
+--
+After each % you can press Ctrl-O to come straight back to the line
+you started on, ready for the next question.
+
+@solution
+:set number
+8G f( %     read the line number   Ctrl-O
+7G f{ %     read it                Ctrl-O
+16G f{ %    read it
+
+:bn , fill in answers.txt, :wa
+
+The one to actually internalise is Ctrl-O. Once you trust it you
+will search across the whole repo just to glance at something,
+because getting back is one keystroke.
+
+@start answers.txt
+# % jumps between a bracket and its partner. Put the cursor on a
+# bracket and press % . Line numbers are already on.
+
+line_matching_the_open_paren_on_line_8=
+line_matching_the_open_brace_on_line_7=
+line_matching_the_open_brace_on_line_16=
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected answers.txt
+# % jumps between a bracket and its partner. Put the cursor on a
+# bracket and press % . Line numbers are already on.
+
+line_matching_the_open_paren_on_line_8=11
+line_matching_the_open_brace_on_line_7=37
+line_matching_the_open_brace_on_line_16=18

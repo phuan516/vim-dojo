@@ -1,0 +1,108 @@
+@meta
+id: 10-02
+title: Where the space goes
+chapter: 10
+type: lesson
+skills: obj-word, inner-vs-around
+par: 24
+minutes: 5
+vscode: select the word plus its trailing space by hand, delete
+open: order.resolver.ts
+
+@brief
+Every text object comes in two flavours. `i` is inner: the thing itself,
+nothing else. `a` is around: the thing plus what holds it apart from its
+neighbours. For a word, "what holds it apart" means one space.
+
+That sounds like a footnote until you delete something. Take a word out
+of the middle of a line with the inner object and you are left with two
+spaces where there was one. Nobody wants that, and nobody notices it
+until the diff.
+
+The lint rule `@typescript-eslint/explicit-member-accessibility` has been
+turned off and `public` is now redundant noise on every method in the
+codebase. Take it off all three methods in this resolver. Indentation
+stays exactly as it is, and `async` stays.
+
+If your result has a double space in it, you picked the wrong flavour.
+
+@keys
+| `diw` | delete the word, leave the whitespace alone |
+| `daw` | delete the word and one space with it |
+| `ciw` `caw` | the same distinction for change |
+
+@hints
+There are two word objects, not one. Only one of them leaves the line
+looking like a human wrote it.
+--
+`aw` is "a word": the word plus the space that follows it. `daw` is what
+you want here.
+--
+Get onto the word first — `daw` from the indent in front of it deletes
+the indent instead. `w` from the start of the line lands on `public`.
+
+@solution
+    7j w daw
+    4j daw
+    4j daw
+    :wq<Enter>
+
+Twenty keystrokes for three edits, and notice what is not in there: no
+counting of characters, no `$`, no visual selection.
+
+The rule for `aw` is worth memorising because it is not symmetrical. It
+takes the whitespace *after* the word; only if there is none does it fall
+back to the whitespace before. So `daw` on the last word of a line eats
+the space in front of it, which is right, and `daw` in the middle of a
+line eats the space behind it, which is also right. Vim is doing the
+thing you would have done by hand.
+
+`dw` would have worked here too, but only because you were standing on
+the `p`. Land one letter late and `dw` deletes `ublic ` and you have to
+undo. `daw` does not care. Every keystroke you do not have to aim is a
+keystroke that survives being tired.
+
+Counts work as well: `d3aw` takes three words and their spaces, which is
+the fastest way to shorten a sentence.
+
+@start order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+
+  public async refundOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.refund(args.id);
+  }
+}
+
+@expected order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+
+  async refundOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.refund(args.id);
+  }
+}

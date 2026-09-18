@@ -1,0 +1,100 @@
+@meta
+id: 31-01
+title: What Neovim actually changed
+chapter: 31
+type: lesson
+skills: nvim-differences
+par: 26
+minutes: 5
+vscode: nothing — this is a decision about your editor, not an edit
+open: NEOVIM.md
+
+@brief
+Neovim is a fork of vim from 2014. It was not a rewrite of the editing
+model. It was a rewrite of everything underneath it: the terminal handling,
+the job control, the plugin interface, and eventually the configuration
+language.
+
+That distinction is the whole chapter, so read the next sentence twice.
+Every motion, operator, text object, count, register, mark, macro and ex
+command in this dojo works identically in Neovim. `ci"`, `daw`, `.`,
+`qq...q@q`, `:g/pat/normal A;`, `:%s//\=`, `"0p`, `Ctrl-O` — all of it,
+unchanged, same keys, same semantics. Nothing you have spent thirty
+chapters building is at risk. What changes is the machinery around the
+editing: how you configure it, what ships in the box, and what the plugin
+ecosystem expects.
+
+This whole chapter is graded by running plain vim. Neovim is not installed
+here, and it does not need to be — you will be reading and writing Lua
+config files as files, the way you would write them before ever starting
+nvim. Nothing in this chapter runs the Lua. Getting the translation right
+on paper is the skill; typing `nvim` afterwards is the easy part.
+
+The notes file in front of you has one bullet filed under the wrong
+heading. Editing keys are not new to you, so this one is about reading.
+Move it to the end of the list where it belongs.
+
+@keys
+| `dd` | cut the line |
+| `G` | last line of the file |
+| `p` | put it back below the cursor |
+
+@hints
+Read both headings first. One of the six things in the top list is not a
+change at all — it is the thing Neovim most carefully did not change.
+--
+`dd` on that line, then get to the bottom of the file.
+--
+`G` then `p` puts the cut line after the last line.
+
+@solution
+    /Every motion<Enter> dd G p :wq<Enter>
+
+Eighteen keystrokes, and the search is most of them.
+
+The bullet about motions and operators belongs in the "same" list because
+Neovim inherits vim's entire editing language and has never broken it.
+That is not an accident of history: Neovim's stated goal was to change the
+implementation without changing the user's fingers, and the compatibility
+has held for over a decade.
+
+Keep the two lists separate in your head. When someone tells you Neovim is
+"a completely different editor", they are describing the plugin ecosystem
+and the config language, both of which really are different. They are not
+describing `d2w`.
+
+@start NEOVIM.md
+# Neovim, in one page
+
+## What Neovim actually changed
+
+- Built-in LSP, so go-to-definition ships with the editor
+- Tree-sitter parsing, so highlighting comes from a real parser
+- Lua as a first-class configuration and plugin language
+- Every motion, operator, text object, register and macro you have learned
+- Floating windows, which almost every modern plugin renders into
+- A usable :terminal and a job API plugins can depend on
+
+## What is exactly the same
+
+- The ex language: ranges, :s, :g, :normal, :sort, filters
+- Buffers, windows, tabs, marks, jumps, the quickfix list
+- Your muscle memory, down to the last dot-repeat
+
+@expected NEOVIM.md
+# Neovim, in one page
+
+## What Neovim actually changed
+
+- Built-in LSP, so go-to-definition ships with the editor
+- Tree-sitter parsing, so highlighting comes from a real parser
+- Lua as a first-class configuration and plugin language
+- Floating windows, which almost every modern plugin renders into
+- A usable :terminal and a job API plugins can depend on
+
+## What is exactly the same
+
+- The ex language: ranges, :s, :g, :normal, :sort, filters
+- Buffers, windows, tabs, marks, jumps, the quickfix list
+- Your muscle memory, down to the last dot-repeat
+- Every motion, operator, text object, register and macro you have learned

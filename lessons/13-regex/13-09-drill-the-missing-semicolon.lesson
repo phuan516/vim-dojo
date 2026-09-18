@@ -1,0 +1,83 @@
+@meta
+id: 13-09
+title: Drill — the missing semicolon
+chapter: 13
+type: drill
+skills: regex-anchors
+par: 13
+minutes: 4
+reps: 8
+vscode: wait for the red squiggle, click after the bracket
+open: payout.job.ts
+
+@brief
+Eight times: one statement in this file is missing its semicolon. Find
+it and add it.
+
+There are closing brackets everywhere. The one you want is the only one
+with nothing after it on its line.
+
+@keys
+| `$` | the end of the line, as an anchor |
+| `A` | append at the end of the line |
+
+@hints
+A statement that is missing its semicolon ends in a closing bracket.
+Anchor the bracket to the end of the line.
+--
+`/)$` `Enter`, then `A;` and `Esc`.
+
+@solution
+/)$<Enter>  A;<Esc>  :wq<Enter>
+
+Eleven keystrokes. Two characters of pattern, and one of them is an
+anchor.
+
+The bracket needed no backslash. In vim's default dialect round
+brackets are ordinary characters — it is `\(` that means something
+special. That is backwards from every other regex tool you have used,
+and the chapter gets to it in a few lessons.
+
+@start payout.job.ts
+import { container } from 'tsyringe';
+import { PayoutProvider } from '../domain/payout/payout.provider';
+import { logger } from '../infrastructure/logger';
+
+export async function runPayoutJob(batchId: string) {
+  const payoutProvider = container.resolve(PayoutProvider);
+  const batch = await payoutProvider.findBatch({ id: batchId });
+
+  if (!batch) {
+    logger.warn('payout batch missing', { batchId });
+    return;
+  }
+
+  for (const payout of batch.payouts) {
+    await payoutProvider.send({ id: payout.id })
+    logger.info('payout sent', { payoutId: payout.id });
+  }
+
+  await payoutProvider.closeBatch({ id: batch.id });
+}
+
+@expected payout.job.ts
+import { container } from 'tsyringe';
+import { PayoutProvider } from '../domain/payout/payout.provider';
+import { logger } from '../infrastructure/logger';
+
+export async function runPayoutJob(batchId: string) {
+  const payoutProvider = container.resolve(PayoutProvider);
+  const batch = await payoutProvider.findBatch({ id: batchId });
+
+  if (!batch) {
+    logger.warn('payout batch missing', { batchId });
+    return;
+  }
+
+  for (const payout of batch.payouts) {
+    await payoutProvider.send({ id: payout.id });
+    logger.info('payout sent', { payoutId: payout.id });
+  }
+
+  await payoutProvider.closeBatch({ id: batch.id });
+}

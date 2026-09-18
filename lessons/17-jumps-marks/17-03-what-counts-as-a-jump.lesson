@@ -1,0 +1,216 @@
+@meta
+id: 17-03
+title: What counts as a jump
+chapter: 17
+type: lesson
+skills: jumplist
+par: 56
+minutes: 6
+vscode: no equivalent; the back button only knows about navigation
+open: order.provider.ts
+
+@brief
+Both `ship` and `cancel` need an `actorId: string` parameter added to
+their signatures, for the audit log.
+
+Search for `ship(` to land on the first signature. Do not edit it yet.
+Get to `cancel` by pressing the paragraph-forward key four separate
+times, then one `j`. Add the parameter there.
+
+Now look at the jumplist with `:jumps` before you go back. There are
+four new entries, one per paragraph key, because `}` is a jump and each
+press was a separate one. `j` is not a jump and added nothing.
+
+Come back to `ship` in one command and add the parameter there too.
+The edit is identical, so the dot command will do the typing.
+
+@keys
+| `}` | forward a paragraph; a jump, every single press |
+| `4}` | four paragraphs; one jump |
+| `j` `w` `f` | not jumps, never recorded |
+| `:jumps` | show the jumplist; `>` marks where you are in it |
+| `4` `Ctrl-O` | back four entries in one go |
+| `.` | repeat the last change |
+
+@hints
+`:jumps` lists the entries with the newest at the bottom. Count the
+lines between the `>` and the `ship(` line and that is your number.
+--
+`Ctrl-O` takes a count, exactly like a motion. `4` then `Ctrl-O` is four
+steps back in one command.
+--
+`/ship(` Enter, `}` `}` `}` `}` `j`, `f)i, actorId: string` Esc,
+`:jumps` Enter, `4` `Ctrl-O`, `f)` and `.`.
+
+@solution
+    /ship(<Enter> }}}}j f)i, actorId: string<Esc>
+    :jumps<Enter> 4 Ctrl-O f). :wq<Enter>
+
+The rule for what gets recorded is simple once you have seen it: a
+motion is a jump if it could carry you an unpredictable distance. Search
+(`/` `?` `n` `N` `*` `#`), `G` and `gg`, `%`, `{` and `}`, `(` and
+`)`, `H` `M` `L`, marks, and every buffer switch. Everything that moves
+a known small amount, `hjkl`, `w` `b` `e`, `f` `t`, `0` `^` `$`, is not
+a jump and leaves nothing behind.
+
+The consequence you just saw: `}}}}` is four jumps, `4}` is one. Both
+land in the same place, but the way back is four presses versus one.
+When you know how far you are going, put the count on the motion and
+the jumplist stays tidy.
+
+`:jumps` is worth reading once so you trust it. The newest entry is at
+the bottom, `>` shows where you currently sit, and the number on each
+line is exactly the count to give `Ctrl-O`. The list is saved between
+sessions, so yours will be longer than four lines and may stop at a
+`-- More --` prompt; `q` closes it. Once you have seen it a few times
+you will stop looking and just press `Ctrl-O` until the screen looks
+right, which is how everybody actually uses it.
+
+`f).` at the end is the small habit worth keeping: come back to the
+exact spot, then let `.` do the typing you already did once.
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { CustomerProvider } from '../customer/customer.provider';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerProvider) protected customerProvider: CustomerProvider,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(customerId: string) {
+    await this.customerProvider.findOne(customerId);
+
+    return this.orderRepository.findByCustomer({ customerId });
+  }
+
+  public async create(args: { customerId: string; total: number }) {
+    const customer = await this.customerProvider.findOne(args.customerId);
+
+    const order = await this.orderRepository.create({
+      values: { customerId: customer.id, total: args.total, status: 'PENDING' },
+    });
+
+    await this.emailService.send({ orderId: order.id, template: 'order_confirmation' });
+
+    return order;
+  }
+
+  public async ship(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_NOT_PENDING');
+    }
+
+    await this.orderRepository.update({ where: { id }, values: { status: 'SHIPPED' } });
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { CustomerProvider } from '../customer/customer.provider';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { EmailService } from '../../infrastructure/services/email.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(CustomerProvider) protected customerProvider: CustomerProvider,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(EmailService) protected emailService: EmailService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async findByCustomer(customerId: string) {
+    await this.customerProvider.findOne(customerId);
+
+    return this.orderRepository.findByCustomer({ customerId });
+  }
+
+  public async create(args: { customerId: string; total: number }) {
+    const customer = await this.customerProvider.findOne(args.customerId);
+
+    const order = await this.orderRepository.create({
+      values: { customerId: customer.id, total: args.total, status: 'PENDING' },
+    });
+
+    await this.emailService.send({ orderId: order.id, template: 'order_confirmation' });
+
+    return order;
+  }
+
+  public async ship(id: string, actorId: string) {
+    const order = await this.findOne(id);
+
+    if (order.status !== 'PENDING') {
+      throw exception('ORDER_NOT_PENDING');
+    }
+
+    await this.orderRepository.update({ where: { id }, values: { status: 'SHIPPED' } });
+
+    return order;
+  }
+
+  public async cancel(id: string, actorId: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}

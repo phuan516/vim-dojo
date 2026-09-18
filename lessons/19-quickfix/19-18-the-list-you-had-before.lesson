@@ -1,0 +1,349 @@
+@meta
+id: 19-18
+title: The list you had before
+chapter: 19
+type: lesson
+skills: quickfix-nav, cdo
+par: 185
+minutes: 9
+vscode: retype the first search and scroll back to where you were
+vimrc: set hidden smartcase
+open: README.md
+
+@brief
+Every `:vimgrep`, `:grep`, `:cfile` and `:make` replaces the quickfix
+list. Vim keeps the last ten. `:colder` steps back to the previous
+list, `:cnewer` forward again, and each list remembers which entry you
+were on.
+
+The job that gets interrupted: three calls on `this.paymentProducer`
+under `src`, and two of them are missing their `await`, so a failed
+publish is silently dropped. Each hit needs reading, because one
+already has it, so this is a walk, not a `:cdo`.
+
+Fix the first hit, then stop: the rename that has to land in the same
+commit is `PaymentProducer.refundIssued` to `refundCompleted`, in the
+producer, both providers and the test. Do it now, with `:vimgrep` and
+`:cdo`, before you forget. That replaces the list you were walking.
+Get it back with `:colder`, carry on from where you were, and add the
+other missing `await`. `RefundIssuedEvent` is a type and keeps its
+name.
+
+@keys
+| `:colder` | go back to the previous quickfix list |
+| `:cnewer` | forward again |
+| `:chistory` | show all the lists vim is holding |
+
+@hints
+`:vimgrep /this\.paymentProducer\./ **/*.ts`. Starting the pattern at
+`this` puts the cursor where the `await` goes. The first hit is in the
+order provider and has none: `i`, `await `, `Esc`, `:w`.
+--
+Now the rename: `:vimgrep /refundIssued/ **/*.ts` and
+`:cdo s/refundIssued/refundCompleted/g | update`. Then `:colder`. The
+message line says which list you are on.
+--
+`:cn`, read: the payment provider's first call already has its
+`await`. `:cn` again: the second does not. Add it, `:wq`.
+
+@solution
+    :vimgrep /this\.paymentProducer\./ **/*.ts<Enter>  i await <Esc> :w<Enter>
+    :vimgrep /refundIssued/ **/*.ts<Enter>  :cdo s/refundIssued/refundCompleted/g | update<Enter>
+    :colder<Enter>  :cn<Enter> :cn<Enter>  i await <Esc> :wq<Enter>
+
+`:colder` brought back a list whose first entry now points at a line
+that reads differently from when it was found: the rename went through
+it. The entry still pointed at the right place and the position was
+still entry one, because vim keeps every list live, not as a snapshot.
+The lists are a stack of up to ten; `:chistory` shows them with the
+command that made each and the one you are on marked.
+
+Lesson 13 solved the same interruption with a location list, by
+deciding in advance that the walk would live somewhere the rename could
+not touch. `:colder` is for when you did not decide in advance, which
+is most of the time. Both are cheap; use whichever you remember first.
+
+The other reason to reach for `:colder` is a search you narrowed too
+far. `:vimgrep` broad, `:vimgrep` narrow, and the narrow one dropped
+something you wanted: one `:colder` and the broad list is back without
+retyping anything.
+
+@start README.md
+# Orders service
+
+Cancelling an order refunds it through `PaymentService.sendRefund`, which
+is named after the gateway's `/sendRefund` endpoint. A refund the gateway
+rejects raises `REFUND_FAILED`. Refund events go out on the
+`payment.sendRefund` routing key, which the ledger service consumes.
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { PaymentProducer } from '../payment/payment.producer';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(PaymentProducer) protected paymentProducer: PaymentProducer,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.sendRefund(order.id);
+    this.paymentProducer.refundIssued({ paymentId: order.id, receipt: 'pending' });
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { PaymentProducer } from '../payment/payment.producer';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(PaymentProducer) protected paymentProducer: PaymentProducer,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.sendRefund(order.id);
+    await this.paymentProducer.refundCompleted({ paymentId: order.id, receipt: 'pending' });
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start src/domain/order/order.provider.test.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { PaymentProducer } from '../payment/payment.producer';
+import { orderFactory } from '../../../test/factories/order.factory';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const paymentProducer = stub<PaymentProducer>();
+  const provider = new OrderProvider(orderRepository, paymentService, paymentProducer);
+
+  afterEach(() => jest.resetAllMocks());
+
+  it('refunds a pending order when it is cancelled', async () => {
+    const order = orderFactory({ status: 'PENDING' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    reveal(paymentService).sendRefund.mockResolvedValue(undefined);
+
+    await provider.cancel(order.id);
+
+    expect(paymentService.sendRefund).toHaveBeenCalledWith(order.id);
+    expect(paymentProducer.refundIssued).toHaveBeenCalled();
+  });
+
+  it('refuses to cancel a shipped order', async () => {
+    const order = orderFactory({ status: 'SHIPPED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+
+    await expect(provider.cancel(order.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+    expect(paymentService.sendRefund).not.toHaveBeenCalled();
+  });
+});
+
+@expected src/domain/order/order.provider.test.ts
+import { stub, reveal } from 'jest-auto-stub';
+import { OrderProvider } from './order.provider';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { PaymentProducer } from '../payment/payment.producer';
+import { orderFactory } from '../../../test/factories/order.factory';
+
+describe('OrderProvider', () => {
+  const orderRepository = stub<OrderRepository>();
+  const paymentService = stub<PaymentService>();
+  const paymentProducer = stub<PaymentProducer>();
+  const provider = new OrderProvider(orderRepository, paymentService, paymentProducer);
+
+  afterEach(() => jest.resetAllMocks());
+
+  it('refunds a pending order when it is cancelled', async () => {
+    const order = orderFactory({ status: 'PENDING' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+    reveal(paymentService).sendRefund.mockResolvedValue(undefined);
+
+    await provider.cancel(order.id);
+
+    expect(paymentService.sendRefund).toHaveBeenCalledWith(order.id);
+    expect(paymentProducer.refundCompleted).toHaveBeenCalled();
+  });
+
+  it('refuses to cancel a shipped order', async () => {
+    const order = orderFactory({ status: 'SHIPPED' });
+    reveal(orderRepository).findOne.mockResolvedValue(order);
+
+    await expect(provider.cancel(order.id)).rejects.toThrow('ORDER_ALREADY_SHIPPED');
+    expect(paymentService.sendRefund).not.toHaveBeenCalled();
+  });
+});
+
+@start src/domain/payment/payment.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { PaymentRepository } from './payment.repository';
+import { PaymentProducer } from './payment.producer';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class PaymentProvider {
+  constructor(
+    @inject(PaymentRepository) protected paymentRepository: PaymentRepository,
+    @inject(PaymentProducer) protected paymentProducer: PaymentProducer,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async reverse(id: string) {
+    const payment = await this.paymentRepository.findOne({ where: { id } });
+
+    if (!payment) {
+      throw exception('PAYMENT_NOT_FOUND');
+    }
+
+    const receipt = await this.paymentService.sendRefund(payment.orderId);
+
+    await this.paymentProducer.refundIssued({ paymentId: id, receipt });
+
+    return receipt;
+  }
+
+  public async void(id: string) {
+    await this.paymentRepository.update({ where: { id }, values: { status: 'VOID' } });
+
+    this.paymentProducer.paymentVoided({ paymentId: id });
+  }
+}
+
+@expected src/domain/payment/payment.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { PaymentRepository } from './payment.repository';
+import { PaymentProducer } from './payment.producer';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class PaymentProvider {
+  constructor(
+    @inject(PaymentRepository) protected paymentRepository: PaymentRepository,
+    @inject(PaymentProducer) protected paymentProducer: PaymentProducer,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async reverse(id: string) {
+    const payment = await this.paymentRepository.findOne({ where: { id } });
+
+    if (!payment) {
+      throw exception('PAYMENT_NOT_FOUND');
+    }
+
+    const receipt = await this.paymentService.sendRefund(payment.orderId);
+
+    await this.paymentProducer.refundCompleted({ paymentId: id, receipt });
+
+    return receipt;
+  }
+
+  public async void(id: string) {
+    await this.paymentRepository.update({ where: { id }, values: { status: 'VOID' } });
+
+    await this.paymentProducer.paymentVoided({ paymentId: id });
+  }
+}
+
+@start src/domain/payment/payment.producer.ts
+import { injectable, inject } from 'tsyringe';
+import { Channel } from '../../infrastructure/rabbit/channel';
+
+type RefundIssuedEvent = {
+  paymentId: string;
+  receipt: string;
+};
+
+@injectable()
+export class PaymentProducer {
+  constructor(@inject(Channel) protected channel: Channel) {}
+
+  public async refundIssued(event: RefundIssuedEvent) {
+    await this.channel.publish('payments', 'payment.sendRefund', event);
+  }
+
+  public async paymentVoided(event: { paymentId: string }) {
+    await this.channel.publish('payments', 'payment.voided', event);
+  }
+}
+
+@expected src/domain/payment/payment.producer.ts
+import { injectable, inject } from 'tsyringe';
+import { Channel } from '../../infrastructure/rabbit/channel';
+
+type RefundIssuedEvent = {
+  paymentId: string;
+  receipt: string;
+};
+
+@injectable()
+export class PaymentProducer {
+  constructor(@inject(Channel) protected channel: Channel) {}
+
+  public async refundCompleted(event: RefundIssuedEvent) {
+    await this.channel.publish('payments', 'payment.sendRefund', event);
+  }
+
+  public async paymentVoided(event: { paymentId: string }) {
+    await this.channel.publish('payments', 'payment.voided', event);
+  }
+}

@@ -1,0 +1,78 @@
+@meta
+id: 11-07
+title: Drill — comment out eight lines
+chapter: 11
+type: drill
+skills: dot-design
+par: 29
+minutes: 5
+reps: 8
+vscode: select the block, Ctrl+slash
+open: debug.ts
+
+@brief
+Eight lines of debug logging to comment out before this goes near a
+review. Prefix each of the eight with `// `, leaving the indentation
+alone.
+
+One change at the top, then `j.` to the bottom.
+
+@keys
+| `I` | insert before the first non-blank character of the line |
+| `Esc` | ends the change |
+| `.` | again |
+
+@hints
+`I` is not the same as `0i`. It lands after the indentation, which is
+where a comment marker belongs.
+--
+Drop to the first `console` line, type the marker once, and never type it
+again.
+
+@solution
+    4j  I// <Esc>   then  j.  seven times
+
+`I` and `A` are a pair worth having in the fingers: the start of the
+content and the end of the line, from any column, in one key. Because
+neither depends on where the cursor was, both replay perfectly under `.`.
+
+Commenting a block out is the everyday case, and it is one of the few
+places where vim's answer is genuinely shorter than the editor shortcut
+you came from — `j.` per line, no selection to make first and none to
+clear afterwards.
+
+@start debug.ts
+export class ReconcileTask {
+  public async run() {
+    const batch = await this.orderRepository.findPending();
+
+    console.log('batch size', batch.length);
+    console.log('first order', batch[0]?.id);
+    console.log('last order', batch[batch.length - 1]?.id);
+    console.table(batch.map((order) => order.status));
+    console.log('customers', batch.map((order) => order.customerId));
+    console.time('reconcile');
+    console.log('ledger account', LEDGER_ACCOUNT);
+    console.timeEnd('reconcile');
+
+    return this.reconcile(batch);
+  }
+}
+
+@expected debug.ts
+export class ReconcileTask {
+  public async run() {
+    const batch = await this.orderRepository.findPending();
+
+    // console.log('batch size', batch.length);
+    // console.log('first order', batch[0]?.id);
+    // console.log('last order', batch[batch.length - 1]?.id);
+    // console.table(batch.map((order) => order.status));
+    // console.log('customers', batch.map((order) => order.customerId));
+    // console.time('reconcile');
+    // console.log('ledger account', LEDGER_ACCOUNT);
+    // console.timeEnd('reconcile');
+
+    return this.reconcile(batch);
+  }
+}

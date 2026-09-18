@@ -1,0 +1,76 @@
+@meta
+id: 26-04
+title: The bang is an operator
+chapter: 26
+type: lesson
+skills: filter-bang
+par: 15
+minutes: 5
+vscode: select the import block by hand, then no command to run on it
+open: registry.ts
+
+@brief
+Six side-effect imports at the top of the DI registry, in the order six
+different people added them. The lint rule wants them alphabetical.
+
+You already know how to do this with a range. Do it without counting
+lines. `!` is not only an ex command — in normal mode it is an operator,
+and like every operator it takes a motion or a text object and works on
+exactly what that covers.
+
+The cursor starts inside the import block. The blank line under it is the
+end of the block as far as vim is concerned.
+
+@keys
+| `!ip` | filter the paragraph the cursor is in |
+| `!}` | filter from here to the end of the paragraph |
+| `!G` | filter from here to the end of the file |
+| `!ap`, `!i{` | the same idea with any other text object |
+
+@hints
+Chapter 10 gave you `ip` — the block of non-blank lines around the cursor.
+Put the operator you just learned in front of it.
+--
+Type `!ip` and watch the command line: vim has already written the range
+for you, `:.,.+5!`, and is waiting for the command name.
+--
+`!ip` then `sort` then Enter, then `:wq`.
+
+@solution
+    !ip sort<Enter>  :wq<Enter>
+
+Press `!ip` and vim puts `:.,.+5!` on the command line. That is worth
+looking at for a second, because it tells you exactly what the operator
+is: a way of writing a range with a motion instead of with numbers. The
+motion is measured, turned into line addresses, and the ex command you
+already know runs.
+
+Which means every text object you have is now a way of choosing what to
+filter. `!ip` for a paragraph. `!i{` for the inside of a block.
+`!ap` for the paragraph and its trailing blank line. `!G` for everything
+from here down. `!}` is the one most people settle on for import blocks,
+because it needs no thought about where the cursor sits inside the block.
+
+Note that the filter is linewise whatever the motion was. `!w` does not
+filter three words; it filters the line the word is on. There is no such
+thing as filtering half a line — the command reads lines on stdin.
+
+@start registry.ts
+import './domain/order/order.module';
+import './domain/customer/customer.module';
+import './infrastructure/email/email.module';
+import './domain/payment/payment.module';
+import './infrastructure/queue/queue.module';
+import './domain/refund/refund.module';
+
+container.boot();
+
+@expected registry.ts
+import './domain/customer/customer.module';
+import './domain/order/order.module';
+import './domain/payment/payment.module';
+import './domain/refund/refund.module';
+import './infrastructure/email/email.module';
+import './infrastructure/queue/queue.module';
+
+container.boot();

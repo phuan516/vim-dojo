@@ -1,0 +1,169 @@
+@meta
+id: 10-22
+title: Scenario — the status panel
+chapter: 10
+type: scenario
+skills: obj-tag, obj-quote, obj-paren, obj-brace, obj-paragraph, obj-word, inner-vs-around
+par: 200
+minutes: 16
+vscode: two files, nine selections, and a lot of squinting at brackets
+open: OrderStatusPanel.tsx status.ts Badge.tsx
+
+@brief
+A ticket, and the last thing in this chapter.
+
+    ORD-607  The order page still renders its own status pill instead of
+             the shared Badge, the labels are missing CANCELLED, and the
+             "(live)" note next to the heading has been wrong since
+             polling was removed.
+
+Three files are open. `:wn` writes the current file and moves on, `:wqa`
+writes everything and quits. Work in the order they open.
+
+  1. OrderStatusPanel.tsx
+
+     - the section's class name becomes `order-status-panel`
+     - the `(live)` note next to the heading goes, tags and all. The
+       heading keeps the word `Status`
+     - the status line renders the label, not the raw enum, so its
+       contents become `{statusLabel(order)}`
+     - the hand-rolled pill is replaced by the shared component:
+       `<Badge status={order.status} />`
+
+  2. status.ts
+
+     - the label list gains `'Cancelled'` on the end
+     - `formatStatus` now takes the whole order, so the fallback call
+       passes `order` and nothing else
+     - `legacyStatusLabel` goes. The legacy column was dropped in the
+       same migration as the batch job, and nothing imports it.
+
+  3. Badge.tsx
+
+     The shared component. Read it if you want to check the prop name.
+     Do not change it.
+
+Nine edits. Every one of them is an object you have met in this chapter,
+and none of them needs a selection.
+
+@keys
+| `ci"` | a class name |
+| `dat` `cat` | an element, tags included |
+| `cit` | an element's contents |
+| `ci(` | an argument list |
+| `ci[` | an array |
+| `dap` | a function with a blank line round it |
+| `:wn` `:wqa` | next file, and finish |
+
+@hints
+Read each edit and name the delimiter before you press anything. Quotes,
+tags, round, square. The shape of the text picks the object for you.
+--
+Two of the JSX edits look similar and are not: one element is being
+deleted outright and one is being swapped for a different element. `dat`
+and `cat`.
+--
+`f(` lands inside the `(live)` note; `f{` lands inside the braces of the
+status line and of the pill. In status.ts, `f[` for the array and `f(`
+for the call, and the dead function is the last paragraph in the file.
+
+@solution
+    5j fp ci" order-status-panel <Esc>
+    j 0 f( dat
+    j 0 f{ cit {statusLabel(order)} <Esc>
+    j 0 f{ cat <Badge status={order.status} /> <Esc>
+    :wn<Enter>
+    2j f[ ci[ 'Pending', 'Shipped', 'Cancelled' <Esc>
+    3j 0 f( ci( order <Esc>
+    3j dap
+    :wqa<Enter>
+
+About a hundred and seventy keystrokes, and something like a hundred and
+twenty of them are text you had to type because it is new code. The
+editing itself — nine structural changes across two files — came to
+roughly fifty.
+
+That ratio is the thing to take out of the chapter. Before text objects,
+a session like this is mostly navigation and selection: find the closing
+tag, find the closing bracket, drag, check, undo, drag again. After them,
+almost all of your keystrokes are the words you meant to write, and the
+structural work is three keys at a time.
+
+The judgement is what is left, and it is worth naming because it is the
+part that stays useful:
+
+  - is the thing I am changing *inside* a delimiter, or is it the
+    delimited thing itself? That picks `i` or `a`.
+  - what is the delimiter? Quote, bracket, brace, tag, blank line.
+  - am I replacing it or removing it? That picks `c` or `d`.
+
+Three questions, and you can answer all three from looking at the screen.
+`ci"` and `ci(` will be most of your text-object use forever; `cit`,
+`dap` and the counted forms are the ones that feel like a superpower the
+first few times, and then just feel normal.
+
+Chapter 11 is the multiplier. `.` repeats your last change, and an edit
+built out of a text object is exactly the kind of change that repeats
+cleanly — which is why `ciw` plus `.` ends up being the rename you reach
+for more often than a search and replace.
+
+@start OrderStatusPanel.tsx
+import { Badge } from '../components/Badge';
+import { formatDate } from '../format';
+
+export function OrderStatusPanel({ order }: Props) {
+  return (
+    <section className="status-panel">
+      <h2>Status<small>(live)</small></h2>
+      <p className="status-line">{order.status}</p>
+      <span className="pill pill-legacy">{order.channel}</span>
+      <footer>Updated {formatDate(order.updatedAt)}</footer>
+    </section>
+  );
+}
+
+@expected OrderStatusPanel.tsx
+import { Badge } from '../components/Badge';
+import { formatDate } from '../format';
+
+export function OrderStatusPanel({ order }: Props) {
+  return (
+    <section className="order-status-panel">
+      <h2>Status</h2>
+      <p className="status-line">{statusLabel(order)}</p>
+      <Badge status={order.status} />
+      <footer>Updated {formatDate(order.updatedAt)}</footer>
+    </section>
+  );
+}
+
+@start status.ts
+import { formatStatus } from './format';
+
+export const STATUS_LABELS = ['Pending', 'Shipped'];
+
+export function statusLabel(order: Order) {
+  return STATUS_LABELS[order.status] ?? formatStatus(order.status, 'en-GB');
+}
+
+export function legacyStatusLabel(order: Order) {
+  return order.legacyStatus === 'D' ? 'Shipped' : 'Pending';
+}
+
+@expected status.ts
+import { formatStatus } from './format';
+
+export const STATUS_LABELS = ['Pending', 'Shipped', 'Cancelled'];
+
+export function statusLabel(order: Order) {
+  return STATUS_LABELS[order.status] ?? formatStatus(order);
+}
+
+@start Badge.tsx
+type Props = {
+  status: OrderStatus;
+};
+
+export function Badge({ status }: Props) {
+  return <span className={`badge badge-${status.toLowerCase()}`}>{status}</span>;
+}

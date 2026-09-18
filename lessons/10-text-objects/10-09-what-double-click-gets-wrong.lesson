@@ -1,0 +1,94 @@
+@meta
+id: 10-09
+title: What double-click gets wrong
+chapter: 10
+type: lesson
+skills: obj-word, obj-quote, inner-vs-around
+par: 52
+minutes: 6
+vscode: double-click, then drag to fix what the double-click missed
+open: order.mailer.ts
+
+@brief
+Double-click is the one selection gesture that is genuinely good in a
+mouse editor, and it is worth being honest about where it stops.
+
+Double-click on `customerId` in `order.customerId` and you get
+`customerId`. That is `iw`, and it is right. Double-click inside
+`'order-shipped'` and you get `order` — half a string, because the dash
+ends the word. Double-click on `order.customer.email` and you get one
+segment of three. In both of those cases you go back to dragging, and
+dragging is how a stray quote ends up inside your string literal.
+
+Vim's answer is that you say which object you mean rather than hoping one
+gesture guesses it.
+
+The notification payload has been flattened upstream. `payload.order` is
+gone: the customer now hangs off the payload directly, and so does the
+order id. While you are in there, the event name has changed to
+`order-dispatched`.
+
+Three edits. The file is nine lines. Do not retype any line in full.
+
+@keys
+| `iw` `aw` | one word — what double-click gives you |
+| `d2aw` | two words and their punctuation, so `order.` goes in one go |
+| `ci'` | the whole string, dashes included |
+| `ciW` | whitespace to whitespace, semicolon and all |
+
+@hints
+Removing `order.` from a chain is not a word deletion. It is a word, and
+then the dot after it.
+--
+Objects take counts exactly like motions do. `d2aw` from the start of
+`order` deletes `order` and the `.` that follows it.
+--
+`3fo` lands on the `o` of `order` on the first line. Then `d2aw`. The
+string is `ci'` from the start of its line, and the last chain is the same
+`3fo` and `d2aw` again.
+
+@solution
+    2j 3fo d2aw
+    j 0 ci' order-dispatched <Esc>
+    3j 0 3fo d2aw
+    :wq<Enter>
+
+Forty-five keystrokes for three edits in three different shapes of text,
+and not one of them needed a selection.
+
+The lesson underneath it is about naming. A mouse has one gesture and it
+has to guess which thing you meant. Vim makes you say it: `iw` for the
+identifier, `iW` for the whole dotted chain, `i'` for the string, and the
+count in `2aw` for exactly two of them. The cost is that you have to know
+the names. The return is that you are never fighting a selection that is
+one character off.
+
+Worth trying by hand afterwards: put the cursor on `customer` in the first
+line and press `ciW`. You will get the whole of `payload.customer.email;`
+including the semicolon, because `W` runs to the next space. That is
+sometimes exactly right and sometimes a trap, and the only way to know
+which is to have felt both.
+
+@start order.mailer.ts
+export class OrderMailer {
+  public async sendShipped(payload: ShippedPayload) {
+    const recipient = payload.order.customer.email;
+    const template = 'order-shipped';
+
+    return this.emailService.send(recipient, template, {
+      orderId: payload.order.id,
+    });
+  }
+}
+
+@expected order.mailer.ts
+export class OrderMailer {
+  public async sendShipped(payload: ShippedPayload) {
+    const recipient = payload.customer.email;
+    const template = 'order-dispatched';
+
+    return this.emailService.send(recipient, template, {
+      orderId: payload.id,
+    });
+  }
+}

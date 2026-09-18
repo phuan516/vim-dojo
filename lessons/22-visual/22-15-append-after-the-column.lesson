@@ -1,0 +1,69 @@
+@meta
+id: 22-15
+title: Append after the column
+chapter: 22
+type: lesson
+skills: visual-block, block-append
+par: 33
+minutes: 5
+vscode: Alt+click after each comma, type, then fix the header by hand
+open: orders.csv
+
+@brief
+`I` inserts at the left edge of a block. `A` appends at its right edge,
+on every line, with the same one-line-until-`Esc` behaviour. Between
+them they put text at any column in any number of lines.
+
+The orders export has lost its `year` column. It goes back between
+`order_id` and `customer`: every data row gets `2024,` after the order
+id, and the header gets `year,` in the same place. The order ids are
+all eight characters, so the comma after them is one column all the
+way down — which is what makes this a block job. The header is one
+line and gets typed by hand.
+
+@keys
+| `Ctrl-V` | start a block |
+| `A` | append after the right edge of the block, on every line |
+| `f,` | find the comma |
+
+@hints
+Skip the header. On the first data row, `f,` puts you on the comma;
+that comma is the block, one column wide, five `j` tall.
+--
+`A` then `2024,` then `Esc`. The text lands after the comma on every
+row.
+--
+`j`, `f,`, `Ctrl-V`, `5j`, `A2024,`, `Esc`. Then `gg`, `f,`, `ayear,`,
+`Esc` for the header.
+
+@solution
+    j f , Ctrl-V 5 j A 2024, <Esc> g g f , a year, <Esc> :wq<Enter>
+
+Twenty-eight keystrokes for six rows, and the same twenty-eight for six
+hundred. The block was the comma column: `A` appends after the block's
+right edge, and since the block was one wide, that is after the comma.
+
+If the block had been wider — say you had selected the whole id — `A`
+would still append after its right edge, so a block does not need to
+be exact, only to end in the right column. What it does need is
+alignment. Where the lines are ragged, `A` still appends at the block's
+column and pads shorter lines with spaces to get there. The next lesson
+is for that.
+
+@start orders.csv
+order_id,customer,total
+ord_1042,priya,48.00
+ord_1043,marco,12.50
+ord_1044,lena,7.25
+ord_1045,tomasz,119.00
+ord_1046,aisha,64.10
+ord_1047,ben,3.99
+
+@expected orders.csv
+order_id,year,customer,total
+ord_1042,2024,priya,48.00
+ord_1043,2024,marco,12.50
+ord_1044,2024,lena,7.25
+ord_1045,2024,tomasz,119.00
+ord_1046,2024,aisha,64.10
+ord_1047,2024,ben,3.99

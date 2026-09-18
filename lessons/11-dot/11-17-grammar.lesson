@@ -1,0 +1,106 @@
+@meta
+id: 11-17
+title: Capstone — the grammar: verb + object
+chapter: 11
+type: scenario
+skills: dot-repeat, dot-design, cgn, obj-word, obj-quote, obj-paren
+par: 94
+minutes: 6
+vscode: double-click, Ctrl+D multi-cursor, F2
+open: user.service.ts
+
+@brief
+This is the level where vim stops being a weird editor and starts
+being a language.
+
+Commands are  verb + object .  d is delete, c is change, y is yank.
+The object can be a motion (dw = delete word) or a TEXT OBJECT:
+
+    iw  inner word        i"  inside the quotes
+    i(  inside the parens i{  inside the braces
+    it  inside the tag
+
+ci"  means "change inside the quotes" and it works from anywhere on
+the line. You do not have to be inside the quotes already.
+
+In user.service.ts:
+
+  1. "/users/"  ->  "/api/v2/users/"      without retyping the quotes
+  2. the whole if condition  ->  result.status >= 400
+  3. rename all three  response  ->  result
+
+Step 3 is VS Code's Ctrl+D multi-cursor. Vim does it with  .  , the
+repeat command: do the edit once, then press . on each other one.
+
+@keys
+ciw / diw / yiw     change / delete / yank the word under the cursor
+ci" ci' ci`         change what is inside the quotes
+ci( ci[ ci{         change what is inside the brackets
+ca( ci( difference  a = around, includes the brackets themselves
+cit                 change inside an HTML/JSX tag
+.                   repeat the last change
+*                   search for the word under the cursor
+n  N                next / previous match
+cgn                 change the next match of the last search, and
+                    then  .  repeats "find next and change it" -
+                    this is the real multi-cursor replacement
+
+@hints
+Put the cursor anywhere on the line with "/users/" and press ci"
+The quotes stay, the contents vanish, you are in INSERT mode.
+--
+For the condition: put the cursor anywhere on the if line and press
+ci( . Everything between the parentheses goes. Type the new
+condition, Esc.
+--
+For the rename, the fast way: put the cursor on the word response
+and press * to search for it. Then press cgn , type result , Esc.
+Now press n . n . to find and change the rest. Or simply hold . -
+cgn re-runs the search itself.
+--
+The slow-but-fine way: ciw result Esc on the first one, then n to
+jump to the next match and . to repeat the change.
+
+@solution
+/users     Enter
+ci" /api/v2/users/  Esc
+
+/if        Enter
+ci( result.status >= 400  Esc
+
+Put the cursor on  response  (on the const line):
+*           search for the word under the cursor, jumps to next one
+cgn result Esc     change this match
+.  .               repeat on the remaining two
+
+:wq
+
+Once verb+object is in your fingers you stop memorising commands.
+d2w, ci{, ya(, yt, - you can invent them because the grammar is
+regular.
+
+@start user.service.ts
+export class UserService {
+  public async fetch(userId: string) {
+    const response = await this.http.get("/users/" + userId);
+
+    if (response.status !== 200) {
+      throw exception("USER_FETCH_FAILED");
+    }
+
+    return response.data;
+  }
+}
+
+@expected user.service.ts
+export class UserService {
+  public async fetch(userId: string) {
+    const result = await this.http.get("/api/v2/users/" + userId);
+
+    if (result.status >= 400) {
+      throw exception("USER_FETCH_FAILED");
+    }
+
+    return result.data;
+  }
+}

@@ -1,0 +1,140 @@
+@meta
+id: 04-06
+title: Let the gutter do the sum
+chapter: 04
+type: lesson
+skills: count-prefix, relativenumber
+par: 18
+minutes: 5
+vscode: nothing like it
+open: orders.csv
+vimrc: set relativenumber
+
+@brief
+Every counted jump so far has cost you a subtraction: you are on line 1,
+you want line 27, so you work out 26. That tax disappears with one
+setting.
+
+`set relativenumber` prints, next to every line, how far that line is from
+the cursor. Not its line number — its distance. The line you want says
+`14` in the margin, so the jump is `14j`. No arithmetic, no reading of
+line numbers, no counting. It has been switched on for this file.
+
+The export is missing a currency on one row: `ORD-1023` has no `GBP` at
+the end. Add `,GBP` so it matches every other row.
+
+Move the cursor and watch the whole margin renumber itself around you.
+That is the feature.
+
+The row is far enough down that an arrow key means holding it and
+watching. That is not a slower way of doing this; it is a different job,
+in which you supervise a cursor instead of aiming one.
+
+@keys
+| `set relativenumber` | distances in the margin instead of line numbers |
+| `23j` | down twenty-three lines |
+| `A` | append at the end of the line |
+
+@hints
+Find the row with your eyes first — it is the one whose line is four
+fields long instead of five. Then read the number the margin has already
+put next to it.
+--
+Whatever number is printed beside that row, that is the count. Type it,
+then `j`.
+--
+`23j`, then `A`, then `,GBP`, then `Esc` and `:wq`.
+
+@solution
+    23j A ,GBP <Esc> :wq<Enter>
+
+Fourteen keystrokes and no mental arithmetic at all. You read `23` off
+the screen and typed it.
+
+Most vim users run with both: `set relativenumber number`, often written
+`set rnu nu`, which shows distances everywhere except the cursor line,
+where it shows the real line number. That gives you the number you need
+for jumping and the number you need for talking about the file with other
+people or a stack trace. Chapter 28 is where you will put it in a config
+so you never think about it again.
+
+A word of warning while it is new: the numbers move. They are distances
+from wherever the cursor is right now, so the moment you jump, they are
+all different. Read, jump, then read again. Do not read two numbers and
+try to use them both.
+
+@start orders.csv
+order_id,customer_id,total,status,currency
+ORD-1001,CUS-200,1999,PAID,GBP
+ORD-1002,CUS-201,4750,PAID,GBP
+ORD-1003,CUS-202,899,PENDING,GBP
+ORD-1004,CUS-203,12500,PAID,GBP
+ORD-1005,CUS-204,2399,SHIPPED,GBP
+ORD-1006,CUS-205,640,PAID,GBP
+ORD-1007,CUS-206,8899,PAID,GBP
+ORD-1008,CUS-207,1550,CANCELLED,GBP
+ORD-1009,CUS-208,3300,PAID,GBP
+ORD-1010,CUS-209,975,SHIPPED,GBP
+ORD-1011,CUS-210,2199,PAID,GBP
+ORD-1012,CUS-211,760,PENDING,GBP
+ORD-1013,CUS-212,5400,PAID,GBP
+ORD-1014,CUS-213,1899,PAID,GBP
+ORD-1015,CUS-214,2750,SHIPPED,GBP
+ORD-1016,CUS-215,410,PAID,GBP
+ORD-1017,CUS-216,6620,CANCELLED,GBP
+ORD-1018,CUS-217,1180,PAID,GBP
+ORD-1019,CUS-218,2050,PAID,GBP
+ORD-1020,CUS-219,735,PENDING,GBP
+ORD-1021,CUS-220,9900,SHIPPED,GBP
+ORD-1022,CUS-221,1425,PAID,GBP
+ORD-1023,CUS-222,3875,PAID
+ORD-1024,CUS-223,2640,PAID,GBP
+ORD-1025,CUS-224,518,SHIPPED,GBP
+ORD-1026,CUS-225,7310,PENDING,GBP
+ORD-1027,CUS-226,1240,PAID,GBP
+ORD-1028,CUS-227,3990,PAID,GBP
+ORD-1029,CUS-228,860,CANCELLED,GBP
+ORD-1030,CUS-229,2075,PAID,GBP
+ORD-1031,CUS-230,1130,PAID,GBP
+ORD-1032,CUS-231,4425,SHIPPED,GBP
+ORD-1033,CUS-232,1795,PAID,GBP
+ORD-1034,CUS-233,555,PENDING,GBP
+ORD-1035,CUS-234,8140,PAID,GBP
+
+@expected orders.csv
+order_id,customer_id,total,status,currency
+ORD-1001,CUS-200,1999,PAID,GBP
+ORD-1002,CUS-201,4750,PAID,GBP
+ORD-1003,CUS-202,899,PENDING,GBP
+ORD-1004,CUS-203,12500,PAID,GBP
+ORD-1005,CUS-204,2399,SHIPPED,GBP
+ORD-1006,CUS-205,640,PAID,GBP
+ORD-1007,CUS-206,8899,PAID,GBP
+ORD-1008,CUS-207,1550,CANCELLED,GBP
+ORD-1009,CUS-208,3300,PAID,GBP
+ORD-1010,CUS-209,975,SHIPPED,GBP
+ORD-1011,CUS-210,2199,PAID,GBP
+ORD-1012,CUS-211,760,PENDING,GBP
+ORD-1013,CUS-212,5400,PAID,GBP
+ORD-1014,CUS-213,1899,PAID,GBP
+ORD-1015,CUS-214,2750,SHIPPED,GBP
+ORD-1016,CUS-215,410,PAID,GBP
+ORD-1017,CUS-216,6620,CANCELLED,GBP
+ORD-1018,CUS-217,1180,PAID,GBP
+ORD-1019,CUS-218,2050,PAID,GBP
+ORD-1020,CUS-219,735,PENDING,GBP
+ORD-1021,CUS-220,9900,SHIPPED,GBP
+ORD-1022,CUS-221,1425,PAID,GBP
+ORD-1023,CUS-222,3875,PAID,GBP
+ORD-1024,CUS-223,2640,PAID,GBP
+ORD-1025,CUS-224,518,SHIPPED,GBP
+ORD-1026,CUS-225,7310,PENDING,GBP
+ORD-1027,CUS-226,1240,PAID,GBP
+ORD-1028,CUS-227,3990,PAID,GBP
+ORD-1029,CUS-228,860,CANCELLED,GBP
+ORD-1030,CUS-229,2075,PAID,GBP
+ORD-1031,CUS-230,1130,PAID,GBP
+ORD-1032,CUS-231,4425,SHIPPED,GBP
+ORD-1033,CUS-232,1795,PAID,GBP
+ORD-1034,CUS-233,555,PENDING,GBP
+ORD-1035,CUS-234,8140,PAID,GBP

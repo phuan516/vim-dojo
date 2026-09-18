@@ -1,0 +1,135 @@
+@meta
+id: 14-11
+title: Count without changing anything
+chapter: 14
+type: lesson
+skills: sub-confirm
+par: 92
+minutes: 7
+vscode: Ctrl-F and read the "3 of 24" badge, three times
+open: refund-audit.md
+
+@brief
+The audit summary at the top of this file has three blanks: how many
+refunds in the table were approved, how many rejected, how many are
+still pending. The batch tool refuses a summary that disagrees with
+the table, so the numbers have to be right.
+
+Twenty-two rows is too many to count by eye and get right twice. A
+substitute has a flag that reports how many matches it would make and
+then changes nothing. Use it three times, then fill in the blanks.
+
+Be careful what you count. The prose above the table uses two of the
+three words, and a match in a sentence is not a row.
+
+@keys
+| `:%s/pattern//n` `Enter` | report the number of matches, change nothing |
+| `:%s/pattern//gn` `Enter` | the same, counting every match on a line rather than lines |
+| `/TBC` `Enter` then `ciw` | find a blank and replace the word |
+| `n` | the next blank |
+
+@hints
+The `n` flag turns any substitute into a dry run. The replacement can
+be empty because it is never used.
+--
+Count something that only appears in table rows. The decision column
+is always preceded by a bar and a space: `| approved` cannot match the
+sentence that says "approved".
+--
+`:%s/| approved//n` reports 11. The other two the same way. Then
+`/TBC`, `ciw`, the number, and `n` to the next blank.
+
+@solution
+    :%s/| approved//n<Enter>   :%s/| rejected//n<Enter>   :%s/| pending//n<Enter>
+    /TBC<Enter>  ciw11<Esc>  n ciw7<Esc>  n ciw4<Esc>  :wq<Enter>
+
+Eighty keystrokes, and none of them were spent scrolling up and
+down the table with a finger on the screen.
+
+The `n` flag is the dry run. Vim finds every match, reports "7 matches
+on 7 lines", and leaves the buffer exactly as it was. Two uses. The
+obvious one is this: you need a number. The important one is checking
+a pattern before you trust it with a change. If `:%s/\<status\>//gn`
+says 11 and you expected 7, you have learned something before it cost
+anything, and you can go and look for the four you did not know about.
+
+The pattern here deserves a second look. `\<rejected\>` would have
+counted 8, because the second sentence says "Rejected refunds". The
+bar and the space in front of the word are what make it a table cell
+and not a word. Counting is only as honest as the pattern, and a
+pattern that describes the structure around the word is usually the
+one that is honest.
+
+@start refund-audit.md
+# Refund audit, week 37
+
+Rejected refunds need a second reviewer before the batch closes on
+Friday. Anything still pending after that rolls into week 38. Fill in
+the counts below from the table; the batch tool refuses a summary that
+does not match.
+
+- Approved: TBC
+- Rejected: TBC
+- Pending: TBC
+
+| refund   | order    | amount | decision |
+|----------|----------|--------|----------|
+| rfd_0401 | ord_8201 |   2100 | approved |
+| rfd_0402 | ord_8203 |   4500 | approved |
+| rfd_0403 | ord_8209 |    899 | rejected |
+| rfd_0404 | ord_8211 |   1250 | approved |
+| rfd_0405 | ord_8214 |   3200 | pending  |
+| rfd_0406 | ord_8216 |   1999 | approved |
+| rfd_0407 | ord_8219 |   6400 | rejected |
+| rfd_0408 | ord_8222 |    750 | approved |
+| rfd_0409 | ord_8225 |   2100 | approved |
+| rfd_0410 | ord_8228 |   4999 | rejected |
+| rfd_0411 | ord_8230 |   1500 | pending  |
+| rfd_0412 | ord_8233 |   8800 | approved |
+| rfd_0413 | ord_8237 |   1250 | rejected |
+| rfd_0414 | ord_8240 |   3200 | approved |
+| rfd_0415 | ord_8241 |    899 | approved |
+| rfd_0416 | ord_8245 |   2100 | pending  |
+| rfd_0417 | ord_8248 |   1999 | rejected |
+| rfd_0418 | ord_8250 |   4500 | approved |
+| rfd_0419 | ord_8254 |    750 | rejected |
+| rfd_0420 | ord_8257 |   6400 | approved |
+| rfd_0421 | ord_8259 |   1500 | pending  |
+| rfd_0422 | ord_8262 |   2100 | rejected |
+
+@expected refund-audit.md
+# Refund audit, week 37
+
+Rejected refunds need a second reviewer before the batch closes on
+Friday. Anything still pending after that rolls into week 38. Fill in
+the counts below from the table; the batch tool refuses a summary that
+does not match.
+
+- Approved: 11
+- Rejected: 7
+- Pending: 4
+
+| refund   | order    | amount | decision |
+|----------|----------|--------|----------|
+| rfd_0401 | ord_8201 |   2100 | approved |
+| rfd_0402 | ord_8203 |   4500 | approved |
+| rfd_0403 | ord_8209 |    899 | rejected |
+| rfd_0404 | ord_8211 |   1250 | approved |
+| rfd_0405 | ord_8214 |   3200 | pending  |
+| rfd_0406 | ord_8216 |   1999 | approved |
+| rfd_0407 | ord_8219 |   6400 | rejected |
+| rfd_0408 | ord_8222 |    750 | approved |
+| rfd_0409 | ord_8225 |   2100 | approved |
+| rfd_0410 | ord_8228 |   4999 | rejected |
+| rfd_0411 | ord_8230 |   1500 | pending  |
+| rfd_0412 | ord_8233 |   8800 | approved |
+| rfd_0413 | ord_8237 |   1250 | rejected |
+| rfd_0414 | ord_8240 |   3200 | approved |
+| rfd_0415 | ord_8241 |    899 | approved |
+| rfd_0416 | ord_8245 |   2100 | pending  |
+| rfd_0417 | ord_8248 |   1999 | rejected |
+| rfd_0418 | ord_8250 |   4500 | approved |
+| rfd_0419 | ord_8254 |    750 | rejected |
+| rfd_0420 | ord_8257 |   6400 | approved |
+| rfd_0421 | ord_8259 |   1500 | pending  |
+| rfd_0422 | ord_8262 |   2100 | rejected |

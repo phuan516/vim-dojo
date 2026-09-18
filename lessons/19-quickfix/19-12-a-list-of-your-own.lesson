@@ -1,0 +1,219 @@
+@meta
+id: 19-12
+title: A list of your own
+chapter: 19
+type: lesson
+skills: location-list
+par: 86
+minutes: 6
+vscode: nothing; the search panel is global
+vimrc: set hidden
+open: README.md
+
+@brief
+Every quickfix command so far has an `l` twin. `:lvimgrep` searches the
+same way as `:vimgrep` and puts the results in the location list
+instead. `:lopen` shows it, `:lne` and `:lp` step through it, `:ldo`
+runs a command on every entry. The difference is ownership. There is
+one quickfix list for the whole of vim. A location list belongs to a
+window: each window can have its own, and a search in one window never
+disturbs another's.
+
+The job: four `: any` types under `src` become `: unknown`. Do it
+through the location list. The two comments that disable the
+`no-explicit-any` lint rule are not types and stay; they are also not
+matched by a pattern that asks for `: any` as a whole word.
+
+@keys
+| `:lvimgrep` `:lvim` | search into this window's location list |
+| `:lopen` `:lclose` | show and hide it |
+| `:lne` `:lp` `:lfirst` `:llast` `:ll N` | step through it |
+| `:ldo` `:lfdo` | run a command per entry, per file |
+
+@hints
+`:lvimgrep /: any\>/ **/*.ts`, then `:lopen` to see the four.
+--
+`:ldo s/: any\>/: unknown/g | update`. The same shape as `:cdo`, one
+letter different.
+--
+`:qa`, because the location window is still open.
+
+@solution
+    :lvimgrep /: any\>/ **/*.ts<Enter>  :lopen<Enter>  :ldo s/: any\>/: unknown/g | update<Enter>  :qa<Enter>
+
+Everything you know about the quickfix list transfers by changing the
+first letter. What does not transfer is the scope. Split the window and
+the new window gets a copy of the location list; close the window and
+its list goes with it. The quickfix list outlives all of that.
+
+The rule of thumb: the quickfix list for the job that spans the
+session, the rename you are working through or the build you are
+fixing; a location list for the question you are asking right now, in
+this window, that you do not want to cost you the quickfix list. The
+next lesson is that situation. Plugins follow the same split: a linter
+that reports per file writes to the location list, a project-wide
+search writes to quickfix.
+
+The `\>` on the pattern is a word boundary. `: any` alone would also
+match `: anything` if a type of that name existed. Cheap insurance.
+
+@start README.md
+# Orders service
+
+Cancelling an order refunds it through `PaymentService.sendRefund`, which
+is named after the gateway's `/sendRefund` endpoint. A refund the gateway
+rejects raises `REFUND_FAILED`. Refund events go out on the
+`payment.sendRefund` routing key, which the ledger service consumes.
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: any, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  public async cancelOrder(_: any, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@expected src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@start src/domain/payment/payment.producer.ts
+import { injectable, inject } from 'tsyringe';
+import { Channel } from '../../infrastructure/rabbit/channel';
+
+type RefundIssuedEvent = {
+  paymentId: string;
+  receipt: string;
+};
+
+@injectable()
+export class PaymentProducer {
+  constructor(@inject(Channel) protected channel: Channel) {}
+
+  public async refundIssued(event: any) {
+    await this.channel.publish('payments', 'payment.sendRefund', event);
+  }
+}
+
+@expected src/domain/payment/payment.producer.ts
+import { injectable, inject } from 'tsyringe';
+import { Channel } from '../../infrastructure/rabbit/channel';
+
+type RefundIssuedEvent = {
+  paymentId: string;
+  receipt: string;
+};
+
+@injectable()
+export class PaymentProducer {
+  constructor(@inject(Channel) protected channel: Channel) {}
+
+  public async refundIssued(event: unknown) {
+    await this.channel.publish('payments', 'payment.sendRefund', event);
+  }
+}
+
+@start src/infrastructure/services/payment.service.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { HttpClient } from '../http/http.client';
+
+@injectable()
+export class PaymentService {
+  constructor(@inject(HttpClient) protected http: HttpClient) {}
+
+  public async sendRefund(orderId: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response: any = await this.http.post('/sendRefund', { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@expected src/infrastructure/services/payment.service.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { HttpClient } from '../http/http.client';
+
+@injectable()
+export class PaymentService {
+  constructor(@inject(HttpClient) protected http: HttpClient) {}
+
+  public async sendRefund(orderId: string) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response: unknown = await this.http.post('/sendRefund', { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.sendRefund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}

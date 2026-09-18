@@ -1,0 +1,105 @@
+@meta
+id: 31-06
+title: nnoremap becomes vim.keymap.set
+chapter: 31
+type: lesson
+skills: lua-config
+par: 195
+minutes: 8
+vscode: keybindings.json, one object per binding
+open: init.lua
+
+@brief
+A mapping in Lua is a function call with four arguments: the mode, the
+left-hand side, the right-hand side, and a table of options.
+
+    nnoremap <leader>h :nohlsearch<CR>
+
+becomes
+
+    vim.keymap.set('n', '<leader>h', ':nohlsearch<CR>', { desc = 'Clear search highlight' })
+
+Three differences from the vimscript, all of them improvements:
+
+- There is no `nore` variant to remember. `vim.keymap.set` is
+  non-recursive by default, which is what you wanted every time anyway.
+  Recursive mapping is opt-in with `{ remap = true }`.
+- The right-hand side can be a Lua function instead of a string of keys.
+  `vim.keymap.set('n', '<leader>d', vim.diagnostic.open_float)` maps a key
+  straight to a function — no `:call`, no `<Cmd>`, no quoting.
+- `{ desc = '...' }` is a human-readable description. It is optional and
+  you should write it every time: it is what `:map` shows, what
+  `:checkhealth` reports, and what a which-key popup reads. A keymap
+  without a `desc` is a keymap nobody can discover six months later.
+
+Leader still works the same way and is still read at definition time, so
+`vim.g.mapleader` has to be set before any mapping that uses it — same
+trap as chapter 28, new spelling.
+
+Port these two mappings into the file, in this order, with exactly these
+descriptions:
+
+    nnoremap <leader>w :w<CR>              desc: Write the file
+    nnoremap <leader>b :ls<CR>:b<Space>    desc: List buffers and wait
+
+Graded in vim. The Lua is written, not run.
+
+@keys
+| `vim.keymap.set(mode, lhs, rhs, opts)` | the whole API |
+| `{ desc = 'text' }` | the options table |
+| `yyp` | copy a line and put the copy below it |
+
+@hints
+Both lines go under the mapping that is already there, and every one of
+them has the same five-part shape.
+--
+`<CR>` and `<Space>` are typed literally inside the quotes, exactly as
+they were in the vimrc.
+--
+You do not have to type the whole thing twice. `yyp` on the existing
+mapping gives you a copy to edit, and `ci'` changes one quoted field at a
+time.
+
+@solution
+Typed straight through, which is what par assumes:
+
+    G o
+    vim.keymap.set('n', '<leader>w', ':w<CR>', { desc = 'Write the file' })<Enter>
+    vim.keymap.set('n', '<leader>b', ':ls<CR>:b<Space>', { desc = 'List buffers and wait' })<Esc>
+    :wq<Enter>
+
+The route a fluent player actually takes is cheaper: `G` `yy` `p` to copy
+the existing mapping, then `f'` `;` to hop between the quoted fields and
+`ci'` to replace each one. Same file, about half the keystrokes, and no
+chance of a typo in the boilerplate. That is worth internalising, because
+a real keymap section is thirty near-identical lines and typing them out
+is how you end up with `'n'` spelled `'n '` on line nineteen.
+
+One more thing you get for free. Because the third argument can be a
+function, a mapping can do real work without a helper command:
+
+    vim.keymap.set('n', '<leader>s', function()
+      vim.opt.spell = not vim.opt.spell:get()
+    end, { desc = 'Toggle spell check' })
+
+In vimscript that is a function definition, a `call`, and a bang you will
+forget. This is the single biggest day-to-day reason people move their
+config to Lua, and it has nothing to do with speed.
+
+@start init.lua
+-- ~/.config/nvim/init.lua
+
+vim.g.mapleader = ' '
+
+-- Mappings
+vim.keymap.set('n', '<leader>h', ':nohlsearch<CR>', { desc = 'Clear search highlight' })
+
+@expected init.lua
+-- ~/.config/nvim/init.lua
+
+vim.g.mapleader = ' '
+
+-- Mappings
+vim.keymap.set('n', '<leader>h', ':nohlsearch<CR>', { desc = 'Clear search highlight' })
+vim.keymap.set('n', '<leader>w', ':w<CR>', { desc = 'Write the file' })
+vim.keymap.set('n', '<leader>b', ':ls<CR>:b<Space>', { desc = 'List buffers and wait' })

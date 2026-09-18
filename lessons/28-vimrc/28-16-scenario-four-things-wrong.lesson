@@ -1,0 +1,176 @@
+@meta
+id: 28-16
+title: Scenario — four things wrong with this vimrc
+chapter: 28
+type: scenario
+skills: vimrc-debug, vimrc-structure, vimrc-mappings, vimrc-filetype
+par: 180
+minutes: 15
+vscode: a settings.json you inherited and nobody understands
+open: .vimrc after/ftplugin/markdown.vim
+
+@brief
+A ticket, not an exercise.
+
+    DEV-77  New starter's vim is misbehaving. Their config came from a
+            colleague who left. Four separate complaints:
+
+            1. TypeScript files get tab characters even though the
+               config says expandtab.
+            2. The leader mappings do not fire on comma. Backslash-w
+               saves, which nobody asked for.
+            3. Pressing the clear-highlight mapping sometimes does
+               something strange after they add other mappings.
+            4. Spell check is on in every file, including .ts, and
+               lines wrap at 80 columns in code.
+
+Two buffers: the vimrc, and their `after/ftplugin/markdown.vim`. There is
+a `after/ftplugin/typescript.vim` in the tree as well — it is correct,
+and changing it fails the check.
+
+Work out each fault before you fix it. `:source %` makes the config live
+in this session, and from there `:verbose set expandtab?`,
+`:verbose nmap <leader>h` and `:scriptnames` will each hand you an
+answer. Guessing is allowed, but the point of the exercise is the three
+commands.
+
+What the config should end up as: one `expandtab`, a leader that works,
+mappings that cannot recurse, and nothing prose-specific left in the
+global config — the spell and wrap settings belong in the markdown
+ftplugin, as `setlocal`, with the `" --- Prose ---` header gone with
+them.
+
+@keys
+| `:verbose set expandtab?` | the value, and the file and line that set it |
+| `:verbose nmap <leader>h` | the same for a mapping |
+| `:source %` | make the file you are editing live |
+| `:19m16` | move line 19 below line 16 |
+| `"a3dd` | cut three lines into register a |
+| `:3,5s/^set/setlocal/` | rewrite a range |
+
+@hints
+Fault 1 is a line that contradicts an earlier one. `:verbose set
+expandtab?` after sourcing names the line number outright. The last
+setting of a global option wins, so the fix is a deletion, not a
+reordering of the file.
+--
+Fault 2 is about *when* `<leader>` is expanded: at definition time. Any
+mapping written above `let mapleader` was bound to backslash while the
+file was being read, and stays that way. The `let` has to move to the top
+of the section.
+--
+Fault 3 is `nmap` where it should be `nnoremap`. A recursive mapping
+follows other mappings, so it changes meaning as the config grows. `nore`
+is the default choice; the recursive form is for the rare case where you
+want it.
+--
+Fault 4 is three global settings that should be local to one filetype.
+Cut them into a register, delete the section header and its blank line,
+and put them in the markdown buffer — then turn each `set` into
+`setlocal`, because these files run per buffer.
+
+@solution
+A route that measures about 150 keystrokes, three of them diagnostic
+commands rather than edits.
+
+**Fault 1.** `:15d` — `set noexpandtab` sits at the bottom of the
+Indentation section, added for somebody's Makefile. It is global, so it
+beats the `expandtab` two lines above it for every file in the session.
+Makefiles already get tabs from vim's own `ftplugin/make.vim`, so there
+was never anything to fix.
+
+**Fault 2.** `:19m16` moves `let mapleader = ","` to the top of the
+Mappings section. Nothing else changes, and both mappings now answer to
+comma. This is the one that people chase for hours, because the config
+*reads* correctly — `<leader>w` is right there in the file — and
+`:verbose nmap ,w` reports no mapping at all while `:nmap \w` shows it.
+
+**Fault 3.** `/nmap ` then `cw` `nnoremap` `<Esc>`. With `nmap`, the
+right-hand side is itself re-mapped: the day they add a mapping that
+starts with `:`, or something involving `<CR>`, this one starts doing
+their other mapping's job.
+
+**Fault 4.** `22G` `"a3dd` cuts the three prose settings into register
+a. `:20,21d` takes the now-empty header and the blank line above it.
+`:w`, `:bn`, `G`, `"ap` puts them at the end of the markdown ftplugin,
+and `:3,5s/^set/setlocal/` makes them local — a global `set` from an
+ftplugin leaks into every other buffer you open afterwards, which is
+exactly the bug you are fixing, moved to a new home. `:wqa`.
+
+The generalisation is worth more than the four fixes. Three questions,
+in this order, settle nearly every config problem: is it even mine
+(`vim --clean`), what is loaded (`:scriptnames`), and who set this
+(`:verbose set`). This config had four unrelated faults and never once
+printed an error message, which is the normal case. Vim does what you
+told it. The work is finding out what you told it.
+
+And the reason a 500-line config from a gist is a bad idea is sitting in
+front of you. Every line here is plausible. Every one of the four faults
+is the kind of thing you write yourself at 6pm and cannot see at 9am the
+next day. A config you grew one line at a time is one you can bisect in
+minutes, because you remember adding every line and why.
+
+@start .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Looks ---
+set number
+set ruler
+
+" --- Indentation ---
+set autoindent
+set expandtab
+set shiftwidth=2
+set noexpandtab
+
+" --- Mappings ---
+nnoremap <leader>w :w<CR>
+nmap <leader>h :nohlsearch<CR>
+let mapleader = ","
+
+" --- Prose ---
+set spell
+set spelllang=en_gb
+set textwidth=80
+
+@expected .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Looks ---
+set number
+set ruler
+
+" --- Indentation ---
+set autoindent
+set expandtab
+set shiftwidth=2
+
+" --- Mappings ---
+let mapleader = ","
+nnoremap <leader>w :w<CR>
+nnoremap <leader>h :nohlsearch<CR>
+
+@start after/ftplugin/markdown.vim
+" Markdown: prose, not code
+setlocal linebreak
+
+@expected after/ftplugin/markdown.vim
+" Markdown: prose, not code
+setlocal linebreak
+setlocal spell
+setlocal spelllang=en_gb
+setlocal textwidth=80
+
+@start after/ftplugin/typescript.vim
+" TypeScript: Prettier's defaults, and a column to aim at
+setlocal shiftwidth=2
+setlocal colorcolumn=100
+setlocal suffixesadd=.ts

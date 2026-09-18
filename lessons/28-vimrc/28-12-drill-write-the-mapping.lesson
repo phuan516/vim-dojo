@@ -1,0 +1,72 @@
+@meta
+id: 28-12
+title: Drill — write the mapping, comment above
+chapter: 28
+type: drill
+skills: vimrc-mappings
+par: 110
+minutes: 5
+reps: 8
+vscode: nothing — keybindings.json is JSON and you would paste it
+open: .vimrc
+
+@brief
+Eight times: add the buffer-list mapping to the end of the Mappings
+section, with its reason on the line above, and save.
+
+    " <leader>b lists the buffers and waits for a number
+    nnoremap <leader>b :ls<CR>:b<Space>
+
+The order you type them in is the drill. Mapping first, comment second,
+because `O` from a comment line gives you another comment leader you did
+not ask for.
+
+@keys
+| `G` `o` | open a line at the bottom |
+| `O` | open a line above |
+| `<CR>` `<Space>` | how a mapping spells Enter and Space |
+
+@hints
+`Go`, the mapping, Esc, then `O` and the comment.
+--
+`<leader>`, `<CR>` and `<Space>` are typed literally — vim reads the
+angle brackets, you do not press the keys.
+
+@solution
+    G o nnoremap <leader>b :ls<CR>:b<Space> <Esc>
+    O " <leader>b lists the buffers and waits for a number <Esc> :wq<Enter>
+
+The mapping is genuinely useful: it lists the buffers and leaves `:b `
+sitting on the command line, so you read the number off the list and type
+it. Two keys to switch to any file you have open.
+
+It also shows the shape of most good mappings: they do not do the job,
+they set the job up and leave you in the right place. A mapping that
+runs `:ls` and then guesses which buffer you meant would be wrong half
+the time and you would stop trusting it.
+
+@start .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Mappings ---
+let mapleader = " "
+nnoremap Y y$
+nnoremap <leader>w :w<CR>
+
+@expected .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Mappings ---
+let mapleader = " "
+nnoremap Y y$
+nnoremap <leader>w :w<CR>
+" <leader>b lists the buffers and waits for a number
+nnoremap <leader>b :ls<CR>:b<Space>

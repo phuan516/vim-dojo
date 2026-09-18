@@ -1,0 +1,342 @@
+@meta
+id: 07-18
+title: Four edits in a deeply nested config
+chapter: 07
+type: lesson
+skills: match-percent, goto-line, zz-center
+par: 108
+minutes: 12
+vscode: fold, unfold, scroll, count the closing braces, get one wrong
+open: payment.config.ts
+
+@brief
+A 123 line config, nested seven levels deep in places, with runs of four and
+five closing braces where the blocks end. Four changes, and every one of
+them is about landing on the right bracket rather than about typing.
+
+  1. Line 82 opens the report recipients list. Add `'ops@acme.dev',` as a
+     new last entry of that list, after the addresses already there.
+
+  2. Line 20 is the production timeouts, written on one line. It needs a
+     third value, so that it reads
+     `timeouts: { connect: 2000, read: 5000, total: 10000 },`.
+
+  3. Line 11 opens the key rotation block. Directly after that block closes,
+     and at the same level as it, add `lastRotatedAt: '2026-06-01',`. It is
+     a sibling of `rotation`, not a member of it, so it goes after the brace
+     that closes rotation and before the one that closes credentials.
+
+  4. The `registerPaymentProvider` call that starts on line 3 is not
+     terminated. Put a semicolon after the bracket that closes it.
+
+The line numbers above are the ones you are given. Two of these edits add a
+line to the file, so the order you work in decides whether the rest of the
+numbers are still true when you get to them.
+
+@keys
+| `%` | jump to the matching bracket |
+| `82G` | line 82 |
+| `zz` | put the cursor line in the middle of the screen |
+| `o` `O` | open a line below, above |
+| `i` `A` | insert before the cursor, append at end of line |
+| `h` `k` | left one character, up a line |
+
+@hints
+Work from the bottom of the file upwards. Two of the four edits push every
+line below them down by one, and the numbers you were given were taken
+before any of them happened.
+--
+You never need to press `f` first. From anywhere on a line, `%` takes the
+first bracket at or after the cursor, so `82G` `%` goes from `recipients: [`
+to the `]` that closes it, and `20G` `%` goes from the opening brace on that
+line to the closing brace on the same line.
+--
+For the list, `%` lands you on the `]`, so `k` puts you on the last entry
+and `o` adds one below it at the right indent. For the rotation block, `%`
+lands you on the brace that closes it, and `o` there opens a line that is
+already at the level you want. For the timeouts, `%` lands you on the `}`, and
+there is a space in front of it, so step back one with `h` before you
+insert or you will write your value on the wrong side of the space.
+
+@solution
+    82G % k o 'ops@acme.dev', <Esc>
+    20G % h i , total: 10000 <Esc>
+    11G zz % o lastRotatedAt: '2026-06-01', <Esc>
+    3G % A ; <Esc>
+    :wq<Enter>
+
+Around ninety keystrokes for four edits in a file nobody could safely count
+braces in.
+
+The whole chapter is in this one. `nG` because a number was handed to you,
+`%` because a bracket was handed to you, `zz` because you wanted to see the
+block you had landed in, `o` and `i` because you already know where the text
+goes once you are standing in the right place.
+
+Edit three is the one that separates people who trust `%` from people who
+do not. The rotation block ends with `},` and is followed by two more
+closing braces in the next two lines. Counting them by eye works here, on a
+file you have just read, in a config you wrote. It stops working on a file
+you have never seen with a run of five closers, and the failure is silent:
+you add your key to the wrong object and the config still parses.
+
+Edit four is the smallest and travels the furthest. Line 3 to line 68 is
+sixty-five lines through four levels of nesting, and `%` did it without you
+knowing the number — which is just as well, since by the time you got there
+you had added two lines above it and the number had changed twice.
+
+That is the shape of everything in this chapter. Say what you mean — that
+line, that block, that bracket, that sentence — and let the motion work out
+the distance. Distance is what changes when somebody else edits the file.
+
+@start payment.config.ts
+import { registerPaymentProvider, defineConfig } from './framework';
+
+registerPaymentProvider({
+  name: 'acme-payments',
+  environments: {
+    production: {
+      baseUrl: 'https://api.acme-payments.com/v2',
+      credentials: {
+        keyId: process.env.ACME_KEY_ID,
+        secret: process.env.ACME_SECRET,
+        rotation: {
+          enabled: true,
+          everyDays: 90,
+          notify: [
+            'payments@acme.dev',
+            'security@acme.dev',
+          ],
+        },
+      },
+      timeouts: { connect: 2000, read: 5000 },
+      retries: {
+        attempts: 3,
+        backoff: {
+          strategy: 'exponential',
+          initialMs: 250,
+          maxMs: 8000,
+        },
+        retryOn: [502, 503, 504],
+      },
+    },
+    sandbox: {
+      baseUrl: 'https://sandbox.acme-payments.com/v2',
+      credentials: {
+        keyId: process.env.ACME_SANDBOX_KEY_ID,
+        secret: process.env.ACME_SANDBOX_SECRET,
+        rotation: {
+          enabled: false,
+          everyDays: 0,
+          notify: [],
+        },
+      },
+      timeouts: { connect: 5000, read: 15000 },
+      retries: {
+        attempts: 1,
+        backoff: {
+          strategy: 'fixed',
+          initialMs: 1000,
+          maxMs: 1000,
+        },
+        retryOn: [503],
+      },
+    },
+  },
+  webhooks: {
+    endpoint: '/webhooks/acme',
+    events: [
+      'refund.created',
+      'refund.settled',
+      'refund.failed',
+      'payment.captured',
+    ],
+    signature: {
+      header: 'x-acme-signature',
+      algorithm: 'sha256',
+      toleranceSeconds: 300,
+    },
+  },
+})
+
+export const reconciliation = defineConfig({
+  schedule: {
+    cron: '0 5 * * *',
+    timezone: 'Europe/London',
+  },
+  window: {
+    days: 7,
+    includeUnsettled: true,
+  },
+  report: {
+    name: 'settlement-reconciliation',
+    format: 'csv',
+    recipients: [
+      'finance@acme.dev',
+      'payments@acme.dev',
+    ],
+    columns: [
+      'order',
+      'reference',
+      'amount',
+      'settled',
+      'discrepancy',
+    ],
+    delivery: {
+      transport: 'email',
+      retries: {
+        attempts: 2,
+        backoff: {
+          strategy: 'fixed',
+          initialMs: 60000,
+          maxMs: 60000,
+        },
+      },
+    },
+  },
+  alerts: {
+    onDiscrepancy: {
+      channel: '#payments-alerts',
+      mention: ['@payments-oncall'],
+      threshold: {
+        count: 1,
+        amountMinorUnits: 1000,
+      },
+    },
+    onFailure: {
+      channel: '#payments-alerts',
+      mention: ['@payments-oncall', '@sre-oncall'],
+      threshold: {
+        count: 1,
+        amountMinorUnits: 0,
+      },
+    },
+  },
+});
+
+@expected payment.config.ts
+import { registerPaymentProvider, defineConfig } from './framework';
+
+registerPaymentProvider({
+  name: 'acme-payments',
+  environments: {
+    production: {
+      baseUrl: 'https://api.acme-payments.com/v2',
+      credentials: {
+        keyId: process.env.ACME_KEY_ID,
+        secret: process.env.ACME_SECRET,
+        rotation: {
+          enabled: true,
+          everyDays: 90,
+          notify: [
+            'payments@acme.dev',
+            'security@acme.dev',
+          ],
+        },
+        lastRotatedAt: '2026-06-01',
+      },
+      timeouts: { connect: 2000, read: 5000, total: 10000 },
+      retries: {
+        attempts: 3,
+        backoff: {
+          strategy: 'exponential',
+          initialMs: 250,
+          maxMs: 8000,
+        },
+        retryOn: [502, 503, 504],
+      },
+    },
+    sandbox: {
+      baseUrl: 'https://sandbox.acme-payments.com/v2',
+      credentials: {
+        keyId: process.env.ACME_SANDBOX_KEY_ID,
+        secret: process.env.ACME_SANDBOX_SECRET,
+        rotation: {
+          enabled: false,
+          everyDays: 0,
+          notify: [],
+        },
+      },
+      timeouts: { connect: 5000, read: 15000 },
+      retries: {
+        attempts: 1,
+        backoff: {
+          strategy: 'fixed',
+          initialMs: 1000,
+          maxMs: 1000,
+        },
+        retryOn: [503],
+      },
+    },
+  },
+  webhooks: {
+    endpoint: '/webhooks/acme',
+    events: [
+      'refund.created',
+      'refund.settled',
+      'refund.failed',
+      'payment.captured',
+    ],
+    signature: {
+      header: 'x-acme-signature',
+      algorithm: 'sha256',
+      toleranceSeconds: 300,
+    },
+  },
+});
+
+export const reconciliation = defineConfig({
+  schedule: {
+    cron: '0 5 * * *',
+    timezone: 'Europe/London',
+  },
+  window: {
+    days: 7,
+    includeUnsettled: true,
+  },
+  report: {
+    name: 'settlement-reconciliation',
+    format: 'csv',
+    recipients: [
+      'finance@acme.dev',
+      'payments@acme.dev',
+      'ops@acme.dev',
+    ],
+    columns: [
+      'order',
+      'reference',
+      'amount',
+      'settled',
+      'discrepancy',
+    ],
+    delivery: {
+      transport: 'email',
+      retries: {
+        attempts: 2,
+        backoff: {
+          strategy: 'fixed',
+          initialMs: 60000,
+          maxMs: 60000,
+        },
+      },
+    },
+  },
+  alerts: {
+    onDiscrepancy: {
+      channel: '#payments-alerts',
+      mention: ['@payments-oncall'],
+      threshold: {
+        count: 1,
+        amountMinorUnits: 1000,
+      },
+    },
+    onFailure: {
+      channel: '#payments-alerts',
+      mention: ['@payments-oncall', '@sre-oncall'],
+      threshold: {
+        count: 1,
+        amountMinorUnits: 0,
+      },
+    },
+  },
+});

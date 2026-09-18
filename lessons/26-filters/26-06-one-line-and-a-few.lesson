@@ -1,0 +1,76 @@
+@meta
+id: 26-06
+title: One line, and then the same again
+chapter: 26
+type: lesson
+skills: filter-bang
+par: 27
+minutes: 5
+vscode: retype both lines in capitals
+open: api-notes.md
+
+@brief
+Two lines in this document list values in lower case. The API returns
+them in upper case, and the document is meant to match the API.
+
+`tr a-z A-Z` is the shell's shortest way of saying "upper case this".
+Feed it one line at a time.
+
+There is a shorthand for the line the cursor is on, the same shape as
+`dd` and `yy`: doubling the operator means "this line". And a filter, like
+any other change, is repeatable.
+
+@keys
+| `!!cmd` | filter the current line — short for `!_cmd` |
+| `!3jcmd` | filter this line and the three below it |
+| `.` | repeat the last filter on the line the cursor is now on |
+| `tr a-z A-Z` | upper case everything on standard input |
+
+@hints
+Get to the first lower-case list, then double the bang.
+--
+`!!tr a-z A-Z` and Enter does the first one. Do not type the second one
+out again.
+--
+`6G`, `!!tr a-z A-Z` Enter, `4j`, `.`, `:wq`.
+
+@solution
+    6G  !!tr a-z A-Z<Enter>  4j  .  :wq<Enter>
+
+Twenty-two keystrokes, and the second line cost one of them.
+
+`.` repeating a filter is the part worth keeping. Vim remembers the whole
+command, so a fiddly `awk` one-liner typed once can be dropped onto line
+after line with a single key — and if you want it on a run of lines
+instead, `!3j` or `!}` does the run in one pass.
+
+The counted form deserves a warning that the range form does not need.
+`!5j` filters six lines, this one and five more, because `j` is a motion
+and the operator covers the line you start on. If you miscount you do not
+get an error, you get five lines through a command that was meant for
+six. `!}` and `!ip` do not have that failure mode, which is why they are
+the ones to reach for on anything with a shape.
+
+@start api-notes.md
+# Status values
+
+The API returns every status in upper case. These two lines came out of
+an old ticket and are still in lower case.
+
+pending, shipped, cancelled, refunded
+
+The refund states are tracked separately:
+
+partial, full, rejected
+
+@expected api-notes.md
+# Status values
+
+The API returns every status in upper case. These two lines came out of
+an old ticket and are still in lower case.
+
+PENDING, SHIPPED, CANCELLED, REFUNDED
+
+The refund states are tracked separately:
+
+PARTIAL, FULL, REJECTED

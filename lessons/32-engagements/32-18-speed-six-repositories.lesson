@@ -1,0 +1,358 @@
+@meta
+id: 32-18
+title: Speed — one filter, six repositories
+chapter: 32
+type: scenario
+skills: speed-under-pressure, argdo, sub-backref, arglist
+par: 98
+minutes: 10
+vscode: six tabs, thirteen lines, one you will miss
+open: src/domain/order/order.repository.ts src/domain/customer/customer.repository.ts src/domain/billing/invoice.repository.ts src/domain/shipping/shipment.repository.ts src/domain/catalogue/product.repository.ts src/domain/address/address.repository.ts docs/soft-delete.md
+vimrc: set hidden
+
+@brief
+    SOFT-12  Soft delete went in last month and the reads were never
+             updated. Every `where` clause in every repository is
+             returning deleted rows. Support have noticed; two customers
+             have seen cancelled orders come back.
+
+Every `where: { ... }` in the six repositories gains `, deleted: null`
+before its closing brace:
+
+    where: { customerId },          becomes   where: { customerId, deleted: null },
+    where: { email, active: true }, becomes   where: { email, active: true, deleted: null },
+
+Eight clauses, six files, all open. `docs/soft-delete.md` is also open —
+it is the migration note, and it quotes a `where` clause as an example of
+what the code used to look like. That quote stays exactly as it is.
+
+**The budget is 98 keystrokes.** Editing eight lines by hand is around
+four hundred, and the last one is in the file you would have stopped
+before reaching.
+
+@keys
+| `:argdo cmd` | run cmd in every file in the argument list |
+| `:argd name` | drop a file from the argument list |
+| `:args` | see what is in the list |
+| `:%s/\(pat\)/\1 extra/ge` | keep the match, add to it, and do not complain when there is none |
+
+@hints
+Seven files are open and six of them want the same change. That is what
+the argument list is for — but the seventh is in the list too, and
+`:argdo` will not ask.
+--
+Take the documentation out of the list before you run anything. `:argd`
+removes a file from the argument list without closing it, and `:args`
+shows you what is left.
+--
+The substitution has to keep the contents of the clause and add to it, so
+it needs a group and a backreference. The `e` flag stops `:argdo`
+aborting on the file that has no match.
+
+@solution
+`:argd docs/soft-delete.md`, then
+`:argdo %s/\(where: { [^}]*\) }/\1, deleted: null }/ge`, then `:wqa`.
+85 keystrokes.
+
+**`:argd` is the whole judgement.** Everything else here is mechanical.
+`:argdo` is a blunt instrument by design — it does the same thing to
+every file you have told it about — so the safety is in what the list
+contains, not in what the command does. One keystroke's worth of thought
+about the list beats a clever pattern that tries to recognise a Markdown
+code block.
+
+This is the same idea as choosing the glob in a `:vimgrep`, and it is
+worth stating plainly: **with a batch command, scope the set first and
+keep the operation simple.** The alternative — one set, one complicated
+operation full of exceptions — fails in a way nobody can review.
+
+**The pattern keeps what it matched.** `\(where: { [^}]*\)` captures the
+clause up to but not including the closing brace, and `\1, deleted: null }`
+puts it back with the filter appended. The `[^}]` is doing real work: it
+cannot cross a brace, so the match is confined to one clause on one line
+and there is no way for it to run off the end of a short object into the
+next one. When you write a batch substitution, the character class that
+says "and not past here" is the part to get right.
+
+**The `e` flag.** Without it, the first file with no match raises E486 and
+`:argdo` stops there, leaving half the tree edited and no error you would
+necessarily notice in a terminal full of output. `e` means "no match is
+not an error", and any `:argdo`, `:bufdo` or `:cfdo` substitution that
+runs over a set you did not hand-pick should have it.
+
+Afterwards: `:vimgrep /where: {/gj src/**/*.ts` and read the list. Eight
+clauses, eight filters. On a change that touches every read in the
+application, the thirty seconds spent confirming that is the cheapest
+thirty seconds of the ticket.
+
+@start src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(customerId: string) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public async findOneByReference(reference: string) {
+    const record = await this.prisma.order.findFirst({
+      where: { reference },
+    });
+
+    return record ? this.toEntity(record) : null;
+  }
+}
+
+@expected src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(customerId: string) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public async findOneByReference(reference: string) {
+    const record = await this.prisma.order.findFirst({
+      where: { reference, deleted: null },
+    });
+
+    return record ? this.toEntity(record) : null;
+  }
+}
+
+@start src/domain/customer/customer.repository.ts
+import { injectable } from 'tsyringe';
+import { Customer as CustomerRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Customer } from './customer.entity';
+
+@injectable()
+export class CustomerRepository extends BaseRepository<CustomerRecord, Customer> {
+  public async findByEmail(email: string) {
+    const record = await this.prisma.customer.findFirst({
+      where: { email, active: true },
+    });
+
+    return record ? this.toEntity(record) : null;
+  }
+}
+
+@expected src/domain/customer/customer.repository.ts
+import { injectable } from 'tsyringe';
+import { Customer as CustomerRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Customer } from './customer.entity';
+
+@injectable()
+export class CustomerRepository extends BaseRepository<CustomerRecord, Customer> {
+  public async findByEmail(email: string) {
+    const record = await this.prisma.customer.findFirst({
+      where: { email, active: true, deleted: null },
+    });
+
+    return record ? this.toEntity(record) : null;
+  }
+}
+
+@start src/domain/billing/invoice.repository.ts
+import { injectable } from 'tsyringe';
+import { Invoice as InvoiceRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Invoice } from './invoice.entity';
+
+@injectable()
+export class InvoiceRepository extends BaseRepository<InvoiceRecord, Invoice> {
+  public async findUnpaid(customerId: string) {
+    const records = await this.prisma.invoice.findMany({
+      where: { customerId, paid: false },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+}
+
+@expected src/domain/billing/invoice.repository.ts
+import { injectable } from 'tsyringe';
+import { Invoice as InvoiceRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Invoice } from './invoice.entity';
+
+@injectable()
+export class InvoiceRepository extends BaseRepository<InvoiceRecord, Invoice> {
+  public async findUnpaid(customerId: string) {
+    const records = await this.prisma.invoice.findMany({
+      where: { customerId, paid: false, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+}
+
+@start src/domain/shipping/shipment.repository.ts
+import { injectable } from 'tsyringe';
+import { Shipment as ShipmentRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Shipment } from './shipment.entity';
+
+@injectable()
+export class ShipmentRepository extends BaseRepository<ShipmentRecord, Shipment> {
+  public async findByOrder(orderId: string) {
+    const records = await this.prisma.shipment.findMany({
+      where: { orderId },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+}
+
+@expected src/domain/shipping/shipment.repository.ts
+import { injectable } from 'tsyringe';
+import { Shipment as ShipmentRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Shipment } from './shipment.entity';
+
+@injectable()
+export class ShipmentRepository extends BaseRepository<ShipmentRecord, Shipment> {
+  public async findByOrder(orderId: string) {
+    const records = await this.prisma.shipment.findMany({
+      where: { orderId, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+}
+
+@start src/domain/catalogue/product.repository.ts
+import { injectable } from 'tsyringe';
+import { Product as ProductRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Product } from './product.entity';
+
+@injectable()
+export class ProductRepository extends BaseRepository<ProductRecord, Product> {
+  public async findBySku(sku: string) {
+    const record = await this.prisma.product.findFirst({
+      where: { sku },
+    });
+
+    return record ? this.toEntity(record) : null;
+  }
+
+  public async findInStock() {
+    const records = await this.prisma.product.findMany({
+      where: { discontinued: false },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+}
+
+@expected src/domain/catalogue/product.repository.ts
+import { injectable } from 'tsyringe';
+import { Product as ProductRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Product } from './product.entity';
+
+@injectable()
+export class ProductRepository extends BaseRepository<ProductRecord, Product> {
+  public async findBySku(sku: string) {
+    const record = await this.prisma.product.findFirst({
+      where: { sku, deleted: null },
+    });
+
+    return record ? this.toEntity(record) : null;
+  }
+
+  public async findInStock() {
+    const records = await this.prisma.product.findMany({
+      where: { discontinued: false, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+}
+
+@start src/domain/address/address.repository.ts
+import { injectable } from 'tsyringe';
+import { Address as AddressRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Address } from './address.entity';
+
+@injectable()
+export class AddressRepository extends BaseRepository<AddressRecord, Address> {
+  public async findByCustomer(customerId: string) {
+    const records = await this.prisma.address.findMany({
+      where: { customerId, verified: true },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+}
+
+@expected src/domain/address/address.repository.ts
+import { injectable } from 'tsyringe';
+import { Address as AddressRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Address } from './address.entity';
+
+@injectable()
+export class AddressRepository extends BaseRepository<AddressRecord, Address> {
+  public async findByCustomer(customerId: string) {
+    const records = await this.prisma.address.findMany({
+      where: { customerId, verified: true, deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+}
+
+@start docs/soft-delete.md
+# Soft delete
+
+Rows are never removed. `deleted` is null while the row is live and
+holds a timestamp once it is gone.
+
+Every read has to say so. Before:
+
+    const records = await this.prisma.order.findMany({
+      where: { customerId },
+    });
+
+After:
+
+    const records = await this.prisma.order.findMany({
+      where: { customerId, deleted: null },
+    });
+
+This page is the migration note for SOFT-12. The "before" block is what
+the code looked like and is not something to go and fix.
+
+@start prisma/schema.prisma
+model Order {
+  id         String    @id
+  customerId String
+  reference  String
+  deleted    DateTime?
+}
+
+model Customer {
+  id      String    @id
+  email   String
+  active  Boolean   @default(true)
+  deleted DateTime?
+}

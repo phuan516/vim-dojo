@@ -1,0 +1,115 @@
+@meta
+id: 10-15
+title: The whole body, in three keys
+chapter: 10
+type: lesson
+skills: obj-brace, inner-vs-around
+par: 96
+minutes: 7
+vimrc: set autoindent
+vscode: click the first line of the body, shift-click the last, type
+open: refund.provider.ts
+
+@brief
+When a brace pair opens and closes on the same line, `i{` is a run of
+characters. When the braces sit on lines of their own — which is every
+function body, every `if`, every `try` — vim quietly switches to whole
+lines instead. `di{` takes out the lines between the braces and leaves the
+braces where they are. `ci{` does the same and opens an empty line at the
+right indent for you to type on.
+
+That makes replacing a function body a three-key operation from anywhere
+inside it. No selecting, no counting lines, no reaching the end of a
+twenty-line method and wondering if you have gone one too far.
+
+The legacy refund endpoint is gone. `RefundProvider.refund` should stop
+talking HTTP and delegate to the payment service instead. The whole body
+becomes one line:
+
+    return this.paymentService.refund(order.id, order.total - order.discount);
+
+The imports, the constructor and the class stay. The method keeps its
+signature.
+
+@keys
+| `di{` | delete the lines between the braces |
+| `ci{` | delete them and start typing at the right indent |
+| `da{` | the braces as well, which is not what you want here |
+| `iB` `cib` | the unshifted spellings |
+
+@hints
+You are inside the body already once you are on any line of it. The
+object knows where the body ends.
+--
+`ci{` from inside the braces clears the body and leaves you in insert mode
+on a blank, correctly indented line.
+--
+`11j` puts you inside the method. Then `ci{`, type the single line, `Esc`,
+`:wq`.
+
+@solution
+    11j ci{ return this.paymentService.refund(order.id, order.total - order.discount); <Esc>
+    :wq<Enter>
+
+Eighty-five keystrokes, and seventy-three of them are the line you had to
+write anyway. The edit itself — finding the fourteen lines of dead body
+and removing them — cost three.
+
+This is the point in the chapter where text objects stop being a
+convenience and start being the reason people use vim. The mouse version
+of this edit is: click at the start of the second line, scroll, shift-click
+at the end of the last line, check you have not caught the closing brace,
+type. The vim version does not involve the word "check".
+
+Two things to notice. First, the switch to linewise is automatic and is
+based on the file, not on a setting: it happens when the braces are alone
+on their lines. Second, `ci{` respects the indent, so the line you type
+lands where Prettier would have put it.
+
+`da{` is the version that takes the braces. On a function body that
+leaves a dangling signature and is almost never what you meant — save it
+for deleting a whole `if` block, where the braces should go too.
+
+@start refund.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class RefundProvider {
+  constructor(
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async refund(order: Order) {
+    const amount = order.total - order.discount;
+    const reference = `refund-${order.id}`;
+    const response = await this.http.post('/refunds/legacy', {
+      amount,
+      reference,
+      orderId: order.id,
+    });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}
+
+@expected refund.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class RefundProvider {
+  constructor(
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async refund(order: Order) {
+    return this.paymentService.refund(order.id, order.total - order.discount);
+  }
+}

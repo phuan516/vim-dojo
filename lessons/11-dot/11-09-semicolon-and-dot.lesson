@@ -1,0 +1,68 @@
+@meta
+id: 11-09
+title: Semicolon and dot, together
+chapter: 11
+type: lesson
+skills: dot-repeat, dot-design
+par: 33
+minutes: 6
+vscode: find-and-replace scoped to a selection, carefully
+open: legacy-ids.ts
+
+@brief
+Two batches of legacy order ids, pipe-separated because the system that
+produced them was written in 2011. The importer wants commas.
+
+Turn every `|` into a `,`. There are ten of them, five on each line, and
+nothing else in either file changes — the ids keep their hyphens.
+
+You have a key that repeats the last find and a key that repeats the last
+change. Neither disturbs the other. Put them next to each other and you
+have a loop that walks a line and edits as it goes.
+
+@keys
+| `f|` | forward to the next pipe |
+| `r,` | replace the character under the cursor with a comma |
+| `;` | the same find again |
+| `.` | the same change again |
+| `0` | column zero, for starting the second line |
+
+@hints
+Do the first one the long way: find the pipe, replace it. Then look at
+your two repeat keys and notice you need exactly one of each.
+--
+`;` moves to the next pipe. `.` replaces it. `;.` is the whole loop, two
+keys per pipe, and you never re-aim either one.
+--
+`f|r,` to start, then `;.` four times finishes the first line. `j0` drops
+to the second, where `;` still remembers the pipe, so it is `;.` five
+times from there.
+
+@solution
+    f|r,   ;. ;. ;. ;.   j0   ;. ;. ;. ;. ;.
+
+Once the first edit is made, the rest of the job is one rhythm typed with
+two fingers. It does not matter how many pipes there are or how far apart
+they sit — you are not aiming, you are pressing `;.` until the line stops
+changing. The one thing to keep an eye on is the end of the line: `f`
+never crosses onto the next line, so `;` simply stops, and a stray `.`
+there would replace a character you did want.
+
+That is why the move to the second line is `j0` and not just `j`. After
+the last replacement your cursor is deep in the line, and `f` only looks
+forward. Sending it back to column zero re-arms the same find for the
+whole of the next line.
+
+`;.` is the first of vim's small self-repeating loops. Chapter 12 gives
+you the one that works across a whole file rather than a single line —
+`n` in place of `;` — and chapter 21 gives you the one that records
+several edits at once. They are all the same idea: make the edit once,
+make the movement once, then alternate.
+
+@start legacy-ids.ts
+export const LEGACY_BATCH_A = 'ORD-1182|ORD-1183|ORD-1184|ORD-1185|ORD-1186|ORD-1187';
+export const LEGACY_BATCH_B = 'ORD-1188|ORD-1189|ORD-1190|ORD-1191|ORD-1192|ORD-1193';
+
+@expected legacy-ids.ts
+export const LEGACY_BATCH_A = 'ORD-1182,ORD-1183,ORD-1184,ORD-1185,ORD-1186,ORD-1187';
+export const LEGACY_BATCH_B = 'ORD-1188,ORD-1189,ORD-1190,ORD-1191,ORD-1192,ORD-1193';

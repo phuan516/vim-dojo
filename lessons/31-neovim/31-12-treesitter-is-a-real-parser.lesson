@@ -1,0 +1,99 @@
+@meta
+id: 31-12
+title: Treesitter is a parser, not a colour scheme
+chapter: 31
+type: lesson
+skills: treesitter, lua-config
+par: 72
+minutes: 7
+vscode: semantic highlighting, which you never had to switch on
+open: treesitter.lua
+
+@brief
+Vim highlights code with regular expressions. A syntax file is a few
+hundred patterns saying "this looks like a string, that looks like a
+keyword", and it is wrong about as often as a regex is wrong about a
+programming language — template literals, JSX, nested quotes, generics.
+
+Treesitter replaces the guess with a parse. Neovim embeds the tree-sitter
+library, so opening a TypeScript file builds an actual syntax tree of that
+file and keeps it up to date as you type, incrementally, per keystroke.
+Highlighting is then a query over the tree: not "a word after `class`"
+but "the name node of a class declaration".
+
+What the tree buys you, beyond better colours:
+
+- **Structural text objects.** With `nvim-treesitter-textobjects`, `vaf`
+  selects a function and `vac` a class — the same grammar as `vap`, over
+  code structure instead of blank lines. This is the one that changes how
+  you edit.
+- **Folds and indent** derived from the tree rather than from `foldmethod=indent`.
+- **`:InspectTree`**, which shows you the parse of the buffer you are
+  looking at, and **`:Inspect`**, which tells you what highlight group is
+  under the cursor and why.
+
+Three honest limits. Treesitter has nothing to do with LSP — one parses
+the file in front of you, the other asks a compiler about the whole
+project, and you want both for different reasons. Parsers are compiled C
+libraries that have to be installed per language and kept in step with the
+plugin. And when a parser and its queries disagree after an update, your
+highlighting breaks in a way a regex syntax file never does.
+
+The config in front of you installs two parsers and has indentation turned
+off. Add `json` and `markdown` to the list, after `typescript`, and switch
+tree-sitter indentation on.
+
+Graded in vim. The Lua is written, not run — there is no parser to install
+here.
+
+@keys
+| `f'` `a` | to the closing quote, then append after it |
+| `ciw` | change the word under the cursor |
+
+@hints
+Two edits: one inside the list, one boolean.
+--
+The list is `{ 'lua', 'typescript' }`. Append to it rather than retyping
+it: get to the quote that closes `'typescript'` and carry on from there.
+--
+`/typescript` Enter, `f'`, `a`, then `, 'json', 'markdown'`. Then
+`/false` Enter and `ciwtrue`.
+
+@solution
+    /typescript<Enter> f' a, 'json', 'markdown'<Esc>
+    /false<Enter> ciw true <Esc>
+    :wq<Enter>
+
+Under sixty keystrokes, and both edits are ones you have made a hundred
+times in this dojo on TypeScript. Config files are just files.
+
+A note on where this is going. `nvim-treesitter` is the plugin that
+installs parsers and wires up the modules, but the tree-sitter integration
+itself is core Neovim — `vim.treesitter.start()` in an ftplugin is enough
+to get highlighting for a parser you already have. Over time more of this
+plugin's job is moving into the editor, which is the same arc `vim.lsp`
+followed: plugin first, core later.
+
+And the thing to hold on to when the ecosystem argues about it: treesitter
+gives you *better information about the file*. It does not give you a new
+way to move around it. `}`, `%`, `di{` and `f(` still do what they always
+did, and they work on the server you ssh into tomorrow, which has none of
+this.
+
+@start treesitter.lua
+-- ~/.config/nvim/lua/config/treesitter.lua
+
+require('nvim-treesitter.configs').setup({
+  ensure_installed = { 'lua', 'typescript' },
+  highlight = { enable = true },
+  indent = { enable = false },
+})
+
+@expected treesitter.lua
+-- ~/.config/nvim/lua/config/treesitter.lua
+
+require('nvim-treesitter.configs').setup({
+  ensure_installed = { 'lua', 'typescript', 'json', 'markdown' },
+  highlight = { enable = true },
+  indent = { enable = true },
+})

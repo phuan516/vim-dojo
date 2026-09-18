@@ -1,0 +1,89 @@
+@meta
+id: 11-06
+title: One change, not two
+chapter: 11
+type: lesson
+skills: dot-design
+par: 38
+minutes: 6
+vscode: Ctrl+D ten times, or find-and-replace
+open: queue-export.txt
+
+@brief
+The nightly queue export writes its status column in lower case. The
+ledger importer only accepts upper case, so ten rows need `pending`
+turned into `PENDING`.
+
+There are two obvious ways to replace a word: delete it and then type the
+new one, or change it in one go. They produce the same ten characters.
+Only one of them leaves something behind that `.` can use.
+
+Do the first row, then find out which route you picked by pressing `.` on
+the second.
+
+@keys
+| `ciw` | change the inner word — delete it and drop straight into insert |
+| `Esc` | ends the change |
+| `.` | repeat the whole change: the delete and the typing together |
+| `dw` then `i` | two changes. `.` repeats only the second one |
+
+@hints
+Whatever you do to the first row, the repeat will replay exactly one
+command. Make sure that command is the entire edit.
+--
+`c` is `d` and `i` fused into a single command, and a single command is a
+single change. `ciw` from anywhere inside the word.
+--
+`ciwPENDING` then `Esc`, then `j.` nine times. The cursor lands on the
+last letter of `PENDING`, which is still inside the next `pending` down,
+so `ciw` finds its own boundaries and you never have to aim.
+
+@solution
+    ciw PENDING <Esc>   then  j.  nine times
+
+A change is one command that alters the buffer, from the moment it starts
+to the moment you are back in normal mode. `ciw` is one command. `dw`
+followed by `iPENDING` and `Esc` is two, and `.` only ever holds the last
+one — so the repeat would insert `PENDING` in front of the word it was
+supposed to replace, and you would be undoing your way back out.
+
+The same rule sets the size of a change, and that cuts the other way.
+Everything you type between entering insert mode and pressing `Esc` is one
+change, however long. Sit in insert mode for two minutes writing a whole
+function and vim dutifully remembers all of it as a single blunt lump —
+technically repeatable, useless in practice, and it is why people say
+their `.` never does anything helpful.
+
+Small, complete, self-aiming changes. That is the whole discipline:
+
+- one command, so the repeat holds all of it
+- ended with `Esc` promptly, so it stays small
+- built on a text object, so it lands correctly wherever the cursor is
+
+Note the third one paying off above. `ciw` works from any character in
+the word, so a bare `j` is enough to set up the next repeat. `cw` would
+have needed the cursor on the first letter and cost you a `0` every line.
+
+@start queue-export.txt
+pending  ORD-1182  CUS-4410  4800
+pending  ORD-1183  CUS-4410  1250
+pending  ORD-1184  CUS-4411  9900
+pending  ORD-1185  CUS-4412  3400
+pending  ORD-1186  CUS-4412   750
+pending  ORD-1187  CUS-4413  6100
+pending  ORD-1188  CUS-4414  2050
+pending  ORD-1189  CUS-4415  4800
+pending  ORD-1190  CUS-4415  1199
+pending  ORD-1191  CUS-4416  8250
+
+@expected queue-export.txt
+PENDING  ORD-1182  CUS-4410  4800
+PENDING  ORD-1183  CUS-4410  1250
+PENDING  ORD-1184  CUS-4411  9900
+PENDING  ORD-1185  CUS-4412  3400
+PENDING  ORD-1186  CUS-4412   750
+PENDING  ORD-1187  CUS-4413  6100
+PENDING  ORD-1188  CUS-4414  2050
+PENDING  ORD-1189  CUS-4415  4800
+PENDING  ORD-1190  CUS-4415  1199
+PENDING  ORD-1191  CUS-4416  8250

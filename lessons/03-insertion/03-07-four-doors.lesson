@@ -1,0 +1,84 @@
+@meta
+id: 03-07
+title: Four doors into the same file
+chapter: 03
+type: lesson
+skills: insert-I, insert-A, open-o, open-O
+par: 110
+minutes: 6
+vscode: four clicks, four bursts of typing
+open: order.entity.ts
+
+@brief
+Four small changes to one type, and each one wants a different door into
+insert mode. Working out which door before you press anything is the whole
+exercise.
+
+  1. A comment above the type, on a new first line:
+
+         // Domain entity. The Prisma record is a different shape.
+
+  2. `id` is missing its semicolon.
+
+  3. `id` should be `readonly`.
+
+  4. A `placedAt: Date;` field, directly under `customerId`.
+
+Nothing here needs you to move along a line, and nothing here needs Enter.
+
+@keys
+| `I` | insert at the first non-blank character |
+| `A` | append at the end of the line |
+| `o` | open a line below |
+| `O` | open a line above |
+| `j` | down a line |
+
+@hints
+Four edits, four keys, in the order they appear in the file. Ask of each
+one: start of the code, end of the line, a new line under, or a new line
+over?
+--
+The comment is `O` on line one. The semicolon is `A`. The `readonly` is
+`I`. The new field is `o`. The only thing left to decide is the order, and
+top to bottom means you only ever press `j`.
+--
+Do the comment first, and remember it pushes everything down by a line, so
+the `id` line is two `j` away from where you end up, not one. Do both `id`
+edits without leaving that line: `I readonly ` `Esc` then `A;` `Esc`.
+
+@solution
+A reasonable run, top to bottom:
+
+    O // Domain entity. The Prisma record is a different shape. <Esc>
+    j j I readonly<Space> <Esc> A ; <Esc>
+    j o placedAt: Date; <Esc>
+    :wq<Enter>
+
+Ninety-seven keystrokes, eighty-two of them the text you were asked for.
+
+The thing worth taking away is that you never positioned the cursor
+horizontally. Not once. Four edits at four different columns — column 1,
+the end of a line, the first non-blank, and a column on a line that did
+not exist yet — and no `h`, no `l`, no `$`, no `0`. Each capital carried
+its own idea of where the edit belonged.
+
+That is the difference between "move the cursor, then type", which is what
+a mouse teaches you, and "say where the text goes", which is what vim is
+for. Later chapters extend the same idea to whole words, sentences and
+blocks, but the shape never changes.
+
+@start order.entity.ts
+export type Order = {
+  id: string
+  customerId: string;
+  status: OrderStatus;
+};
+
+@expected order.entity.ts
+// Domain entity. The Prisma record is a different shape.
+export type Order = {
+  readonly id: string;
+  customerId: string;
+  placedAt: Date;
+  status: OrderStatus;
+};

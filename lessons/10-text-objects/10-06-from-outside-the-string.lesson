@@ -1,0 +1,94 @@
+@meta
+id: 10-06
+title: You do not have to be inside it
+chapter: 10
+type: lesson
+skills: obj-quote
+par: 97
+minutes: 6
+vscode: click into the string first, then select it
+open: order.mailer.ts
+
+@brief
+The quote objects have a property the word objects do not: if the cursor
+is not inside a string, vim looks forward along the line and uses the next
+one it finds. From the first column of a line, `ci"` changes the first
+string on that line. You never have to travel to it.
+
+That single detail is what makes string editing in vim feel like cheating.
+Jump to the line, press three keys, type.
+
+Marketing have renamed the shipped notification. Three things change in
+this mailer:
+
+  - the subject line should read `Order ${order.id} has shipped`
+  - the event name sent to the email service becomes `order-dispatched`
+  - the template becomes `dispatched-html`
+
+The `${order.id}` interpolation stays in the subject. Everything else in
+the file is fine.
+
+@keys
+| `ci"` | change the next double-quoted string on the line |
+| `ci'` | the same for single quotes |
+| ``ci` `` | and for a template literal |
+| `0` | first column, so the whole line is ahead of you |
+
+@hints
+Two of these strings are single-quoted and one is a backtick template.
+The object you want is named after the quote character itself.
+--
+You do not need to steer the cursor into the string. From the start of the
+line, `ci'` finds the first single-quoted string ahead of it.
+--
+`0` then `ci'` is a reliable pair: go to column one, change the first
+string on the line. For the subject line the object is `` i` ``, and the
+`${order.id}` has to be typed back in by hand.
+
+@solution
+    2j ci` Order ${order.id} has shipped <Esc>
+    2j 0 ci' order-dispatched <Esc>
+    2j 0 ci' dispatched-html <Esc>
+    :wq<Enter>
+
+Eighty-four keystrokes and sixty of them are the new text, which is the
+sign of an edit done well: you paid for the words and almost nothing for
+the navigation.
+
+The forward search only goes as far as the end of the line, and it only
+happens when the cursor is not already inside a string. Inside one, the
+object is the one you are in. Both behaviours are what you want, and
+together they mean the sequence `0ci'` works on any line with exactly one
+string on it — which is most lines.
+
+When a line has two strings, `0` gets you the first and `f` onto the
+second one gets you the other. You saw that in the last lesson.
+
+One warning: vim decides where a string starts by counting quotes from the
+beginning of the line, so an apostrophe in a comment on the same line
+will confuse `ci'`. Double quotes and backticks rarely have that problem,
+and `u` costs one key.
+
+@start order.mailer.ts
+export class OrderMailer {
+  public async sendShipped(order: Order, customer: Customer) {
+    const subject = `Order ${order.id} is on its way`;
+
+    return this.emailService.send(customer.email, 'order-shipped', {
+      subject,
+      template: 'shipped-html',
+    });
+  }
+}
+
+@expected order.mailer.ts
+export class OrderMailer {
+  public async sendShipped(order: Order, customer: Customer) {
+    const subject = `Order ${order.id} has shipped`;
+
+    return this.emailService.send(customer.email, 'order-dispatched', {
+      subject,
+      template: 'dispatched-html',
+    });
+  }
+}

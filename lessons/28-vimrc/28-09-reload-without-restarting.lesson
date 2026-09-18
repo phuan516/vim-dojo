@@ -1,0 +1,130 @@
+@meta
+id: 28-09
+title: Reload the config without restarting
+chapter: 28
+type: lesson
+skills: vimrc-structure, vimrc-debug
+par: 138
+minutes: 6
+vscode: settings.json applies as you type it
+open: .vimrc order.provider.ts
+
+@brief
+A vimrc is only run at startup, so a line you have just written is not
+live yet. Quitting and reopening to test it is the slow loop, and the one
+that makes people give up on configuring vim at all.
+
+`:source %` runs the file you are editing. `:source $MYVIMRC` runs your
+config from anywhere. Either way the loop becomes: write a line, source
+it, try it, keep it or delete it — all without leaving the session.
+
+Add this mapping to the Mappings section, with its reason on the line
+above rather than beside it:
+
+    " Y yanks to the end of the line, like D and C
+    nnoremap Y y$
+
+Then source the file and use it. In the provider buffer, `reinstate`
+logs nothing useful: its `logger.info` call is missing the payload that
+`cancel` has. Copy that payload — from the space before `{` to the end of
+the line — onto the end of the `reinstate` call. With the mapping
+sourced, `Y` takes exactly that and nothing else.
+
+Do it without sourcing and `Y` still means `yy`, you paste a whole line,
+and the file does not match. The grading tells you whether the source
+happened.
+
+@keys
+| `:source %` | run the file you are editing |
+| `:source $MYVIMRC` | run your config from anywhere |
+| `Y` | with the mapping: yank to the end of the line |
+| `t{` | move to just before the next `{` |
+| `p` | put after the cursor |
+
+@hints
+Write the mapping, `:w`, then `:source %`. The mapping is live in this
+vim from that moment.
+--
+An inline comment is not safe after `:nnoremap` — the quote becomes part
+of what the mapping types. Put the mapping down first and open the
+comment line above it with `O`.
+--
+In the provider: `t{` on the `cancel` log line puts the cursor on the
+space before the brace, `Y` yanks from there to the end of the line, and
+`$` then `p` on the `reinstate` line appends it.
+
+@solution
+    G o nnoremap Y y$ <Esc> O " Y yanks to the end of the line, like D and C <Esc>
+    :w<Enter> :source %<Enter> :bn<Enter>
+    /order.cancelled<Enter> t{ Y /reinstated<Enter> $ p :wqa<Enter>
+
+The `:source` is three keystrokes of the hundred and the only one that
+matters. Everything you write in this chapter should be tested this way
+before you believe it.
+
+Two things `:source` will not do for you. It runs your config *again* on
+top of the current state, so it adds mappings and autocommands rather
+than replacing them — an autocommand defined outside an `augroup` ends up
+registered twice, and a mapping you deleted from the file is still in
+memory until you restart. And a setting you changed by hand with `:set`
+during the session is overwritten by whatever the file says, which is
+occasionally a surprise and usually what you wanted.
+
+`Y` itself is worth keeping. `D` and `C` both act to the end of the line;
+`Y` is the odd one out, yanking the whole line like `yy` for historical
+reasons. Vim's own defaults file has considered changing it for years.
+Your config can change it today, which is rather the point of having one.
+
+@start .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Mappings ---
+nnoremap <C-l> :nohlsearch<CR><C-l>
+
+@expected .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Mappings ---
+nnoremap <C-l> :nohlsearch<CR><C-l>
+" Y yanks to the end of the line, like D and C
+nnoremap Y y$
+
+@start order.provider.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class OrderProvider {
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+    this.logger.info('order.cancelled', { orderId: order.id });
+  }
+
+  public async reinstate(id: string) {
+    const order = await this.findOne(id);
+    this.logger.info('order.reinstated',
+  }
+}
+
+@expected order.provider.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class OrderProvider {
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+    this.logger.info('order.cancelled', { orderId: order.id });
+  }
+
+  public async reinstate(id: string) {
+    const order = await this.findOne(id);
+    this.logger.info('order.reinstated', { orderId: order.id });
+  }
+}

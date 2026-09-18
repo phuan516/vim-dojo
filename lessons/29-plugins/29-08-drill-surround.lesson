@@ -1,0 +1,151 @@
+@meta
+id: 29-08
+title: Drill — one pair, added
+chapter: 29
+type: drill
+skills: surround
+par: 15
+minutes: 5
+reps: 8
+vscode: click, click, type quote, type quote, fix the one you put in the wrong place
+open: event.ts
+vimrc: set packpath^=. | packloadall!
+
+@brief
+Eight times: put single quotes around the topic name, save, quit. The
+surround plugin is shipped with the lesson, in `pack/dojo/start/surround/`.
+
+Nothing to work out. `ys` is a verb and it wants a motion, the same as
+`d` and `c`. The reflex being built is reaching for `ys` instead of
+reaching for the quote key twice.
+
+@keys
+| `ys{motion}{char}` | surround what the motion covers |
+| `t;` | up to, but not including, the semicolon |
+| `f=w` | onto the `=`, then forward one word |
+
+@hints
+The motion is the awkward part, not the verb. What covers
+`order.cancelled` and stops before the semicolon?
+--
+`f=w` gets you onto the value. `yst;'` does the rest.
+
+@solution
+    f=w  yst;'  :wq<Enter>
+
+Twelve keystrokes.
+
+Two things to notice by rep eight. The motion is chosen by what is in the
+file, not by the shape of the word: `t;` works here because the line ends
+in a semicolon, and `ysiw'` would not, because `order.cancelled` is two
+words to vim and a dot in between.
+
+And the verb reads left to right in the order you think: surround, this
+much, with that. Once it is in your fingers you stop planning it. `ysi(`,
+`ysa{`, `yst,`, `ys$` — all of them free, because you already know the
+motions.
+
+@start pack/dojo/start/surround/plugin/surround.vim
+" dojo-surround.vim - a small, honest surround plugin.
+" Shipped inside this lesson. You did not install it; the dojo did.
+"
+"   ds{char}           delete the surrounding pair
+"   cs{old}{new}       change one surrounding pair into another
+"   ys{motion}{char}   surround the text the motion covers
+"   {Visual}S{char}    surround the selection
+"
+" Brackets come in pairs: ( [ { < all give you the matching closer.
+" Anything else is used on both sides, so " gives "..." and ` gives `...`.
+
+if exists('g:loaded_dojo_surround')
+  finish
+endif
+let g:loaded_dojo_surround = 1
+
+let s:pairs = {
+      \ '(': '()', ')': '()',
+      \ '[': '[]', ']': '[]',
+      \ '{': '{}', '}': '{}',
+      \ '<': '<>', '>': '<>',
+      \ }
+
+function! s:delims(char) abort
+  return get(s:pairs, a:char, a:char . a:char)
+endfunction
+
+" The text between the pair, without the pair itself.
+function! s:inner(char) abort
+  let save = @z
+  let @z = ''
+  silent execute 'normal! "zyi' . a:char
+  let text = @z
+  let @z = save
+  return text
+endfunction
+
+" A visual selection covering the pair AND what is between it. vi" selects
+" the inside; o h o l then walks each end out by one character onto the
+" delimiters. Doing it this way rather than with va" matters: va" also
+" swallows the whitespace next to the string.
+function! s:select(char) abort
+  return 'vi' . a:char . 'ohol'
+endfunction
+
+function! s:replace(char, text) abort
+  let save = @z
+  let @z = a:text
+  silent execute 'normal! ' . s:select(a:char) . '"zp'
+  let @z = save
+endfunction
+
+function! s:ds(char) abort
+  let inner = s:inner(a:char)
+  if inner ==# ''
+    return
+  endif
+  call s:replace(a:char, inner)
+endfunction
+
+function! s:cs(old, new) abort
+  let inner = s:inner(a:old)
+  if inner ==# ''
+    return
+  endif
+  let d = s:delims(a:new)
+  call s:replace(a:old, d[0] . inner . d[1])
+endfunction
+
+function! s:ys(type) abort
+  let d = s:delims(nr2char(getchar()))
+  let save = @z
+  if a:type ==# 'line'
+    silent execute "normal! '[V']\"zy"
+    call setreg('z', d[0] . "\n" . @z . d[1], 'V')
+    silent execute "normal! '[V']\"zp"
+  else
+    silent execute "normal! `[v`]\"zy"
+    let @z = d[0] . @z . d[1]
+    silent execute "normal! `[v`]\"zp"
+  endif
+  let @z = save
+endfunction
+
+function! s:vs(char) abort
+  let d = s:delims(a:char)
+  let save = @z
+  silent execute 'normal! gv"zy'
+  let @z = d[0] . @z . d[1]
+  silent execute 'normal! gv"zp'
+  let @z = save
+endfunction
+
+nnoremap <silent> ds :<C-u>call <SID>ds(nr2char(getchar()))<CR>
+nnoremap <silent> cs :<C-u>call <SID>cs(nr2char(getchar()), nr2char(getchar()))<CR>
+nnoremap <silent> ys :<C-u>set operatorfunc=<SID>ys<CR>g@
+xnoremap <silent> S :<C-u>call <SID>vs(nr2char(getchar()))<CR>
+
+@start event.ts
+export const topic = order.cancelled;
+
+@expected event.ts
+export const topic = 'order.cancelled';

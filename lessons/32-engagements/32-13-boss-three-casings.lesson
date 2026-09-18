@@ -1,0 +1,348 @@
+@meta
+id: 32-13
+title: Boss — rename across three casings
+chapter: 32
+type: boss
+skills: multi-file-refactor, vimgrep, cfdo, sub-case, code-review
+par: 297
+minutes: 22
+vscode: Rename Symbol three times, miss the JSON, break the queue
+open: src/domain/shipping/shipping.entity.ts src/domain/shipping/shipping.schema.graphql docs/queues.md
+vimrc: set hidden
+
+@brief
+    SHP-401  Product have settled on "fulfilment". Rename the concept
+             across the shipping domain. The directory and the file
+             names move in a follow-up ticket; today is identifiers
+             only, so no import path changes.
+
+             Two things keep the old word and the reviewer will check
+             both:
+
+             - `dispatchOrder` is the published GraphQL mutation. The
+               schema file is open in the second buffer. Renaming it
+               breaks every client.
+             - `'order.dispatched'` is a routing key. The warehouse
+               integration binds to it. `docs/queues.md`, third buffer,
+               says so out loud.
+
+             The migration under prisma/ does not change either.
+
+The word occurs in three casings and you have to find all three:
+`Dispatch` in the types, `dispatch` in the methods and fields, and
+`DISPATCH_` in the error codes. A rename that catches two of the three
+leaves a codebase that half-compiles and reads worse than before you
+started.
+
+Six files change. Only one of them is open. Find the rest yourself.
+
+Par is 297 keystrokes, which is comfortable for the right route and
+impossible for a file-by-file one.
+
+@keys
+| `:vimgrep /pat/gj src/**/*.ts src/**/*.json` | one list, every file |
+| `:copen` `:cclose` | read it, close it |
+| `:cfdo %s/old/new/g` | the same substitution in every file on the list |
+| `\C` | case sensitive, whatever `ignorecase` says |
+| `:cfdo %s/wrong/right/g` | and again, to put back what you overreached on |
+
+@hints
+The search term has to be case insensitive to find all three casings, and
+the substitutions have to be case sensitive so they do not collapse them
+into one. `ignorecase` gives you the first for free; `\C` gives you the
+second.
+--
+Three passes, one per casing: `\CDispatch` to `Fulfilment`, `\CDISPATCH`
+to `FULFILMENT`, `\Cdispatch` to `fulfilment`. Each is a `:cfdo`, and
+because each is anchored to a case, they cannot interfere with each
+other and the order does not matter.
+--
+The lowercase pass is the one that overreaches: it takes `dispatchOrder`
+and the routing key with it. Do not try to write a pattern that dodges
+them. Let it run and then put both back, which is two more substitutions
+over the same list.
+--
+`:cfdo %s/\CfulfilmentOrder/dispatchOrder/g` and
+`:cfdo %s/order\.fulfilmented/order.dispatched/g`. Then prove it with
+`:vimgrep /dispatch/gj src/**/*.ts src/**/*.json` — two hits left, and
+you should be able to name both before you look.
+
+@solution
+A route that measures 258 keystrokes.
+
+    :vimgrep /dispatch/gj src/**/*.ts src/**/*.json
+    :copen
+    :cclose
+    :cfdo %s/\CDispatch/Fulfilment/g
+    :cfdo %s/\CDISPATCH/FULFILMENT/g
+    :cfdo %s/\Cdispatch/fulfilment/g
+    :cfdo %s/\CfulfilmentOrder/dispatchOrder/g
+    :cfdo %s/order\.fulfilmented/order.dispatched/g
+    :wqa
+
+Five substitutions to make two exceptions. That looks wasteful and it is
+the cheapest correct route by a wide margin. Here is why each piece is
+what it is.
+
+**One list, built once.** `:vimgrep` over a glob finds the files; you
+never open one by hand and you never wonder whether you got them all.
+The list is also the audit: `:copen` and read it before you run anything.
+Six files, twenty-three hits, and two of them are the ones the ticket told you
+about — you should be able to point at them in the list.
+
+**Case insensitive to find, case sensitive to change.** The search is
+`/dispatch/` and `ignorecase` makes it match all three casings, which is
+exactly what you want when the question is "where is this concept".
+The substitutions carry `\C` because the question there is "change this
+spelling to that spelling", and a pass without `\C` would rewrite
+`DISPATCH_NOT_FOUND` to `fulfilment_NOT_FOUND` on the first command and
+you would not notice until the error registry stopped matching.
+
+**Overreach, then restore.** The tempting move is a clever pattern for
+the lowercase pass that spares `dispatchOrder` and the routing key.
+Try writing it. It has to know about a capital `O` in one case and a
+quoted string in the other, it takes four attempts to get right, and the
+next person cannot read it. Two extra one-line substitutions, each of
+which says plainly "this name stays", are shorter, obvious in the diff,
+and easy to review. Correcting afterwards beats being clever upfront
+whenever the exceptions can be named.
+
+**Prove it.** Run the original `:vimgrep` again at the end. Two hits
+should remain, in two files, and you should have predicted both. A rename
+is finished when the search agrees with you, not when the diff looks
+plausible. This is also the only step that would have caught a missed
+casing, which is the defect this kind of ticket actually ships.
+
+The judgement in this one is not in the keystrokes. It is knowing that a
+mutation name and a routing key are contracts with somebody outside your
+repository, and that a rename stops at the edge of what you own. The
+schema file and `docs/queues.md` were open in front of you for that
+reason, and a reviewer will ask whether you read them.
+
+@start src/domain/shipping/shipping.entity.ts
+export type Dispatch = {
+  id: string;
+  orderId: string;
+  carrier: string;
+  trackingRef: string;
+  dispatchedAt: Date;
+  status: DispatchStatus;
+};
+
+export type DispatchStatus = 'PENDING' | 'SENT' | 'DELIVERED';
+
+@expected src/domain/shipping/shipping.entity.ts
+export type Fulfilment = {
+  id: string;
+  orderId: string;
+  carrier: string;
+  trackingRef: string;
+  fulfilmentedAt: Date;
+  status: FulfilmentStatus;
+};
+
+export type FulfilmentStatus = 'PENDING' | 'SENT' | 'DELIVERED';
+
+@start src/domain/shipping/shipping.repository.ts
+import { injectable } from 'tsyringe';
+import { Shipment as ShipmentRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Dispatch } from './shipping.entity';
+
+@injectable()
+export class ShippingRepository extends BaseRepository<ShipmentRecord, Dispatch> {
+  public toEntity(record: ShipmentRecord): Dispatch {
+    return {
+      id: record.id,
+      orderId: record.orderId,
+      carrier: record.carrier,
+      trackingRef: record.trackingRef,
+      dispatchedAt: record.dispatchedAt,
+      status: record.status,
+    };
+  }
+}
+
+@expected src/domain/shipping/shipping.repository.ts
+import { injectable } from 'tsyringe';
+import { Shipment as ShipmentRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Fulfilment } from './shipping.entity';
+
+@injectable()
+export class ShippingRepository extends BaseRepository<ShipmentRecord, Fulfilment> {
+  public toEntity(record: ShipmentRecord): Fulfilment {
+    return {
+      id: record.id,
+      orderId: record.orderId,
+      carrier: record.carrier,
+      trackingRef: record.trackingRef,
+      fulfilmentedAt: record.fulfilmentedAt,
+      status: record.status,
+    };
+  }
+}
+
+@start src/domain/shipping/shipping.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { ShippingRepository } from './shipping.repository';
+
+@injectable()
+export class ShippingProvider {
+  constructor(
+    @inject(ShippingRepository) protected shippingRepository: ShippingRepository,
+  ) {}
+
+  public async dispatch(orderId: string) {
+    const dispatch = await this.shippingRepository.findOne({ where: { orderId } });
+
+    if (!dispatch) {
+      throw exception('DISPATCH_NOT_FOUND');
+    }
+
+    if (dispatch.dispatchedAt) {
+      throw exception('DISPATCH_ALREADY_SENT');
+    }
+
+    return this.shippingRepository.update({
+      where: { orderId },
+      values: { dispatchedAt: new Date(), status: 'SENT' },
+    });
+  }
+}
+
+@expected src/domain/shipping/shipping.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { ShippingRepository } from './shipping.repository';
+
+@injectable()
+export class ShippingProvider {
+  constructor(
+    @inject(ShippingRepository) protected shippingRepository: ShippingRepository,
+  ) {}
+
+  public async fulfilment(orderId: string) {
+    const fulfilment = await this.shippingRepository.findOne({ where: { orderId } });
+
+    if (!fulfilment) {
+      throw exception('FULFILMENT_NOT_FOUND');
+    }
+
+    if (fulfilment.fulfilmentedAt) {
+      throw exception('FULFILMENT_ALREADY_SENT');
+    }
+
+    return this.shippingRepository.update({
+      where: { orderId },
+      values: { fulfilmentedAt: new Date(), status: 'SENT' },
+    });
+  }
+}
+
+@start src/domain/shipping/shipping.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { ShippingProvider } from './shipping.provider';
+
+@injectable()
+export class ShippingResolver {
+  constructor(@inject(ShippingProvider) protected shippingProvider: ShippingProvider) {}
+
+  public async dispatchOrder(_: unknown, args: { orderId: string }) {
+    return this.shippingProvider.dispatch(args.orderId);
+  }
+}
+
+@expected src/domain/shipping/shipping.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { ShippingProvider } from './shipping.provider';
+
+@injectable()
+export class ShippingResolver {
+  constructor(@inject(ShippingProvider) protected shippingProvider: ShippingProvider) {}
+
+  public async dispatchOrder(_: unknown, args: { orderId: string }) {
+    return this.shippingProvider.fulfilment(args.orderId);
+  }
+}
+
+@start src/consumers/shipping.consumer.ts
+import { injectable, inject } from 'tsyringe';
+import { ShippingProvider } from '../domain/shipping/shipping.provider';
+
+@injectable()
+export class ShippingConsumer {
+  public readonly routingKey = 'order.dispatched';
+
+  constructor(@inject(ShippingProvider) protected shippingProvider: ShippingProvider) {}
+
+  public async consume(message: { orderId: string }) {
+    return this.shippingProvider.dispatch(message.orderId);
+  }
+}
+
+@expected src/consumers/shipping.consumer.ts
+import { injectable, inject } from 'tsyringe';
+import { ShippingProvider } from '../domain/shipping/shipping.provider';
+
+@injectable()
+export class ShippingConsumer {
+  public readonly routingKey = 'order.dispatched';
+
+  constructor(@inject(ShippingProvider) protected shippingProvider: ShippingProvider) {}
+
+  public async consume(message: { orderId: string }) {
+    return this.shippingProvider.fulfilment(message.orderId);
+  }
+}
+
+@start src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "DISPATCH_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "DISPATCH_ALREADY_SENT": { "statusCode": 409, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@expected src/configuration/errors/default.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "FULFILMENT_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "FULFILMENT_ALREADY_SENT": { "statusCode": 409, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@start src/domain/shipping/shipping.schema.graphql
+type Mutation {
+  dispatchOrder(orderId: ID!): Dispatch
+}
+
+type Dispatch {
+  id: ID!
+  orderId: ID!
+  carrier: String!
+  trackingRef: String!
+}
+
+@start docs/queues.md
+# Queues
+
+| exchange | routing key | consumer |
+|---|---|---|
+| orders | order.placed | invoice.consumer |
+| orders | order.dispatched | shipping.consumer |
+| orders | order.cancelled | refund.consumer |
+
+Routing keys are part of the contract with the warehouse integration.
+They are not renamed with the code that publishes them.
+
+@start prisma/migrations/20240418_shipment/migration.sql
+CREATE TABLE shipment (
+  id VARCHAR(36) NOT NULL PRIMARY KEY,
+  order_id VARCHAR(36) NOT NULL,
+  carrier VARCHAR(64) NOT NULL,
+  tracking_ref VARCHAR(64) NOT NULL,
+  dispatched_at DATETIME NULL,
+  status VARCHAR(16) NOT NULL DEFAULT 'PENDING'
+);

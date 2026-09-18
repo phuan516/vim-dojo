@@ -1,0 +1,99 @@
+@meta
+id: 28-10
+title: Choosing a leader key
+chapter: 28
+type: lesson
+skills: vimrc-mappings
+par: 136
+minutes: 5
+vscode: chords like Ctrl-K Ctrl-S, which you also had to choose once
+open: .vimrc
+
+@brief
+Every key in normal mode already does something, so your own mappings
+need a prefix that does not. That prefix is the leader: press it, then
+press a letter, and vim runs your command. `<leader>` in a mapping stands
+for whatever you set `mapleader` to.
+
+The default is backslash, which is awkward on most keyboards. The two
+common replacements are comma — close to the fingers, but it is the
+"repeat `f` backwards" key, which you will miss — and Space, which does
+nothing in normal mode that `l` does not do better. Space is the usual
+answer, and it is the one to take unless you have a reason.
+
+Set it at the top of the Mappings section, with the reason above it, and
+add the first mapping that uses it: `<leader>w` writes the file.
+
+    " space: big, central, and means nothing on its own
+    let mapleader = " "
+    nnoremap <C-l> :nohlsearch<CR><C-l>
+    nnoremap Y y$
+    nnoremap <leader>w :w<CR>
+
+The order matters more than it looks. `<leader>` is expanded when the
+mapping is *defined*, not when you press it, so a mapping written above
+the `let` line quietly binds to backslash instead, forever.
+
+@keys
+| `let mapleader = " "` | make Space the leader |
+| `O` | open a line above |
+| `<CR>` | how a mapping spells Enter |
+
+@hints
+`let mapleader` has to sit above every mapping that uses `<leader>`, so
+it goes at the top of the section — above the two mappings already there.
+--
+Search for `nohlsearch` to land on the first mapping, then `O` to open a
+line above it. Once you are on the `let` line, a second `O` gives you the
+comment line without vim adding a `"` of its own.
+--
+Then `G` and `o` for the new `<leader>w` mapping at the bottom. `:w<CR>`
+is typed literally, angle brackets and all.
+
+@solution
+    /nohlsearch<Enter> O let mapleader = " " <Esc>
+    O " space: big, central, and means nothing on its own <Esc>
+    G o nnoremap <leader>w :w<CR> <Esc> :wq<Enter>
+
+Three things about leaders that save arguments later.
+
+`mapleader` is read at definition time. Change it halfway down your
+config and everything above keeps the old prefix, which is the single
+most confusing thing a vimrc can do to you. Set it once, at the top,
+before any mapping.
+
+There is a second one, `maplocalleader`, for mappings that only apply to
+one kind of file — the per-filetype files in lesson 28-13 are where those
+live. Plugins use it too. Backslash-comma or a plain comma is the usual
+choice; you can ignore it until a plugin asks.
+
+And keep the leader mappings mnemonic and few. `<leader>w` write,
+`<leader>h` clear the highlight, `<leader>b` buffers. If you cannot
+remember what `<leader>gq` does, you will never press it, and it is
+costing you a line of config and a moment of doubt every time you read
+the file.
+
+@start .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Mappings ---
+nnoremap <C-l> :nohlsearch<CR><C-l>
+nnoremap Y y$
+
+@expected .vimrc
+" ~/.vimrc - one line at a time, when something annoys you.
+
+set nocompatible
+syntax on
+filetype plugin indent on
+
+" --- Mappings ---
+" space: big, central, and means nothing on its own
+let mapleader = " "
+nnoremap <C-l> :nohlsearch<CR><C-l>
+nnoremap Y y$
+nnoremap <leader>w :w<CR>

@@ -1,0 +1,150 @@
+@meta
+id: 18-04
+title: Browse the tree with netrw
+chapter: 18
+type: lesson
+skills: netrw
+par: 62
+minutes: 5
+vscode: the Explorer sidebar
+open: src/domain/order/order.provider.ts
+
+@brief
+Sometimes you do not know the file's name, only roughly where it is.
+Vim ships with a file browser called netrw. Ask to edit a directory and
+you get a listing of it instead of a file.
+
+You are in the order provider. Somewhere under `src/infrastructure/`
+there is a service that sends email, and its `post` call goes to
+`/send`. Every other service on that gateway is namespaced, so the path
+should be `/email/send`. Find the file by browsing, not by typing its
+name, and make that one change.
+
+Two ways in. `:e .` lists the project root. `:Explore` lists the
+directory of the file you are in, which is usually closer to where you
+want to be. The listing is an ordinary buffer: `j` and `k` move, `/`
+searches, Enter opens the entry under the cursor. A directory entry
+opens as another listing. `-` goes up one level.
+
+The dojo keeps a couple of dot-files in the root. Leave them be.
+
+@keys
+| `:e .` | browse the current working directory |
+| `:Explore` or `:Ex` | browse the directory of the current file |
+| `Enter` | open the file or directory under the cursor |
+| `-` | go up to the parent directory |
+| `/name` | move to an entry, as in any buffer |
+
+@hints
+`:Ex` shows `src/domain/order/`. You need to go up twice and then down
+into `infrastructure/services/`.
+--
+`-` goes up. Search for the directory you want and press Enter on it.
+`/infra`, Enter, Enter is faster than counting lines, and it still works
+when someone adds a directory above it.
+--
+`:Ex`, `--`, `/infra` Enter Enter, `/serv` Enter Enter, `/email`
+Enter Enter. Then `/post`, `f/`, `aemail/`, `Esc`, `:wq`.
+
+@solution
+    :Ex<Enter> - -
+    /infra<Enter><Enter> /serv<Enter><Enter> /email<Enter><Enter>
+    /post<Enter> f/ aemail/ <Esc> :wq<Enter>
+
+Or `:e .` and go down from the root: `/src`, `/infra`, `/serv`,
+`/email`, Enter after each. About the same number of keys. Pick the
+starting point that is nearer the target.
+
+Notice that the listing is searchable. People who come from a sidebar
+reach for `j` and start counting; `/` plus three letters is faster and
+does not go wrong when the directory changes shape.
+
+netrw is not a good sidebar and it is not trying to be. It is good at
+exactly this: you are in a file, you want to look around it, you look,
+you open something, the listing goes away. `:Sexplore` and `:Vexplore`
+do the same in a split when you want the code to stay on screen. The
+scenario at the end of the chapter uses one.
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async cancel(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start src/domain/order/order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order } from './order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+    };
+  }
+}
+
+@start src/infrastructure/services/email.service.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class EmailService {
+  public async send(args: { to: string; template: string }) {
+    return this.http.post(`/send`, args);
+  }
+}
+
+@expected src/infrastructure/services/email.service.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class EmailService {
+  public async send(args: { to: string; template: string }) {
+    return this.http.post(`/email/send`, args);
+  }
+}
+
+@start src/infrastructure/services/payment.service.ts
+import { injectable } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+
+@injectable()
+export class PaymentService {
+  public async refund(orderId: string) {
+    const response = await this.http.post(`/refunds`, { orderId });
+
+    if (response.status !== 200) {
+      throw exception('REFUND_FAILED');
+    }
+
+    return response.data;
+  }
+}

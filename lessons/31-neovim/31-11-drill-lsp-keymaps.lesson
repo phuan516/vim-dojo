@@ -1,0 +1,56 @@
+@meta
+id: 31-11
+title: Drill — map a key to a function
+chapter: 31
+type: drill
+skills: nvim-lsp, lua-config
+par: 96
+minutes: 6
+reps: 8
+vscode: F12, which you did not configure and cannot change easily
+open: lsp.lua
+
+@brief
+Eight times: add the go-to-definition mapping below the hover mapping, and
+save.
+
+    vim.keymap.set('n', 'gd', vim.lsp.buf.definition, { desc = 'Go to definition' })
+
+The point of the rep is the third argument. It is a function, not a string
+of keys — no quotes, and no trailing `<CR>`. Putting quotes round it is the
+single most common Lua keymap mistake, and it fails by mapping `gd` to
+typing the literal text.
+
+Graded in vim. The Lua is written, not run.
+
+@keys
+| `vim.lsp.buf.definition` | the function, unquoted |
+| `G` `o` | open a line at the bottom |
+
+@hints
+Copy the shape of the hover line above it. Only the key and the function
+change.
+--
+No quotes round `vim.lsp.buf.definition`. Quotes would map `gd` to typing
+those twenty-two characters into your buffer.
+
+@solution
+    G o vim.keymap.set('n', 'gd', vim.lsp.buf.definition, { desc = 'Go to definition' }) <Esc> :wq<Enter>
+
+Eighty-odd keystrokes. What you are drilling is the reflex that a mapping's
+right-hand side can be behaviour rather than keystrokes.
+
+For the record, on Neovim 0.11 you may not need this line at all: an
+attached buffer already has `grn`, `gra`, `grr`, `gri`, `gO` and `K`
+mapped by default, and `gd` follows the tag stack, which the LSP client
+also populates. Write your own anyway if `gd` is what your fingers expect
+— that is the whole reason keymaps exist.
+
+@start lsp.lua
+-- Buffer-local LSP mappings
+vim.keymap.set('n', 'K', vim.lsp.buf.hover, { desc = 'Hover documentation' })
+
+@expected lsp.lua
+-- Buffer-local LSP mappings
+vim.keymap.set('n', 'K', vim.lsp.buf.hover, { desc = 'Hover documentation' })
+vim.keymap.set('n', 'gd', vim.lsp.buf.definition, { desc = 'Go to definition' })

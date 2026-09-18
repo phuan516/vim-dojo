@@ -1,0 +1,81 @@
+@meta
+id: 08-10
+title: Rewrite a line, keep the indent
+chapter: 08
+type: lesson
+skills: change-c, substitute-s
+par: 116
+minutes: 6
+vscode: Home, Shift-End, type over the selection
+open: order.resolver.ts
+vimrc: set autoindent
+
+@brief
+Sometimes a line is not worth salvaging. Both resolvers here pull every
+order out of the database and filter in memory, which was fine with forty
+orders in the seed data and is not fine now.
+
+Rewrite both bodies:
+
+    return this.orderProvider.findOne(id);
+    return this.orderProvider.findMany({ customerId });
+
+The indentation is already correct and you should not have to type it.
+That is the point of this lesson: the linewise change keeps the indent
+and throws away the rest.
+
+@keys
+| `cc` | change the whole line — clears it, keeps the indent, inserts |
+| `S` | the same command, spelled differently |
+| `4j` | four lines down |
+| `Esc` | out |
+
+@hints
+You met `dd` for "delete this whole line". The change operator doubles the
+same way.
+--
+`cc` empties the line, puts the cursor where the code starts, and leaves
+you in insert mode. You type the new body and nothing else.
+--
+`2j` `cc`, type the first line, `Esc`. Then `4j` `S` and the second one —
+`S` and `cc` are the same command.
+
+@solution
+    2j cc return this.orderProvider.findOne(id);<Esc>
+    4j S  return this.orderProvider.findMany({ customerId });<Esc>  :wq<Enter>
+
+Almost all of that is the new code. The editing part is two keystrokes a
+line, and neither line needed selecting, and the indentation looked after
+itself.
+
+The indent is worth a word. `cc` keeps it because `autoindent` is on —
+this lesson switches it on, and any real vimrc has it. Without it `cc`
+clears the line to column zero and you type the spaces yourself. If you
+ever find `cc` eating your indentation, that setting is why.
+
+`S` is the same command with another name, and it is the linewise
+relative of the `s` you met earlier: `s` substitutes a character, `S`
+substitutes a line. Vim has a few of these doubles. Use whichever one
+your hand finds; nobody will be able to tell from the file.
+
+@start order.resolver.ts
+export class OrderResolver {
+  public async order(id: string) {
+    return this.orderProvider.findAll().filter((o) => o.id === id);
+  }
+
+  public async orders(customerId: string) {
+    return this.orderProvider.findAll().filter((o) => o.customerId === customerId);
+  }
+}
+
+@expected order.resolver.ts
+export class OrderResolver {
+  public async order(id: string) {
+    return this.orderProvider.findOne(id);
+  }
+
+  public async orders(customerId: string) {
+    return this.orderProvider.findMany({ customerId });
+  }
+}

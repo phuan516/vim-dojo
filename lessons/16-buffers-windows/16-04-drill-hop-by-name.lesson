@@ -1,0 +1,168 @@
+@meta
+id: 16-04
+title: Drill — hop by name
+chapter: 16
+type: drill
+skills: buffer-switch
+par: 90
+minutes: 6
+reps: 8
+vscode: click a tab, edit, click another tab
+open: order.resolver.ts registry.ts errors.json order.provider.ts
+
+@brief
+Eight times: the wrong status code and the wrong error name. In
+`errors.json`, `ORDER_ALREADY_SHIPPED` says `400`; it should be `409`.
+In `order.provider.ts`, `cancel` throws `ORDER_SHIPPED`; it should
+throw `ORDER_ALREADY_SHIPPED`. Two other files are open and stay as
+they are.
+
+You start in the resolver, so both edits need a hop. Name the buffer,
+edit, write, name the next one. No `:ls`, no numbers.
+
+@keys
+| `:b err` | the errors file |
+| `:b prov` | the provider; there is only one open |
+| `:w` | write before the hop |
+| `:wqa` | write all, quit all |
+
+@hints
+`:b err`, `/SHIPPED`, `f4`, `cw409`, `Esc`, `:w`. Then `:b prov`,
+`/ORDER_SH`, `cw` and the full code.
+--
+Say the fragment before you type it. `err`, `prov`. By rep four the
+saying should have stopped.
+
+@solution
+    :b err<Enter>  /SHIPPED<Enter>  f4  cw 409 <Esc>  :w<Enter>
+    :b prov<Enter>  /ORDER_SH<Enter>  cw ORDER_ALREADY_SHIPPED <Esc>  :wqa<Enter>
+
+The drill is the two `:b` commands. Everything else is chapter 6 and 8.
+
+Notice what `cw` does on `ORDER_SHIPPED`: the underscore is a word
+character, so the whole code is one word and `cw` replaces all of it.
+On `400` it replaces the number and stops at the comma. Same key, and
+the word boundary does the thinking.
+
+@start order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@start registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { OrderResolver } from '../domain/order/order.resolver';
+import { PaymentService } from '../infrastructure/services/payment.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('PaymentService', { useClass: PaymentService });
+container.register('OrderResolver', { useClass: OrderResolver });
+
+@start errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 400, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@expected errors.json
+{
+  "ORDER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "ORDER_ALREADY_SHIPPED": { "statusCode": 409, "sentry": false },
+  "CUSTOMER_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "REFUND_FAILED": { "statusCode": 502, "sentry": true }
+}
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}

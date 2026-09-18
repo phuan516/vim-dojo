@@ -1,0 +1,191 @@
+@meta
+id: 13-18
+title: Match here, land there
+chapter: 13
+type: lesson
+skills: regex-zs-ze
+par: 38
+minutes: 7
+vscode: Ctrl+D on LEGACY_ and then deselect the two you did not mean
+open: refund.provider.ts
+
+@brief
+The error registry has dropped its `LEGACY_` prefixes. Four `throw`
+statements in this provider still use the old codes — strip `LEGACY_`
+from each of them, so `'LEGACY_REFUND_DECLINED'` becomes
+`'REFUND_DECLINED'` and so on.
+
+The prefix appears in two other places that are *not* error codes: the
+`LEGACY_REFUND_LIMIT` constant, imported at the top and used in a
+comparison. Those keep their names.
+
+So the context is `exception('` and the thing to delete is `LEGACY_`.
+Every pattern you have written so far has landed at the start of its
+match, which here would be the `e` of `exception` — nine characters
+from where you want to be. This lesson is the fix, and it is the one
+part of vim's regex that no other tool has.
+
+@keys
+| `\zs` | "start the match here" — everything before it is checked but not matched |
+| `/exception('\zsLEGACY_` | find `LEGACY_`, but only after `exception('`, and land on the `L` |
+| `dgn` | delete the next match — and the match is only what came after `\zs` |
+| `.` | delete the next one too |
+
+@hints
+The pattern has to mention `exception('` to rule out the constant, but
+the cursor and the deletion need to start at `LEGACY_`. Vim lets one
+pattern say both.
+--
+`\zs` marks where the match begins. Put it after the context and before
+the thing you want. The cursor lands on the `L`, and `gn` selects only
+`LEGACY_`.
+--
+`/exception('\zsLEGACY_` `Enter`, then `dgn`, then `.` three times.
+
+@solution
+/exception('\zsLEGACY_<Enter>  dgn  .  .  .  :wq<Enter>
+
+Thirty-three keystrokes, and the constant was never at risk.
+
+`\zs` — "zero-width start" — splits a pattern into two parts: what must
+be there, and what counts as the match. The text before `\zs` has to
+be present for the pattern to succeed, but it is not part of the
+result. So the cursor lands after it, highlighting starts after it,
+and — the part that matters most — `gn` selects only what follows it.
+`dgn` deleted seven characters, not sixteen.
+
+That is what makes `\zs` more than a landing trick. Chapter 11's `cgn`
+and `dgn` change or delete *the match*, and until now the match was
+the whole pattern. With `\zs`, the match is the part you want to edit
+and the rest is context that has to be true. Any find-and-change job
+that needs a condition on what comes before — change this only after
+that — is one `\zs` away from being a `cgn` and a row of dots.
+
+This was written in the default dialect on purpose. Under `\v` the
+round bracket in `exception(` would have needed a backslash and the
+pattern would have been `\vexception\('\zsLEGACY_` — longer, for
+nothing. Very magic is the better default; it is not a law. When the
+literal text is full of brackets and the pattern has no quantifiers,
+the plain dialect is shorter. Pick per pattern.
+
+@start refund.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { LEGACY_REFUND_LIMIT } from './refund.constants';
+import { RefundRepository } from './refund.repository';
+import { OrderRepository } from '../order/order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class RefundProvider {
+  constructor(
+    @inject(RefundRepository) protected refundRepository: RefundRepository,
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(args: { id: string }) {
+    const refund = await this.refundRepository.findOne({ where: { id: args.id } });
+
+    if (!refund) {
+      throw exception('LEGACY_REFUND_NOT_FOUND');
+    }
+
+    return refund;
+  }
+
+  public async create(args: { orderId: string; amount: number }) {
+    const order = await this.orderRepository.findOne({ where: { id: args.orderId } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    if (args.amount > order.total) {
+      throw exception('LEGACY_REFUND_EXCEEDS_TOTAL');
+    }
+
+    const requiresApproval = args.amount > LEGACY_REFUND_LIMIT;
+
+    return this.refundRepository.create({
+      values: { orderId: order.id, amount: args.amount, status: requiresApproval ? 'PENDING_APPROVAL' : 'PENDING' },
+    });
+  }
+
+  public async settle(args: { id: string }) {
+    const refund = await this.findOne({ id: args.id });
+
+    if (refund.status === 'SETTLED') {
+      throw exception('LEGACY_REFUND_ALREADY_SETTLED');
+    }
+
+    const result = await this.paymentService.refund(refund.orderId, refund.amount);
+
+    if (!result.ok) {
+      throw exception('LEGACY_REFUND_DECLINED');
+    }
+
+    return this.refundRepository.update({ where: { id: refund.id }, values: { status: 'SETTLED' } });
+  }
+}
+
+@expected refund.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { LEGACY_REFUND_LIMIT } from './refund.constants';
+import { RefundRepository } from './refund.repository';
+import { OrderRepository } from '../order/order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class RefundProvider {
+  constructor(
+    @inject(RefundRepository) protected refundRepository: RefundRepository,
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(args: { id: string }) {
+    const refund = await this.refundRepository.findOne({ where: { id: args.id } });
+
+    if (!refund) {
+      throw exception('REFUND_NOT_FOUND');
+    }
+
+    return refund;
+  }
+
+  public async create(args: { orderId: string; amount: number }) {
+    const order = await this.orderRepository.findOne({ where: { id: args.orderId } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    if (args.amount > order.total) {
+      throw exception('REFUND_EXCEEDS_TOTAL');
+    }
+
+    const requiresApproval = args.amount > LEGACY_REFUND_LIMIT;
+
+    return this.refundRepository.create({
+      values: { orderId: order.id, amount: args.amount, status: requiresApproval ? 'PENDING_APPROVAL' : 'PENDING' },
+    });
+  }
+
+  public async settle(args: { id: string }) {
+    const refund = await this.findOne({ id: args.id });
+
+    if (refund.status === 'SETTLED') {
+      throw exception('REFUND_ALREADY_SETTLED');
+    }
+
+    const result = await this.paymentService.refund(refund.orderId, refund.amount);
+
+    if (!result.ok) {
+      throw exception('REFUND_DECLINED');
+    }
+
+    return this.refundRepository.update({ where: { id: refund.id }, values: { status: 'SETTLED' } });
+  }
+}

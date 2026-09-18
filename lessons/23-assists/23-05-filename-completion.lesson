@@ -1,0 +1,87 @@
+@meta
+id: 23-05
+title: Complete a path from the disk
+chapter: 23
+type: lesson
+skills: complete-file
+par: 25
+minutes: 4
+vscode: the path IntelliSense, if the extension is installed
+open: seed.ts
+
+@brief
+The seed script loads three CSV fixtures. The first path is complete;
+the other two stop after a couple of letters. The files exist in
+`fixtures/` next to this script, and their names are long enough that
+you do not want to type them, or remember them.
+
+Complete the two paths from the disk. Do not open the directory to
+look; the point is that vim will look for you.
+
+@keys
+| `Ctrl-X Ctrl-F` (insert mode) | complete a filename from the filesystem |
+| `Ctrl-N` / `Ctrl-P` | move through the candidates |
+
+@hints
+Get the cursor onto the closing quote of the second path — `4G$F'` —
+and `i` to insert just before it.
+--
+`Ctrl-X Ctrl-F` reads the partial path to the left of the cursor
+(`fixtures/or`) and completes it against the files that actually
+exist.
+--
+`Esc`, then `j$F'i` and the same chord for the refunds line.
+
+@solution
+    4G$F' i<Ctrl-X><Ctrl-F><Esc>
+    j$F' i<Ctrl-X><Ctrl-F><Esc>
+    :wq<Enter>
+
+Twenty-one keystrokes, and no typos in filenames, ever.
+
+`Ctrl-X Ctrl-F` takes the filename characters before the cursor and
+completes them the way the shell would. Relative paths are relative to
+vim's working directory. A prefix that matches several files opens the
+usual menu; `Ctrl-N` moves through it. `fixtures/` on its own, with
+nothing after the slash, lists everything in the directory, which is a
+fast way to browse without leaving insert mode.
+
+The quote before the path is not a filename character, so vim knows
+where the path starts. The same goes for `(`, `,` and a space.
+
+Two more members of the family you should know exist. `Ctrl-X Ctrl-]`
+completes from a tags file. `Ctrl-X Ctrl-O` is omni completion — the
+one that knows what type a variable is and what methods it has. It
+needs something to ask: a language server, which is chapter 30.
+
+@start seed.ts
+import { loadCsv } from './load-csv';
+
+const customers = loadCsv('fixtures/customers-2024-q3.csv');
+const orders = loadCsv('fixtures/or');
+const refunds = loadCsv('fixtures/re');
+
+export const seed = { customers, orders, refunds };
+
+@expected seed.ts
+import { loadCsv } from './load-csv';
+
+const customers = loadCsv('fixtures/customers-2024-q3.csv');
+const orders = loadCsv('fixtures/orders-2024-q3-placed.csv');
+const refunds = loadCsv('fixtures/refunds-2024-q3-approved.csv');
+
+export const seed = { customers, orders, refunds };
+
+@start fixtures/customers-2024-q3.csv
+id,email,name
+c_1001,ana@example.com,Ana Costa
+c_1002,ben@example.com,Ben Okafor
+
+@start fixtures/orders-2024-q3-placed.csv
+id,customerId,status,total
+o_2001,c_1001,PENDING,120.00
+o_2002,c_1002,SHIPPED,48.50
+
+@start fixtures/refunds-2024-q3-approved.csv
+id,orderId,amount
+r_3001,o_2002,48.50

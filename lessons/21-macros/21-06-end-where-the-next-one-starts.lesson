@@ -1,0 +1,93 @@
+@meta
+id: 21-06
+title: End where the next one starts
+chapter: 21
+type: lesson
+skills: macro-record, macro-count
+par: 45
+minutes: 7
+vscode: a regex replace on pipes and spaces, then fix the ends by hand
+open: refund-cases.csv
+
+@brief
+QA sent the refund test cases as a markdown table. The test loader
+wants CSV. Every row, header included, loses its pipes:
+
+    | ord_101 | cus_7 | 1200 |    →    ord_101,cus_7,1200
+
+The `|---|---|---|` separator line is not a row. It goes.
+
+The catch is in the shape of the edit. Cleaning the end of a line
+leaves the cursor at the end of the line, and `j` keeps the column. If
+the macro then starts with a motion that only looks forward, it starts
+in the wrong place and quietly does the wrong thing. A macro has to
+finish where the next replay needs to begin.
+
+@keys
+| `dw` | delete the pipe and the space after it |
+| `f\|` then `h` | onto the space before the next pipe |
+| `3s` | replace three characters and start inserting |
+| `$xx` | delete the last two characters |
+| `j0` | down a line, then to column one |
+
+@hints
+Delete the separator line first, go back to the top, and record on the
+header row. The macro is `dw`, then two rounds of `f|h3s,` `Esc`, then
+`$xx`. Now think about where the cursor is.
+--
+It is at the end of the line. If the recording ends with a bare `j`,
+the next replay starts at the end of the next line and `dw` eats the
+wrong thing. End with `j0` instead.
+--
+`jdd` `gg`, then `qadwf|h3s,<Esc>f|h3s,<Esc>$xxj0q`, then `12@a`.
+
+@solution
+    j dd gg   qa dw f|h 3s, <Esc> f|h 3s, <Esc> $xx j0 q   12@a   :wq<Enter>
+
+Thirty-nine keystrokes.
+
+Every macro has a contract with itself: it starts from a position, and
+it must leave the cursor in that same kind of position for the next
+run. There are two honest ways to keep the contract.
+
+Normalise at the start: open with `0` or `^` (lesson 1 and 5) and the
+macro does not care what came before. Or normalise at the end: finish
+with `j0`, or `j^`, or a search that lands on the next target. Either
+is fine; forgetting both is the commonest way a macro fails on line two
+after working on line one. If a replay does something strange, the
+first thing to check is where the previous one left the cursor.
+
+You may have noticed that `12@a` ran the last `j0` onto nothing and
+stopped. That is the safety property from the previous lesson doing its
+job at the end of the file.
+
+@start refund-cases.csv
+| order | customer | total |
+|---|---|---|
+| ord_101 | cus_7 | 1200 |
+| ord_102 | cus_7 | 450 |
+| ord_103 | cus_12 | 9900 |
+| ord_104 | cus_3 | 1575 |
+| ord_105 | cus_21 | 80 |
+| ord_106 | cus_12 | 2200 |
+| ord_107 | cus_8 | 640 |
+| ord_108 | cus_30 | 12000 |
+| ord_109 | cus_3 | 315 |
+| ord_110 | cus_17 | 1999 |
+| ord_111 | cus_21 | 4250 |
+| ord_112 | cus_9 | 75 |
+
+@expected refund-cases.csv
+order,customer,total
+ord_101,cus_7,1200
+ord_102,cus_7,450
+ord_103,cus_12,9900
+ord_104,cus_3,1575
+ord_105,cus_21,80
+ord_106,cus_12,2200
+ord_107,cus_8,640
+ord_108,cus_30,12000
+ord_109,cus_3,315
+ord_110,cus_17,1999
+ord_111,cus_21,4250
+ord_112,cus_9,75

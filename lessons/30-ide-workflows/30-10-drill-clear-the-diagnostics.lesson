@@ -1,0 +1,86 @@
+@meta
+id: 30-10
+title: Drill — clear the diagnostics
+chapter: 30
+type: drill
+skills: diagnostics
+par: 58
+minutes: 5
+reps: 8
+vscode: click the first problem, retype, click the next
+vimrc: set errorformat=%-G\ %.%#,%f(%l\\,%c):\ error\ %m
+open: src/domain/customer/customer.provider.ts
+
+@brief
+Two misspelled property names, both with a "did you mean" in the
+message. `tsc.log` is provided with the lesson and does not change.
+
+Eight times: load the list, fix the word under the cursor, next, fix,
+save and quit.
+
+@keys
+| `:cfile file` | load the errors and jump to the first |
+| `ciw` | change the word under the cursor |
+| `:cn` | next error |
+
+@hints
+`:cfile tsc.log` puts the cursor on the exact character the compiler
+complained about, so `ciw` is already aimed.
+--
+Do not read the file to find the second error. `:cn` knows where it is.
+
+@solution
+    :cfile tsc.log<Enter>  ciw sendEmail <Esc>  :cn<Enter>  ciw customerId <Esc>  :wq<Enter>
+
+The rhythm — load, `:cn`, fix, `:cn`, fix — is the same whether the
+list came from a saved log, from `:make`, from `:grep`, or from a
+language server plugin pushing diagnostics into it. Quickfix is the
+common currency. Learn the rhythm once and every tool that can produce
+a list of file-line-message fits into it.
+
+@start tsc.log
+src/domain/customer/customer.provider.ts(9,29): error TS2551: Property 'sendEmial' does not exist on type 'EmailService'. Did you mean 'sendEmail'?
+  src/infrastructure/services/email.service.ts(7,3): 'sendEmail' is declared here.
+src/domain/customer/customer.provider.ts(15,47): error TS2551: Property 'custmerId' does not exist on type '{ customerId: string; }'. Did you mean 'customerId'?
+
+@start src/domain/customer/customer.provider.ts
+import { EmailService } from '../../infrastructure/services/email.service';
+
+export class CustomerProvider {
+  constructor(protected emailService: EmailService) {}
+
+  public async welcome(customerId: string) {
+    const customer = await this.findOne(customerId);
+
+    await this.emailService.sendEmial(customer.email);
+
+    return customer;
+  }
+
+  public async notify(order: { customerId: string }) {
+    const customer = await this.findOne(order.custmerId);
+
+    return this.emailService.sendReceipt(customer.email);
+  }
+}
+
+@expected src/domain/customer/customer.provider.ts
+import { EmailService } from '../../infrastructure/services/email.service';
+
+export class CustomerProvider {
+  constructor(protected emailService: EmailService) {}
+
+  public async welcome(customerId: string) {
+    const customer = await this.findOne(customerId);
+
+    await this.emailService.sendEmail(customer.email);
+
+    return customer;
+  }
+
+  public async notify(order: { customerId: string }) {
+    const customer = await this.findOne(order.customerId);
+
+    return this.emailService.sendReceipt(customer.email);
+  }
+}

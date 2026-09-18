@@ -1,0 +1,307 @@
+@meta
+id: 07-02
+title: Go to the line the compiler named
+chapter: 07
+type: lesson
+skills: goto-line
+par: 27
+minutes: 4
+vscode: Ctrl-G, type the number, Enter
+open: order.repository.ts
+
+@brief
+`tsc` has just told you exactly where the problem is:
+
+    src/domain/order/order.repository.ts:53:51 - error TS1005: ';' expected.
+    src/domain/order/order.repository.ts:88:7  - error TS1005: ';' expected.
+    src/domain/order/order.repository.ts:110:7 - error TS1005: ';' expected.
+
+Three statements in this 121 line repository are not terminated. Put a
+semicolon on the end of each of the three lines the compiler named. Change
+nothing else — the other statements in the file are already correct.
+
+You have a line number and a file. Do not go looking for the lines; go to
+them.
+
+@keys
+| `53G` | line 53 |
+| `G` | with no count, the last line |
+| `A` | append at the end of the line |
+
+@hints
+`G` took you to the end of the file in the last lesson. It takes a count,
+and a count changes what "the end" means.
+--
+A number in front of `G` is an absolute line number: `53G` is line 53, from
+anywhere, in one jump. The line numbers down the side of the screen are what
+the compiler is counting, so the two agree.
+--
+Three jumps, and on each one `A` `;` `Esc` finishes the line. Work down the
+file so the jumps stay in order: 53, then 88, then 110.
+
+@solution
+    53G A ; <Esc>  88G A ; <Esc>  110G A ; <Esc>  :wq<Enter>
+
+Twenty-three keystrokes for three fixes spread over a hundred lines.
+
+`nG` is the motion you use every time a tool hands you a line number, and
+tools hand you line numbers constantly: compiler errors, stack traces, lint
+output, `git blame`, a failing test, a code review comment. Reading the
+number and then hunting for the line by eye is a habit worth breaking on
+day one.
+
+There is a subtlety in the first error. The compiler says column 51, but the
+line is short of a semicolon at its very end, so `A` is right and you never
+had to care about the column. Column numbers in TypeScript errors point at
+the token that confused the parser, not at the fix.
+
+One more thing to notice: your cursor is where you left it after each fix,
+and the next jump does not care. Absolute motions are absolute. That makes
+them safe to chain without stopping to work out where you are — which is
+precisely what `j` and `k` cannot give you.
+
+@start order.repository.ts
+import { injectable, inject } from 'tsyringe';
+import { Order as OrderRecord, PrismaClient } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order, OrderStatus } from './order.entity';
+import { FindOrdersArgs, UpdateOrderArgs, CreateOrderArgs } from './order.types';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  constructor(@inject(PrismaClient) protected prisma: PrismaClient) {
+    super(prisma.order);
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      reference: record.reference ?? undefined,
+      status: record.status as OrderStatus,
+      amount: record.amount,
+      currency: record.currency,
+      placedAt: record.placedAt,
+      cancelledAt: record.cancelledAt ?? undefined,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+
+  public async findOne(args: FindOrdersArgs): Promise<Order | undefined> {
+    const record = await this.prisma.order.findFirst({ where: args.where });
+
+    if (!record) {
+      return undefined;
+    }
+
+    return this.toEntity(record);
+  }
+
+  public async findMany(args: FindOrdersArgs): Promise<Order[]> {
+    const records = await this.prisma.order.findMany({
+      where: args.where,
+      orderBy: { placedAt: 'desc' },
+      take: args.take ?? 50,
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public async findByCustomer(customerId: string): Promise<Order[]> {
+    const records = await this.prisma.order.findMany({
+      where: { customerId, deleted: null },
+      orderBy: { placedAt: 'desc' },
+    });
+
+    return records.map((record) => this.toEntity(record))
+  }
+
+  public async findPending(take: number): Promise<Order[]> {
+    const records = await this.prisma.order.findMany({
+      where: { status: 'PENDING' },
+      orderBy: { placedAt: 'asc' },
+      take,
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public async countByStatus(status: OrderStatus): Promise<number> {
+    return this.prisma.order.count({ where: { status } });
+  }
+
+  public async create(args: CreateOrderArgs): Promise<Order> {
+    const record = await this.prisma.order.create({
+      data: {
+        customerId: args.customerId,
+        amount: args.amount,
+        currency: args.currency,
+        status: 'PENDING',
+        placedAt: new Date(),
+      },
+    });
+
+    return this.toEntity(record);
+  }
+
+  public async update(args: UpdateOrderArgs): Promise<Order> {
+    const record = await this.prisma.order.update({
+      where: args.where,
+      data: args.values,
+    })
+
+    return this.toEntity(record);
+  }
+
+  public async markCancelled(id: string, reason: string): Promise<Order> {
+    const record = await this.prisma.order.update({
+      where: { id },
+      data: {
+        status: 'CANCELLED',
+        cancelledAt: new Date(),
+        cancellationReason: reason,
+      },
+    });
+
+    return this.toEntity(record);
+  }
+
+  public async softDelete(id: string): Promise<void> {
+    await this.prisma.order.update({
+      where: { id },
+      data: { deleted: new Date() },
+    })
+  }
+
+  public async totalForCustomer(customerId: string): Promise<number> {
+    const result = await this.prisma.order.aggregate({
+      where: { customerId, status: 'COMPLETED' },
+      _sum: { amount: true },
+    });
+
+    return result._sum.amount ?? 0;
+  }
+}
+
+@expected order.repository.ts
+import { injectable, inject } from 'tsyringe';
+import { Order as OrderRecord, PrismaClient } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Order, OrderStatus } from './order.entity';
+import { FindOrdersArgs, UpdateOrderArgs, CreateOrderArgs } from './order.types';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  constructor(@inject(PrismaClient) protected prisma: PrismaClient) {
+    super(prisma.order);
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      reference: record.reference ?? undefined,
+      status: record.status as OrderStatus,
+      amount: record.amount,
+      currency: record.currency,
+      placedAt: record.placedAt,
+      cancelledAt: record.cancelledAt ?? undefined,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+
+  public async findOne(args: FindOrdersArgs): Promise<Order | undefined> {
+    const record = await this.prisma.order.findFirst({ where: args.where });
+
+    if (!record) {
+      return undefined;
+    }
+
+    return this.toEntity(record);
+  }
+
+  public async findMany(args: FindOrdersArgs): Promise<Order[]> {
+    const records = await this.prisma.order.findMany({
+      where: args.where,
+      orderBy: { placedAt: 'desc' },
+      take: args.take ?? 50,
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public async findByCustomer(customerId: string): Promise<Order[]> {
+    const records = await this.prisma.order.findMany({
+      where: { customerId, deleted: null },
+      orderBy: { placedAt: 'desc' },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public async findPending(take: number): Promise<Order[]> {
+    const records = await this.prisma.order.findMany({
+      where: { status: 'PENDING' },
+      orderBy: { placedAt: 'asc' },
+      take,
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public async countByStatus(status: OrderStatus): Promise<number> {
+    return this.prisma.order.count({ where: { status } });
+  }
+
+  public async create(args: CreateOrderArgs): Promise<Order> {
+    const record = await this.prisma.order.create({
+      data: {
+        customerId: args.customerId,
+        amount: args.amount,
+        currency: args.currency,
+        status: 'PENDING',
+        placedAt: new Date(),
+      },
+    });
+
+    return this.toEntity(record);
+  }
+
+  public async update(args: UpdateOrderArgs): Promise<Order> {
+    const record = await this.prisma.order.update({
+      where: args.where,
+      data: args.values,
+    });
+
+    return this.toEntity(record);
+  }
+
+  public async markCancelled(id: string, reason: string): Promise<Order> {
+    const record = await this.prisma.order.update({
+      where: { id },
+      data: {
+        status: 'CANCELLED',
+        cancelledAt: new Date(),
+        cancellationReason: reason,
+      },
+    });
+
+    return this.toEntity(record);
+  }
+
+  public async softDelete(id: string): Promise<void> {
+    await this.prisma.order.update({
+      where: { id },
+      data: { deleted: new Date() },
+    });
+  }
+
+  public async totalForCustomer(customerId: string): Promise<number> {
+    const result = await this.prisma.order.aggregate({
+      where: { customerId, status: 'COMPLETED' },
+      _sum: { amount: true },
+    });
+
+    return result._sum.amount ?? 0;
+  }
+}

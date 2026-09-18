@@ -1,0 +1,208 @@
+@meta
+id: 32-12
+title: Refactor — the resolver is doing too much
+chapter: 32
+type: scenario
+skills: multi-file-refactor, register-named, op-linewise, global-delete
+par: 128
+minutes: 10
+vscode: cut in one tab, paste in another, lose it if you copy twice
+open: src/domain/order/order.resolver.ts src/domain/order/order.provider.ts src/domain/order/order.entity.ts src/domain/order/order.schema.graphql
+vimrc: set hidden
+
+@brief
+    ORD-990  `cancelOrder` decides whether an order may be cancelled.
+             That decision belongs in the provider: the consumer
+             cancels orders too and does not go through the resolver,
+             so a shipped order can be cancelled from the queue today.
+
+             Move the guard down a layer. The resolver maps GraphQL to
+             a provider call and does nothing else.
+
+After the move:
+
+  - order.resolver.ts — `cancelOrder` is one line, a call to
+    `this.orderProvider.cancel(args.id)`. The `exception` import goes
+    with the guard; nothing in the file throws any more.
+
+  - order.provider.ts — `cancel` looks the order up and refuses a
+    shipped one before it updates anything. It has `findOne` already,
+    and it takes an `id`, not an `args` object, so the line you move
+    needs adjusting as you land it.
+
+The entity and the schema do not change. The public API is identical
+before and after — that is what makes this a refactor.
+
+@keys
+| `"a6dd` | delete six lines into register a |
+| `"ap` | put register a below this line |
+| `dw` `x` | delete a word, then the punctuation after it |
+| `:g/pat/d` | delete the line that matches |
+
+@hints
+Moving code between files is a delete into a named register and a put.
+Use a named one: everything else you delete on the way would overwrite
+the unnamed register, and you would find out at the paste.
+--
+In the resolver the guard is six lines — the lookup, the blank line, the
+three lines of `if`, and the blank line after it. Taking the blank lines
+with it is what makes the paste land correctly spaced at the other end.
+--
+`/const order = await` `Enter` `"a6dd`, then `:g/^import { exception/d`.
+In the provider, `/public async cancel` `Enter` `"ap` puts the block
+straight under the signature, and then two small edits turn
+`this.orderProvider.findOne(args.id)` into `this.findOne(id)`.
+
+@solution
+`/const order = await` `Enter` `"a6dd` `:g/^import { exception/d`
+`:bn` `/public async cancel` `Enter` `"ap`
+`/orderProvider` `Enter` `dwx` `/args` `Enter` `dwx` `:wqa`.
+111 keystrokes.
+
+**A named register is the whole technique.** Cross-file moves are one of
+the few places where the unnamed register will genuinely bite you: you
+delete the block, then delete the now-unused import on your way out, and
+the import is what you paste. `"a` costs two keystrokes and removes the
+failure mode entirely. Get in the habit of reaching for a letter whenever
+the yank and the put are more than a couple of keystrokes apart.
+
+**Take the blank lines with the block.** Six lines, not four. The two
+blank lines are part of the shape of the code, and if you carry them the
+paste needs no tidying at either end. Carrying structure rather than text
+is the same instinct as `dap` over `4dd`.
+
+**Adjust at the destination, not the source.** The moved line refers to
+`this.orderProvider` and `args.id`, neither of which exists in the
+provider. Two `dw` `x` pairs fix both, in place, after the paste. Editing
+it before the move would mean editing code that is briefly wrong in a
+file where it does not belong.
+
+One thing that is not a keystroke: this ticket is worth doing because of
+the consumer, not because of the layering. "Business logic belongs in the
+provider" is a style rule and reasonable people argue about it. "A
+shipped order can be cancelled from the queue today" is a bug, and it is
+the sentence that gets the refactor reviewed and merged.
+
+@start src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    const order = await this.orderProvider.findOne(args.id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@expected src/domain/order/order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@start src/domain/order/order.entity.ts
+export type Order = {
+  id: string;
+  customerId: string;
+  status: OrderStatus;
+  total: number;
+};
+
+export type OrderStatus = 'PENDING' | 'SHIPPED' | 'CANCELLED';
+
+@start src/domain/order/order.schema.graphql
+type Query {
+  order(id: ID!): Order
+}
+
+type Mutation {
+  cancelOrder(id: ID!): Order
+}

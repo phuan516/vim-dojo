@@ -1,0 +1,96 @@
+@meta
+id: 16-12
+title: Drill — side by side
+chapter: 16
+type: drill
+skills: split-window, window-nav
+par: 110
+minutes: 6
+reps: 8
+vscode: open the second file, drag its tab to the right, edit, edit
+open: customer.entity.ts
+vimrc: set wildmenu wildmode=full
+
+@brief
+Eight times: open the customer repository beside the entity, give both
+a `phone` field, write, quit. The repository is not in the list; you
+open it. In the entity the field is `phone?: string;` under `email`,
+and in the repository it is `phone: record.phone ?? undefined,` under
+its `email` line.
+
+Filenames complete on the command line too. `:vs customer.r` and Tab
+finishes the name.
+
+@keys
+| `:vs customer.r` `Tab` | open it on the left |
+| `Ctrl-W l` | back to the entity on the right |
+| `:wqa` | write both, quit |
+
+@hints
+`:vs customer.r`, Tab, Enter. `/email`, `o`, the mapping, `Esc`.
+`Ctrl-W l`. `/email`, `o`, the field, `Esc`. `:wqa`.
+--
+The drill is the shape: open beside, edit left, hop right, edit, write
+all. Do not touch `:b` at all in this one.
+
+@solution
+    :vs customer.r<Tab><Enter>  /email<Enter>  o phone: record.phone ?? undefined, <Esc>
+    Ctrl-W l  /email<Enter>  o phone?: string; <Esc>  :wqa<Enter>
+
+Under a hundred keystrokes with the Tab, and it would be a hundred and
+ten without.
+
+By the end of the reps `Ctrl-W l` should feel like `l`: the same
+direction, one level up. That is the whole design of the `Ctrl-W`
+family. Anything you can do to move the cursor between characters,
+`Ctrl-W` does between windows.
+
+@start customer.entity.ts
+export type Customer = {
+  id: string;
+  email: string;
+  name: string;
+};
+
+@expected customer.entity.ts
+export type Customer = {
+  id: string;
+  email: string;
+  phone?: string;
+  name: string;
+};
+
+@start customer.repository.ts
+import { injectable } from 'tsyringe';
+import { Customer as CustomerRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Customer } from './customer.entity';
+
+@injectable()
+export class CustomerRepository extends BaseRepository<CustomerRecord, Customer> {
+  public toEntity(record: CustomerRecord): Customer {
+    return {
+      id: record.id,
+      email: record.email,
+      name: record.name,
+    };
+  }
+}
+
+@expected customer.repository.ts
+import { injectable } from 'tsyringe';
+import { Customer as CustomerRecord } from '@prisma/client';
+import { BaseRepository } from '../../infrastructure/base.repository';
+import { Customer } from './customer.entity';
+
+@injectable()
+export class CustomerRepository extends BaseRepository<CustomerRecord, Customer> {
+  public toEntity(record: CustomerRecord): Customer {
+    return {
+      id: record.id,
+      email: record.email,
+      phone: record.phone ?? undefined,
+      name: record.name,
+    };
+  }
+}

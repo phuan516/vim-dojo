@@ -1,0 +1,57 @@
+@meta
+id: 25-03
+title: Drill — the three lines below
+chapter: 25
+type: drill
+skills: range-syntax
+par: 15
+minutes: 4
+reps: 8
+vscode: select three lines with the mouse, Delete
+open: jest.setup.ts
+
+@brief
+Eight times: the three lines under the cursor are a stale mock that the
+new fixture replaced. Delete them without moving.
+
+The cursor is on line 1 and stays there. A range with no address before
+the offset means "from the cursor", so `+1` is the line below and `+3`
+is three below.
+
+@keys
+| `:+1,+3d` | the three lines below the cursor |
+| `+1` | short for `.+1` |
+
+@hints
+You do not need `.` at all. A leading `+` already counts from the
+cursor.
+--
+`:+1,+3d` Enter, `:wq`.
+
+@solution
+    :+1,+3d<Enter>  :wq<Enter>
+
+Twelve keystrokes. `j3dd` is shorter and it moves the cursor; this does
+not. That is the trade the whole chapter runs on — Ex ranges cost a few
+more keys and leave you exactly where you were, which is what you want
+when the edit is a detour from the thing you were actually doing.
+
+Drill it until `+1,+3` reads as "the next three lines" rather than as
+arithmetic.
+
+@start jest.setup.ts
+import { container } from 'tsyringe';
+jest.mock('../src/infrastructure/services/payment.service');
+jest.mock('../src/infrastructure/services/email.service');
+jest.mock('../src/infrastructure/services/ledger.service');
+
+beforeEach(() => {
+  container.clearInstances();
+});
+
+@expected jest.setup.ts
+import { container } from 'tsyringe';
+
+beforeEach(() => {
+  container.clearInstances();
+});

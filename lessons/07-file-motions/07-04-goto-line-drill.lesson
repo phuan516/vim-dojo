@@ -1,0 +1,197 @@
+@meta
+id: 07-04
+title: Drill — five numbers, five jumps
+chapter: 07
+type: drill
+skills: goto-line
+par: 40
+minutes: 5
+reps: 8
+vscode: Ctrl-G, type, Enter, click, type — five times over
+open: default.json
+
+@brief
+`jq` refuses this 74 line error registry and lists the lines: 13, 29, 41,
+57, 69. Each one is a closing brace that needs a trailing comma.
+
+Nothing to work out. Read a number, jump to it, append a comma, read the
+next number. The dojo will hand you the file eight times.
+
+@keys
+| `13G` | line 13 |
+| `A` | append at the end of the line |
+| `Esc` | back to normal mode |
+
+@hints
+The whole rep is number, `G`, `A`, comma, `Esc`. Five of those and you are
+done.
+--
+Do not check where you are between jumps. `nG` does not care where you
+were, so looking costs you time and buys you nothing.
+
+@solution
+    13G A , <Esc>  29G A , <Esc>  41G A , <Esc>  57G A , <Esc>  69G A , <Esc>
+    :wq<Enter>
+
+Thirty-four keystrokes for five fixes in a file you never scrolled.
+
+The reason this is worth drilling rather than just knowing is the gap
+between reading a number and your fingers being at that line. Fluent, it is
+under a second and you keep the next number in your head while it happens.
+Hesitant, you lose the list and start reaching for the mouse to keep your
+place.
+
+Two digits then `G`. That is all it ever is, whether the file is eighty
+lines or eight thousand.
+
+@start default.json
+{
+  "ORDER_NOT_FOUND": {
+    "statusCode": 404,
+    "sentry": false
+  },
+  "ORDER_ALREADY_SHIPPED": {
+    "statusCode": 409,
+    "sentry": false
+  },
+  "ORDER_ALREADY_CANCELLED": {
+    "statusCode": 409,
+    "sentry": false
+  }
+  "ORDER_AMOUNT_INVALID": {
+    "statusCode": 422,
+    "sentry": false
+  },
+  "ORDER_CURRENCY_UNSUPPORTED": {
+    "statusCode": 422,
+    "sentry": false
+  },
+  "ORDER_EXPORT_FAILED": {
+    "statusCode": 500,
+    "sentry": true
+  },
+  "CUSTOMER_NOT_FOUND": {
+    "statusCode": 404,
+    "sentry": false
+  }
+  "CUSTOMER_EMAIL_TAKEN": {
+    "statusCode": 409,
+    "sentry": false
+  },
+  "CUSTOMER_BLOCKED": {
+    "statusCode": 403,
+    "sentry": false
+  },
+  "PAYMENT_DECLINED": {
+    "statusCode": 402,
+    "sentry": false
+  }
+  "PAYMENT_TIMEOUT": {
+    "statusCode": 504,
+    "sentry": true
+  },
+  "PAYMENT_PROVIDER_ERROR": {
+    "statusCode": 502,
+    "sentry": true
+  },
+  "REFUND_FAILED": {
+    "statusCode": 502,
+    "sentry": true
+  },
+  "REFUND_WINDOW_EXPIRED": {
+    "statusCode": 422,
+    "sentry": false
+  }
+  "REFUND_ALREADY_ISSUED": {
+    "statusCode": 409,
+    "sentry": false
+  },
+  "WEBHOOK_SIGNATURE_INVALID": {
+    "statusCode": 401,
+    "sentry": false
+  },
+  "SETTLEMENT_MISMATCH": {
+    "statusCode": 500,
+    "sentry": true
+  }
+  "RATE_LIMIT_EXCEEDED": {
+    "statusCode": 429,
+    "sentry": false
+  }
+}
+
+@expected default.json
+{
+  "ORDER_NOT_FOUND": {
+    "statusCode": 404,
+    "sentry": false
+  },
+  "ORDER_ALREADY_SHIPPED": {
+    "statusCode": 409,
+    "sentry": false
+  },
+  "ORDER_ALREADY_CANCELLED": {
+    "statusCode": 409,
+    "sentry": false
+  },
+  "ORDER_AMOUNT_INVALID": {
+    "statusCode": 422,
+    "sentry": false
+  },
+  "ORDER_CURRENCY_UNSUPPORTED": {
+    "statusCode": 422,
+    "sentry": false
+  },
+  "ORDER_EXPORT_FAILED": {
+    "statusCode": 500,
+    "sentry": true
+  },
+  "CUSTOMER_NOT_FOUND": {
+    "statusCode": 404,
+    "sentry": false
+  },
+  "CUSTOMER_EMAIL_TAKEN": {
+    "statusCode": 409,
+    "sentry": false
+  },
+  "CUSTOMER_BLOCKED": {
+    "statusCode": 403,
+    "sentry": false
+  },
+  "PAYMENT_DECLINED": {
+    "statusCode": 402,
+    "sentry": false
+  },
+  "PAYMENT_TIMEOUT": {
+    "statusCode": 504,
+    "sentry": true
+  },
+  "PAYMENT_PROVIDER_ERROR": {
+    "statusCode": 502,
+    "sentry": true
+  },
+  "REFUND_FAILED": {
+    "statusCode": 502,
+    "sentry": true
+  },
+  "REFUND_WINDOW_EXPIRED": {
+    "statusCode": 422,
+    "sentry": false
+  },
+  "REFUND_ALREADY_ISSUED": {
+    "statusCode": 409,
+    "sentry": false
+  },
+  "WEBHOOK_SIGNATURE_INVALID": {
+    "statusCode": 401,
+    "sentry": false
+  },
+  "SETTLEMENT_MISMATCH": {
+    "statusCode": 500,
+    "sentry": true
+  },
+  "RATE_LIMIT_EXCEEDED": {
+    "statusCode": 429,
+    "sentry": false
+  }
+}

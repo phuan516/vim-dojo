@@ -1,0 +1,99 @@
+@meta
+id: 24-18
+title: The command-line window
+chapter: 24
+type: lesson
+skills: cmdline-window
+par: 48
+minutes: 6
+vscode: nothing like it
+open: errors.ts
+
+@brief
+Two error maps, `clientErrors` on lines 2 to 7 and `serverErrors` on
+lines 11 to 16, each need sorting by status code. You know the command
+from lesson 14. Run it on the first block.
+
+Now the second block needs the same command with a different range,
+and the range is at the *front*. `Ctrl-B` gets you there but the
+command line has no way to delete forward without arrow keys. So open
+the command-line window instead: `q:`. It is a real buffer containing
+your command history, one command per line, with an empty line at the
+bottom for a new one. Every normal-mode key you own works in it. Go up
+to the last command, change the range with `c` and a motion, and press
+Enter on the line to run it.
+
+@keys
+| `q:` | open the command-line window |
+| `k` | up onto the last command you ran |
+| `cts` | change up to the `s` of `sort` — that is, the range |
+| `Enter` | in the window: run the command under the cursor |
+| `:q` | in the window: close it without running anything |
+
+@hints
+The first sort is `:2,7sort n /statusCode/`. Run it, look at the result.
+--
+`q:` opens the window with the cursor on the empty bottom line. `k` is
+the command you just ran. The range is the first three characters, and
+`cts` changes exactly up to the `s` of `sort`.
+--
+`q:` `k` `0cts11,16` `Esc` Enter, then `:wq`.
+
+@solution
+    :2,7sort n /statusCode/<Enter>
+    q: k 0 cts 11,16 <Esc> <Enter>
+    :wq<Enter>
+
+Forty-two keystrokes. Retyping the second command would have been
+fifty-four, and over par.
+
+`q:` is the answer to every command-line editing limitation at once.
+History is a buffer, so `/statusCode` finds the command you want, `j`
+and `k` walk through it, `ciw` and `ct/` and `f,` and `r` all do what
+they always do, and Enter runs the line you are on. If you press `q:`
+by accident, which everyone does when reaching for `:q`, `:q` closes
+it. `q/` is the same window for search history, and `Ctrl-F` opens it
+from a command line you are already halfway through typing, which is
+the move when you realise mid-command that the fix is behind you.
+
+The window is also a place to compose a command that is too long to
+get right in one go. Type it, edit it as text, run it, and if it was
+wrong, `q:` again and fix what was wrong rather than starting over.
+
+@start errors.ts
+export const clientErrors = {
+  ORDER_NOT_FOUND: { statusCode: 404, sentry: false },
+  TIER_3_REQUIRED: { statusCode: 403, sentry: false },
+  ORDER_ALREADY_SHIPPED: { statusCode: 409, sentry: false },
+  CUSTOMER_NOT_FOUND: { statusCode: 404, sentry: false },
+  PAYMENT_DECLINED: { statusCode: 402, sentry: false },
+  REFUND_WINDOW_EXPIRED: { statusCode: 422, sentry: false },
+};
+
+export const serverErrors = {
+  GATEWAY_V2_TIMEOUT: { statusCode: 504, sentry: true },
+  EMAIL_DELIVERY_FAILED: { statusCode: 502, sentry: true },
+  REFUND_FAILED: { statusCode: 502, sentry: true },
+  DATABASE_UNAVAILABLE: { statusCode: 503, sentry: true },
+  UNEXPECTED: { statusCode: 500, sentry: true },
+  GATEWAY_V2_REJECTED: { statusCode: 502, sentry: true },
+};
+
+@expected errors.ts
+export const clientErrors = {
+  PAYMENT_DECLINED: { statusCode: 402, sentry: false },
+  TIER_3_REQUIRED: { statusCode: 403, sentry: false },
+  ORDER_NOT_FOUND: { statusCode: 404, sentry: false },
+  CUSTOMER_NOT_FOUND: { statusCode: 404, sentry: false },
+  ORDER_ALREADY_SHIPPED: { statusCode: 409, sentry: false },
+  REFUND_WINDOW_EXPIRED: { statusCode: 422, sentry: false },
+};
+
+export const serverErrors = {
+  UNEXPECTED: { statusCode: 500, sentry: true },
+  EMAIL_DELIVERY_FAILED: { statusCode: 502, sentry: true },
+  REFUND_FAILED: { statusCode: 502, sentry: true },
+  GATEWAY_V2_REJECTED: { statusCode: 502, sentry: true },
+  DATABASE_UNAVAILABLE: { statusCode: 503, sentry: true },
+  GATEWAY_V2_TIMEOUT: { statusCode: 504, sentry: true },
+};

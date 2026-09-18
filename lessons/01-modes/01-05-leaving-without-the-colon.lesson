@@ -1,0 +1,67 @@
+@meta
+id: 01-05
+title: Leaving without the colon
+chapter: 01
+type: lesson
+skills: cmdline, insert-a, esc, survival-motion
+par: 20
+minutes: 3
+vscode: Ctrl-S then Ctrl-W
+open: standup.md
+
+@brief
+There is a shorter way out. From normal mode, `ZZ` — capital Z twice —
+writes the file if it changed and quits. No colon, no Enter, two keys of
+the same finger.
+
+It is the same thing as `:wq` in almost every case, and it is what a lot
+of people's hands end up doing. The difference is that `ZZ` only writes
+when there is something to write, so opening a file to read it and
+pressing `ZZ` leaves the timestamp alone.
+
+The Blocked line in standup.md is cut short. It should read:
+
+    Blocked: waiting on staging access
+
+Finish the line and leave with `ZZ` instead of `:wq`.
+
+@keys
+| `ZZ` | write if changed, then quit |
+| `ZQ` | quit and throw the changes away |
+| `$` | last character of the line |
+| `a` | append to the right of the cursor |
+
+@hints
+It is the last line of the file. `j` four times gets you there; `$` gets
+you to the end of it.
+--
+You are adding to the right of the final character, so `a`, not `i`.
+--
+Type the missing word, `Esc`, then two capital Zs. Hold Shift and press
+z twice.
+
+@solution
+    j j j j $ a <space> access <Esc> ZZ
+
+`ZZ` has a twin, `ZQ`, which quits and discards. The pair maps onto `:wq`
+and `:q!`. Learn `ZZ` because your hands will use it; know `ZQ` exists
+because one day you will want it.
+
+Be careful with the capital. `zz` in lower case is a real command too — it
+redraws the screen with the cursor line in the middle — so a missed Shift
+does something harmless but confusing rather than nothing at all. If the
+file did not close, that is probably what happened.
+
+@start standup.md
+Daily notes for Wednesday standup
+
+Yesterday: reviewed the refund window PR
+Today: pairing on the payment retry
+Blocked: waiting on staging
+
+@expected standup.md
+Daily notes for Wednesday standup
+
+Yesterday: reviewed the refund window PR
+Today: pairing on the payment retry
+Blocked: waiting on staging access

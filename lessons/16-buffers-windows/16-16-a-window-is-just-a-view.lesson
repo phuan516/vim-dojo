@@ -1,0 +1,180 @@
+@meta
+id: 16-16
+title: A window is just a view
+chapter: 16
+type: lesson
+skills: split-window, buffer-switch, window-nav, buffer-list
+par: 140
+minutes: 7
+vscode: split right, then use the file picker inside the new half
+open: order.resolver.ts order.provider.ts
+
+@brief
+Put the two halves of the chapter together. A window shows a buffer,
+and which buffer it shows is up to you: `:b name` inside a window
+points that window at a different buffer and leaves every other window
+alone. So `:sp` followed by `:b prov` gives you the resolver in one
+window and the provider in the other, from two buffers that were
+already loaded. `:sp name` was the same move for a file that was not.
+`Ctrl-^` inside a window swaps that window, too. `:ls` after it shows
+both buffers marked `a`, active, because both are on screen.
+
+The ticket: cancelling an order needs a reason, and the schema already
+sends one.
+
+  1. `order.provider.ts`: `cancel(id: string)` becomes
+     `cancel(id: string, reason: string)`, and the update values become
+     `{ status: 'CANCELLED', cancellationReason: reason }`.
+  2. `order.resolver.ts`: `cancelOrder` passes it through:
+     `this.orderProvider.cancel(args.id, args.reason)`.
+
+Both files on screen, both edited, one `:wqa`.
+
+@keys
+| `:sp` then `:b prov` | split, then point the new window at the provider |
+| `Ctrl-W j` | back down to the resolver's window |
+| `Ctrl-^` | swap this window to its alternate buffer |
+| `:ls` | `a` on every buffer that is in a window |
+
+@hints
+`:sp`, `:b prov`. The top window is now the provider and the bottom
+one is still the resolver.
+--
+Provider: `/async cancel`, `f)`, `i`, type `, reason: string`, `Esc`.
+Then `/CANCELLED'`, `f'`, `a`, type `, cancellationReason: reason`,
+`Esc`.
+--
+`Ctrl-W j`. `/cancel(` finds the call and not the method name, `f)`,
+`i`, `, args.reason`, `Esc`, `:wqa`.
+
+@solution
+    :sp<Enter>  :b prov<Enter>
+    /async cancel<Enter>  f)  i , reason: string <Esc>
+    /CANCELLED'<Enter>  f'  a , cancellationReason: reason <Esc>
+    Ctrl-W j  /cancel(<Enter>  f)  i , args.reason <Esc>  :wqa<Enter>
+
+About a hundred and twenty keystrokes; the layout cost twelve.
+
+This is the model paying off. Buffers are what is loaded. Windows are
+where you look. Any window can look at any buffer, and changing what a
+window shows costs the same `:b` you would use with one window. Once
+that is comfortable, `:sp name`, `:vs name`, `:sp` plus `:b`, and
+`Ctrl-^` in a split are all the same idea wearing different keys, and
+you stop thinking about which one to reach for.
+
+VS Code has a version of this, but each editor group keeps its own tab
+strip and the same file in two groups is two tabs that happen to agree.
+Here it is one buffer, and the list does not care how many windows are
+looking at it.
+
+@start order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string; reason: string }) {
+    return this.orderProvider.cancel(args.id);
+  }
+}
+
+@expected order.resolver.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderProvider } from './order.provider';
+
+@injectable()
+export class OrderResolver {
+  constructor(@inject(OrderProvider) protected orderProvider: OrderProvider) {}
+
+  public async order(_: unknown, args: { id: string }) {
+    return this.orderProvider.findOne(args.id);
+  }
+
+  public async cancelOrder(_: unknown, args: { id: string; reason: string }) {
+    return this.orderProvider.cancel(args.id, args.reason);
+  }
+}
+
+@start order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+}
+
+@expected order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { exception } from '../../configuration/errors';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+  ) {}
+
+  public async findOne(id: string) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+
+    if (!order) {
+      throw exception('ORDER_NOT_FOUND');
+    }
+
+    return order;
+  }
+
+  public async cancel(id: string, reason: string) {
+    const order = await this.findOne(id);
+
+    if (order.status === 'SHIPPED') {
+      throw exception('ORDER_ALREADY_SHIPPED');
+    }
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED', cancellationReason: reason },
+    });
+  }
+}

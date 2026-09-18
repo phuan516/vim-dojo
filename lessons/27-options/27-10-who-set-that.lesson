@@ -1,0 +1,97 @@
+@meta
+id: 27-10
+title: Who set that
+chapter: 27
+type: lesson
+skills: verbose-set, sub-basic
+par: 48
+minutes: 7
+vscode: nothing — no setting of VS Code's changes what a replace-all means
+open: refund.mapper.ts
+vimrc: source config.vim
+
+@brief
+Rename every `orderId` in `refund.mapper.ts` to `refundId`. Four
+occurrences, three lines, one substitute. You have been doing this since
+chapter 14.
+
+    :%s/orderId/refundId/g
+
+Run it and two of the four are still `orderId`.
+
+Nothing is wrong with your command. Something in this session has changed
+what the `g` flag means, and the single most useful debugging command in
+vim will tell you what, and which line of which file did it.
+
+The file that did it is `config.vim`, sitting in this directory. It is
+open to nobody and it is not yours to edit — find the line, understand it,
+and get the rename done in this session.
+
+@keys
+| `:verbose set gdefault?` | the value, and the file and line that set it |
+| `:verbose set` | prefix any command to make it name its source |
+| `:set gdefault?` | the value alone |
+| `:scriptnames` | every file vim sourced, numbered |
+| `:verbose map` `:verbose au` | the same trick for mappings and autocommands |
+
+@hints
+Run the substitute and look at what survived. It is not random: it is the
+first match on each line that changed, and the rest that did not. That is
+the behaviour of a substitute *without* `g` — so your `g` is being read
+backwards.
+--
+The option is `gdefault`. `:verbose set gdefault?` tells you both what it
+is and who is responsible.
+--
+`:set nogdefault` `Enter` puts the flag back to meaning what you think it
+means, and then your original substitute works as written.
+
+@solution
+    :set nogdefault<Enter>  :%s/orderId/refundId/g<Enter>  :wq<Enter>
+
+Forty-three keystrokes.
+
+`gdefault` makes every `:s` behave as if `g` were already there — and
+makes an explicit `g` *turn it off*. It was a popular setting for about
+five years, on the theory that you almost always want every match. Then
+people noticed that it silently changes the meaning of every substitute
+they had ever learned, including the ones in every answer on the internet,
+and vim's own documentation now says not to use it.
+
+The lesson is not the option. It is the command that found it.
+
+    :verbose set gdefault?
+
+`:verbose` prefixed to anything makes vim name the file and line that last
+set what you are asking about. It works on options, on mappings
+(`:verbose nmap <C-p>`), on autocommands (`:verbose au BufWritePre`) and
+on functions. When your vim does something you did not ask for — an
+indent that is wrong, a key that does nothing, a file that reformats
+itself on save — this is the first thing you type. It turns "one of my
+plugins is doing this" into a file name and a line number in about four
+seconds.
+
+`:verbose` takes a count: `:5verbose set sw?` raises the verbosity level
+and shows you more of what vim was doing at the time. You will rarely need
+it. `:scriptnames` is its companion — the full list of everything vim has
+sourced, in order, which is how you find out that a plugin you forgot you
+installed is loading at all.
+
+@start config.vim
+" team defaults, inherited from the old tech lead
+set ignorecase
+set smartcase
+set gdefault
+set shiftwidth=2
+
+@start refund.mapper.ts
+export const toRefundRow = (orderId: string, amount: number) => ({
+  order: orderId, reference: `refund-${orderId}`,
+  key: `${orderId}:${amount}`, source: orderId,
+});
+
+@expected refund.mapper.ts
+export const toRefundRow = (refundId: string, amount: number) => ({
+  order: refundId, reference: `refund-${refundId}`,
+  key: `${refundId}:${amount}`, source: refundId,
+});

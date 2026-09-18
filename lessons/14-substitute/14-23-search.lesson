@@ -1,0 +1,118 @@
+@meta
+id: 14-23
+title: Capstone — searching inside a file
+chapter: 14
+type: scenario
+skills: search-slash, search-star, search-motion, sub-basic
+par: 110
+minutes: 6
+vscode: Ctrl+F
+open: order.repository.ts answers.txt
+
+@brief
+Ctrl+F in VS Code opens a little box. In vim, search IS a motion:
+/thing jumps there, and because it is a motion you can also say
+d/thing to delete everything up to it.
+
+The one you will use most is  *  : put the cursor on any word and
+press *, and vim searches for that exact word. No typing, no box.
+
+Read order.repository.ts and fill in answers.txt.
+
+Your vimrc already sets hlsearch, so matches stay highlighted.
+Clear the highlight with Ctrl-L when it gets noisy.
+
+@keys
+/text Enter    search forwards        ?text Enter   search backwards
+n  N           next match / previous match
+*  #           search for the word under the cursor, fwd / back
+Ctrl-L         clear the search highlight (set up in your vimrc)
+:%s/x//gn      count matches of x without changing anything
+:noh           same as Ctrl-L, clears the highlight
+d/text Enter   delete from here up to the next "text"
+/text\c        search ignoring case for this one search
+
+@hints
+:%s/customerId//gn prints "N matches on N lines" at the bottom and
+changes nothing. The gn flag is the trick - g means every match on
+each line, n means "just count".
+--
+Beware: /records also matches "record" inside other words? No - but
+it does match "records" inside nothing else here. Whole-word search
+is  /\<records\>  , and * does that for you automatically.
+--
+For line numbers, turn on :set number , then /toEntity and read the
+line you land on. Press n to walk to the later matches.
+--
+?deleted searches BACKWARDS from the cursor. Press G first to get to
+the bottom, then ?deleted finds the last one directly.
+
+@solution
+:set number
+:%s/customerId//gn     -> the count
+:%s/records//gn        -> the count
+gg /toEntity Enter     -> first match, read the line number
+G  ?deleted Enter      -> last match, read the line number
+
+:bn  fill in answers.txt  :wa
+
+The habit: * is free. Cursor on a symbol, press *, you are at the
+next use of it. It replaces "select the word, Ctrl+F, Enter".
+
+@start answers.txt
+# Use search to answer these. Do not count by eye.
+#
+#   :%s/word//gn     counts matches without changing anything
+#                    ( gn = "how many, do not replace" )
+
+count_of_customerId=
+count_of_records=
+line_of_the_first_toEntity=
+line_of_the_last_deleted=
+
+@start order.repository.ts
+import { injectable } from 'tsyringe';
+import { Order as OrderRecord, PrismaClient } from '@prisma/client';
+import { BaseRepository } from './base.repository';
+import { Order } from '../entities/order.entity';
+
+@injectable()
+export class OrderRepository extends BaseRepository<OrderRecord, Order> {
+  public async findByCustomer(customerId: string) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId, deleted: null },
+      orderBy: { created: 'desc' },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public async findPending(customerId: string) {
+    const records = await this.prisma.order.findMany({
+      where: { customerId, status: 'PENDING', deleted: null },
+    });
+
+    return records.map((record) => this.toEntity(record));
+  }
+
+  public toEntity(record: OrderRecord): Order {
+    return {
+      id: record.id,
+      customerId: record.customerId,
+      status: record.status,
+      total: record.total,
+      cancellationReason: record.cancellationReason ?? undefined,
+    };
+  }
+}
+
+@expected answers.txt
+# Use search to answer these. Do not count by eye.
+#
+#   :%s/word//gn     counts matches without changing anything
+#                    ( gn = "how many, do not replace" )
+
+count_of_customerId=6
+count_of_records=4
+line_of_the_first_toEntity=14
+line_of_the_last_deleted=19

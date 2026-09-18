@@ -1,0 +1,80 @@
+@meta
+id: 07-10
+title: Drill — one sentence per line
+chapter: 07
+type: drill
+skills: paragraph-motion
+par: 50
+minutes: 5
+reps: 8
+vscode: click before each second sentence, Enter, Backspace over the space
+open: policy.md
+
+@brief
+The team has moved its docs to one sentence per line so that review diffs
+stay readable. Eight lines, two sentences each. Split every line at the
+sentence boundary.
+
+Nothing to work out. The trailing space left behind does not matter; the
+grader ignores it, as does git. Neither does the last `)` of the last rep,
+which has nowhere to go.
+
+@keys
+| `)` | forward to the start of the next sentence |
+| `i` `Enter` | break the line in front of the cursor |
+
+@hints
+The rep is five keys: `)` to land on the second sentence, `i` `Enter` `Esc`
+to push it onto a line of its own, then `)` again to step onto the next
+line.
+--
+That closing `)` is what makes every rep identical. It leaves you at the
+start of a line, so the `)` that opens the next rep lands mid-line, where a
+break is actually wanted. Eight identical reps, no `j` between them.
+
+@solution
+    ) i <Enter> <Esc> )   eight times, then :wq<Enter>
+
+Forty-three keystrokes to reflow eight lines.
+
+Reformatting prose is the job that turns people back into mouse users,
+because it looks like it needs precision: find the boundary, click exactly
+between the full stop and the capital, do not eat the space. `)` removes all
+of that. It knows where the sentence starts, so the only thing left for you
+to decide is what to do when you get there.
+
+Note what you did not do: you never pressed `j`, never looked at a line
+number, and never checked where you were. The rep carried you down the file
+on its own. That is the sign of a well-chosen motion.
+
+The one thing to watch is that `i` `Enter` at the very start of a line
+leaves an empty line rather than splitting anything, which is why the rep
+is built to land you mid-line every time.
+
+@start policy.md
+A refund is always issued against an order. The customer record is never touched.
+Amounts are in minor units. A refund may not exceed the order total.
+Partial refunds are allowed. They may be repeated until the total is reached.
+The window is thirty days. Outside it the cancellation still succeeds.
+Every provider call carries an idempotency key. The key comes from the refund id.
+A failed refund is retried by the nightly job. The caller never retries in the request path.
+Receipts are queued rather than sent inline. A mail failure cannot fail the refund.
+Webhook signatures are checked before parsing. Replays are answered with a 200 and ignored.
+
+@expected policy.md
+A refund is always issued against an order.
+The customer record is never touched.
+Amounts are in minor units.
+A refund may not exceed the order total.
+Partial refunds are allowed.
+They may be repeated until the total is reached.
+The window is thirty days.
+Outside it the cancellation still succeeds.
+Every provider call carries an idempotency key.
+The key comes from the refund id.
+A failed refund is retried by the nightly job.
+The caller never retries in the request path.
+Receipts are queued rather than sent inline.
+A mail failure cannot fail the refund.
+Webhook signatures are checked before parsing.
+Replays are answered with a 200 and ignored.

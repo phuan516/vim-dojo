@@ -1,0 +1,237 @@
+@meta
+id: 04-18
+title: The payout export
+chapter: 04
+type: lesson
+skills: count-prefix, relativenumber, hjkl, gj-gk
+par: 130
+minutes: 10
+vscode: three tabs, a lot of scrolling and two paste mistakes
+open: payouts.csv release-notes.md errors.json
+vimrc: set relativenumber number
+
+@brief
+The last one in the chapter, and the only rule is that no key you press
+may be an arrow key. Three files, opened as three buffers in the order
+below. `:wn` — write, next — saves the file you are in and moves you to
+the following one. `:wq` on the last file finishes the job, and `:q`
+leaves a file untouched. Proper file and buffer juggling is chapters 16
+and 18; those three are all you need today.
+
+**payouts.csv** — forty-eight lines. One row lost its currency column in
+the export: it is the only line with four fields instead of five. Put
+`,GBP` back on the end of it. Then add four identical reconciliation rows
+to the bottom of the file, each exactly:
+
+    PAY-0000,MER-00,0,PENDING,GBP
+
+**release-notes.md** — two additions. Under `## Unreleased`, below the
+existing bullet, add:
+
+    - record the currency on every payout row
+
+And the top heading, `# Payouts service`, needs an underline directly
+beneath it: a line of `=` exactly as long as the heading text, which is
+seventeen characters.
+
+**errors.json** — nothing to do. It is open so you can check
+`PAYOUT_CURRENCY_MISSING` exists. Change a single byte of it and this
+lesson fails.
+
+@keys
+| `26j` | down twenty-six lines |
+| `4o` | open four lines, repeating what you type on each |
+| `17i=` `Esc` | insert seventeen equals signs |
+| `:wn` | write this file and move to the next one |
+| `:q` | leave this one untouched — it is the last file, so this exits |
+
+@hints
+Work the CSV top to bottom: the broken row first, then the last line, then
+the four new rows. That way you only read the margin twice and both
+numbers point downwards.
+--
+For the release notes, do the bullet first and the underline second, or
+you will read a margin number that your own new line has already made
+wrong.
+--
+The underline is `o` `Esc` to make an empty line under the heading, then
+`17i=` and `Esc`. The four CSV rows are `4o`, the row typed once, `Esc`.
+--
+End with `:wn` on the CSV, `:wn` on the release notes, and `:q` on
+errors.json. If you accidentally typed into errors.json, `u` until the
+file is clean, then `:q`.
+
+@solution
+    payouts.csv     26j A ,GBP <Esc>
+                    21j 4o PAY-0000,MER-00,0,PENDING,GBP <Esc> :wn<Enter>
+
+    release-notes   4j o - record the currency on every payout row <Esc>
+                    5k o <Esc> 17i= <Esc> :wn<Enter>
+
+    errors.json     :q<Enter>
+
+Around a hundred and ten keystrokes for three files, and roughly
+eighty of those are text that had to be typed by somebody.
+
+Look back at what you have actually got out of this chapter. Four keys
+that never leave the home row. A number in front of any of them that says
+exactly how far. A margin that hands you that number so you never do the
+arithmetic. A count on `o` and `i` that writes repeated text once. And
+the judgement to notice when the count is getting silly and something
+else is called for.
+
+That is a small set of ideas, and it is the foundation for everything
+from here on, because the count generalises. In chapter 5, `3w` moves
+three words. In chapter 9, `d3j` deletes four lines. In chapter 21, `10@q`
+runs a macro ten times. You learn the counting once.
+
+What you should be left with is a habit rather than a key: before you
+move, know where you are going. Arrow keys and scrolling are the opposite
+habit — move a bit, look, move a bit more, look again. The reason this
+chapter kept putting the target twenty-six lines away was to make that
+difference impossible to miss.
+
+@start payouts.csv
+payout_id,merchant_id,amount,status,currency
+PAY-4100,MER-50,1999,SETTLED,GBP
+PAY-4101,MER-51,4750,SETTLED,GBP
+PAY-4102,MER-52,899,PENDING,GBP
+PAY-4103,MER-53,12500,SETTLED,GBP
+PAY-4104,MER-54,2399,SETTLED,GBP
+PAY-4105,MER-55,640,PENDING,GBP
+PAY-4106,MER-56,8899,SETTLED,GBP
+PAY-4107,MER-57,1550,SETTLED,GBP
+PAY-4108,MER-58,3300,SETTLED,GBP
+PAY-4109,MER-59,975,PENDING,GBP
+PAY-4110,MER-60,2199,SETTLED,GBP
+PAY-4111,MER-61,760,SETTLED,GBP
+PAY-4112,MER-62,5400,SETTLED,GBP
+PAY-4113,MER-50,1899,PENDING,GBP
+PAY-4114,MER-51,2750,SETTLED,GBP
+PAY-4115,MER-52,410,SETTLED,GBP
+PAY-4116,MER-53,6620,PENDING,GBP
+PAY-4117,MER-54,1180,SETTLED,GBP
+PAY-4118,MER-55,2050,SETTLED,GBP
+PAY-4119,MER-56,735,SETTLED,GBP
+PAY-4120,MER-57,9900,PENDING,GBP
+PAY-4121,MER-58,1425,SETTLED,GBP
+PAY-4122,MER-59,3875,SETTLED,GBP
+PAY-4123,MER-60,2640,SETTLED,GBP
+PAY-4124,MER-61,518,PENDING,GBP
+PAY-4125,MER-62,7310,SETTLED
+PAY-4126,MER-50,1240,SETTLED,GBP
+PAY-4127,MER-51,3990,PENDING,GBP
+PAY-4128,MER-52,860,SETTLED,GBP
+PAY-4129,MER-53,2075,SETTLED,GBP
+PAY-4130,MER-54,1130,SETTLED,GBP
+PAY-4131,MER-55,4425,PENDING,GBP
+PAY-4132,MER-56,1795,SETTLED,GBP
+PAY-4133,MER-57,555,SETTLED,GBP
+PAY-4134,MER-58,8140,PENDING,GBP
+PAY-4135,MER-59,2260,SETTLED,GBP
+PAY-4136,MER-60,1015,SETTLED,GBP
+PAY-4137,MER-61,6750,SETTLED,GBP
+PAY-4138,MER-62,1470,PENDING,GBP
+PAY-4139,MER-50,2890,SETTLED,GBP
+PAY-4140,MER-51,920,SETTLED,GBP
+PAY-4141,MER-52,5115,PENDING,GBP
+PAY-4142,MER-53,1660,SETTLED,GBP
+PAY-4143,MER-54,3450,SETTLED,GBP
+PAY-4144,MER-55,1285,SETTLED,GBP
+PAY-4145,MER-56,7020,PENDING,GBP
+PAY-4146,MER-57,2610,SETTLED,GBP
+
+@expected payouts.csv
+payout_id,merchant_id,amount,status,currency
+PAY-4100,MER-50,1999,SETTLED,GBP
+PAY-4101,MER-51,4750,SETTLED,GBP
+PAY-4102,MER-52,899,PENDING,GBP
+PAY-4103,MER-53,12500,SETTLED,GBP
+PAY-4104,MER-54,2399,SETTLED,GBP
+PAY-4105,MER-55,640,PENDING,GBP
+PAY-4106,MER-56,8899,SETTLED,GBP
+PAY-4107,MER-57,1550,SETTLED,GBP
+PAY-4108,MER-58,3300,SETTLED,GBP
+PAY-4109,MER-59,975,PENDING,GBP
+PAY-4110,MER-60,2199,SETTLED,GBP
+PAY-4111,MER-61,760,SETTLED,GBP
+PAY-4112,MER-62,5400,SETTLED,GBP
+PAY-4113,MER-50,1899,PENDING,GBP
+PAY-4114,MER-51,2750,SETTLED,GBP
+PAY-4115,MER-52,410,SETTLED,GBP
+PAY-4116,MER-53,6620,PENDING,GBP
+PAY-4117,MER-54,1180,SETTLED,GBP
+PAY-4118,MER-55,2050,SETTLED,GBP
+PAY-4119,MER-56,735,SETTLED,GBP
+PAY-4120,MER-57,9900,PENDING,GBP
+PAY-4121,MER-58,1425,SETTLED,GBP
+PAY-4122,MER-59,3875,SETTLED,GBP
+PAY-4123,MER-60,2640,SETTLED,GBP
+PAY-4124,MER-61,518,PENDING,GBP
+PAY-4125,MER-62,7310,SETTLED,GBP
+PAY-4126,MER-50,1240,SETTLED,GBP
+PAY-4127,MER-51,3990,PENDING,GBP
+PAY-4128,MER-52,860,SETTLED,GBP
+PAY-4129,MER-53,2075,SETTLED,GBP
+PAY-4130,MER-54,1130,SETTLED,GBP
+PAY-4131,MER-55,4425,PENDING,GBP
+PAY-4132,MER-56,1795,SETTLED,GBP
+PAY-4133,MER-57,555,SETTLED,GBP
+PAY-4134,MER-58,8140,PENDING,GBP
+PAY-4135,MER-59,2260,SETTLED,GBP
+PAY-4136,MER-60,1015,SETTLED,GBP
+PAY-4137,MER-61,6750,SETTLED,GBP
+PAY-4138,MER-62,1470,PENDING,GBP
+PAY-4139,MER-50,2890,SETTLED,GBP
+PAY-4140,MER-51,920,SETTLED,GBP
+PAY-4141,MER-52,5115,PENDING,GBP
+PAY-4142,MER-53,1660,SETTLED,GBP
+PAY-4143,MER-54,3450,SETTLED,GBP
+PAY-4144,MER-55,1285,SETTLED,GBP
+PAY-4145,MER-56,7020,PENDING,GBP
+PAY-4146,MER-57,2610,SETTLED,GBP
+PAY-0000,MER-00,0,PENDING,GBP
+PAY-0000,MER-00,0,PENDING,GBP
+PAY-0000,MER-00,0,PENDING,GBP
+PAY-0000,MER-00,0,PENDING,GBP
+
+@start release-notes.md
+# Payouts service
+
+## Unreleased
+
+- retry settlement webhooks up to six times
+
+## 2024-03-04
+
+- partial refunds behind a feature flag
+- faster monthly export
+
+## 2024-02-19
+
+- first cut of the payouts ledger
+
+@expected release-notes.md
+# Payouts service
+=================
+
+## Unreleased
+
+- retry settlement webhooks up to six times
+- record the currency on every payout row
+
+## 2024-03-04
+
+- partial refunds behind a feature flag
+- faster monthly export
+
+## 2024-02-19
+
+- first cut of the payouts ledger
+
+@start errors.json
+{
+  "PAYOUT_NOT_FOUND": { "statusCode": 404, "sentry": false },
+  "PAYOUT_ALREADY_SETTLED": { "statusCode": 409, "sentry": false },
+  "PAYOUT_CURRENCY_MISSING": { "statusCode": 422, "sentry": true }
+}

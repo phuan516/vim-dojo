@@ -1,0 +1,115 @@
+@meta
+id: 15-13
+title: Collect the open items
+chapter: 15
+type: lesson
+skills: global-copy
+par: 23
+minutes: 5
+vscode: search for [ ], copy each line, scroll to the bottom, paste, scroll back up
+open: sprint-notes.md
+
+@brief
+Friday. The sprint notes have a section per day and a `## Carry over`
+heading at the bottom that is still empty. Every unticked item from the
+week, the `- [ ]` lines, needs to appear under that heading, in the
+order it was written. The daily sections keep their copies; carry over
+is a summary, not a move.
+
+`:m` moved lines. Its sibling `:t` copies them, and `:t$` copies to the
+end of the file. Under `:g`, that collects a copy of every match at the
+bottom, in order, for the same reason `:m$` did last lesson.
+
+@keys
+| `:g/pattern/t$` | copy every matching line to the end of the file, in order |
+| `:t$` | copy the current line to the end |
+| `\[` | a literal square bracket in a pattern |
+
+@hints
+Describe an open item exactly. It starts with a dash, a space, an open
+bracket, a space and a close bracket. Ticked items have an `x` where the
+space is.
+--
+Square brackets mean something in a pattern, so the opening one needs a
+backslash. The closing one does not, but escaping it too does no harm.
+--
+`:g/^- \[ \]/t$` and Enter.
+
+@solution
+    :g/^- \[ \]/t$<Enter>  :wq<Enter>
+
+Nineteen keystrokes, and the six open items are copied to the bottom in
+the order they appear.
+
+`t` for copy is old vi: it stands for "to", as in "copy this line to
+there". `:t$` is the whole idea of `:g//t$`; it is a report generator.
+Any time you want a list of matching lines gathered somewhere without
+disturbing the original, this is the shape. Collect every `TODO` at the
+bottom of a file before a review, every `throw exception(` in a
+provider to compare with the error codes, every failing test name from
+a log.
+
+On the bracket: `[` opens a character class in a regex, so an unescaped
+`[ ]` would mean "a single space" rather than the three characters you
+want. The `\[` makes it literal. Ticked items have `[x]`, so the space
+inside is what separates open from done.
+
+@start sprint-notes.md
+# Sprint 41 notes
+
+## Monday
+- [x] deploy the refund window change
+- [ ] chase finance about the 30 day cutoff
+- [x] triage the gateway alerts
+
+## Tuesday
+- [ ] write the migration for placedAt
+- [x] review the payments PR
+- [ ] add REFUND_WINDOW_EXPIRED to errors.json
+
+## Wednesday
+- [x] pair with Ana on the consumer
+- [ ] update the runbook for the rollback
+
+## Thursday
+- [x] fix the flaky order.spec
+- [ ] remove the legacy refund path
+- [x] demo prep
+
+## Friday
+- [ ] retro notes
+
+## Carry over
+
+@expected sprint-notes.md
+# Sprint 41 notes
+
+## Monday
+- [x] deploy the refund window change
+- [ ] chase finance about the 30 day cutoff
+- [x] triage the gateway alerts
+
+## Tuesday
+- [ ] write the migration for placedAt
+- [x] review the payments PR
+- [ ] add REFUND_WINDOW_EXPIRED to errors.json
+
+## Wednesday
+- [x] pair with Ana on the consumer
+- [ ] update the runbook for the rollback
+
+## Thursday
+- [x] fix the flaky order.spec
+- [ ] remove the legacy refund path
+- [x] demo prep
+
+## Friday
+- [ ] retro notes
+
+## Carry over
+- [ ] chase finance about the 30 day cutoff
+- [ ] write the migration for placedAt
+- [ ] add REFUND_WINDOW_EXPIRED to errors.json
+- [ ] update the runbook for the rollback
+- [ ] remove the legacy refund path
+- [ ] retro notes

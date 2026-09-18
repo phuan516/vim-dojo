@@ -1,0 +1,114 @@
+@meta
+id: 13-02
+title: Anything in between
+chapter: 13
+type: lesson
+skills: regex-quantifiers
+par: 36
+minutes: 5
+vscode: Ctrl+F for the id, Enter, Enter, Enter, Enter, Enter
+open: app.log
+
+@brief
+This is the log excerpt for ticket PAY-731. Order `ord_9125` timed out
+at the gateway, a retry was scheduled, and the retry never fired. The
+line that says the retry was scheduled needs tagging so the write-up can
+point at it: append ` # PAY-731` to it.
+
+Two obvious searches, both wrong. `/retry` finds a retry for a different
+order. `/9125` finds the order's first line, ten lines before the one
+you want, and `n` walks you down through the whole lifecycle to get
+there.
+
+What you actually know is that the line contains `retry` and then, some
+way further along, `9125`. A pattern can say exactly that, with the gap
+left unspecified.
+
+@keys
+| `*` | in a pattern: zero or more of whatever came just before it |
+| `.*` | any character, any number of times — "anything at all" |
+| `A` | append at the end of the line |
+
+@hints
+Neither word is unique on its own. Both words together, in that order,
+on one line, are.
+--
+`.` is any character and `*` means "repeat the last thing as many times
+as needed, including none". `.*` is therefore a gap of any length.
+--
+`/retry.*9125` `Enter` lands on the one line that has both. `A` and the
+tag.
+
+@solution
+/retry.*9125<Enter>  A # PAY-731<Esc>  :wq<Enter>
+
+Twenty-nine keystrokes, and one search instead of six.
+
+`*` on its own is rarely what you want. It attaches to the atom before
+it — a character, a class, a group — and means "zero or more of that".
+`ab*c` matches `ac`, `abc` and `abbbbc`. The "zero" part catches people
+out: `x*` matches the empty string, so it never fails, so a search for
+`/foo*` will stop at `fo` in `for`. Chapter 13 gives you `\+` for "one
+or more" in a few lessons' time, which is usually what you meant.
+
+`.*` is the combination you will type constantly. It is the regex way of
+saying "and then, further along". Two things on a line, in a known
+order, with an unknown amount of stuff between them — that is most of
+what you need from a log file, and most of what you need when a name is
+common but a *pairing* is rare.
+
+It is greedy. `.*` grabs as much as it can and gives back only what it
+must, so `/order=.*request=` matches from the first `order=` to the
+*last* `request=` on the line, not the nearest. On a single log line
+that rarely matters. When it does, `\{-}` is the non-greedy form, and it
+gets a mention later in the chapter.
+
+@start app.log
+2026-05-14T09:12:01Z INFO  order.submit order=ord_9118 request=req_5c1e9a total=4200
+2026-05-14T09:12:02Z INFO  payment.authorise order=ord_9118 request=req_5c1e9a result=approved
+2026-05-14T09:12:02Z INFO  payment.capture order=ord_9118 request=req_5c1e9a result=captured
+2026-05-14T09:12:40Z ERROR payment.capture order=ord_9121 request=req_77b0d3 reason=GATEWAY_TIMEOUT
+2026-05-14T09:12:41Z INFO  retry.scheduled order=ord_9121 request=req_77b0d3 in_seconds=60
+2026-05-14T09:13:05Z INFO  order.submit order=ord_9125 request=req_a4f2c8 total=15990
+2026-05-14T09:13:06Z INFO  payment.authorise order=ord_9125 request=req_a4f2c8 result=approved
+2026-05-14T09:13:06Z INFO  stock.reserve order=ord_9125 request=req_a4f2c8 sku=SKU-2231 qty=2
+2026-05-14T09:13:07Z ERROR payment.capture order=ord_9125 request=req_a4f2c8 reason=GATEWAY_TIMEOUT
+2026-05-14T09:13:07Z INFO  stock.release order=ord_9125 request=req_a4f2c8 sku=SKU-2231
+2026-05-14T09:13:08Z INFO  email.sent order=ord_9125 template=payment_pending to=lena@example.com
+2026-05-14T09:13:41Z INFO  retry.fired order=ord_9121 request=req_77b0d3 attempt=1
+2026-05-14T09:13:42Z ERROR payment.capture order=ord_9121 request=req_77b0d3 reason=GATEWAY_TIMEOUT
+2026-05-14T09:13:42Z INFO  retry.scheduled order=ord_9121 request=req_77b0d3 in_seconds=120
+2026-05-14T09:13:50Z INFO  audit.write order=ord_9125 request=req_a4f2c8 event=capture_failed
+2026-05-14T09:13:51Z INFO  retry.scheduled order=ord_9125 request=req_a4f2c8 in_seconds=60
+2026-05-14T09:14:10Z INFO  order.submit order=ord_9127 request=req_0b9e11 total=2199
+2026-05-14T09:14:11Z INFO  payment.authorise order=ord_9127 request=req_0b9e11 result=approved
+2026-05-14T09:15:42Z INFO  retry.fired order=ord_9121 request=req_77b0d3 attempt=2
+2026-05-14T09:15:43Z INFO  payment.capture order=ord_9121 request=req_77b0d3 result=captured
+2026-05-14T09:16:00Z INFO  worker.heartbeat pool=payments inflight=1 scheduled=1
+2026-05-14T09:31:00Z INFO  worker.heartbeat pool=payments inflight=0 scheduled=1
+2026-05-14T09:46:00Z INFO  worker.heartbeat pool=payments inflight=0 scheduled=1
+
+@expected app.log
+2026-05-14T09:12:01Z INFO  order.submit order=ord_9118 request=req_5c1e9a total=4200
+2026-05-14T09:12:02Z INFO  payment.authorise order=ord_9118 request=req_5c1e9a result=approved
+2026-05-14T09:12:02Z INFO  payment.capture order=ord_9118 request=req_5c1e9a result=captured
+2026-05-14T09:12:40Z ERROR payment.capture order=ord_9121 request=req_77b0d3 reason=GATEWAY_TIMEOUT
+2026-05-14T09:12:41Z INFO  retry.scheduled order=ord_9121 request=req_77b0d3 in_seconds=60
+2026-05-14T09:13:05Z INFO  order.submit order=ord_9125 request=req_a4f2c8 total=15990
+2026-05-14T09:13:06Z INFO  payment.authorise order=ord_9125 request=req_a4f2c8 result=approved
+2026-05-14T09:13:06Z INFO  stock.reserve order=ord_9125 request=req_a4f2c8 sku=SKU-2231 qty=2
+2026-05-14T09:13:07Z ERROR payment.capture order=ord_9125 request=req_a4f2c8 reason=GATEWAY_TIMEOUT
+2026-05-14T09:13:07Z INFO  stock.release order=ord_9125 request=req_a4f2c8 sku=SKU-2231
+2026-05-14T09:13:08Z INFO  email.sent order=ord_9125 template=payment_pending to=lena@example.com
+2026-05-14T09:13:41Z INFO  retry.fired order=ord_9121 request=req_77b0d3 attempt=1
+2026-05-14T09:13:42Z ERROR payment.capture order=ord_9121 request=req_77b0d3 reason=GATEWAY_TIMEOUT
+2026-05-14T09:13:42Z INFO  retry.scheduled order=ord_9121 request=req_77b0d3 in_seconds=120
+2026-05-14T09:13:50Z INFO  audit.write order=ord_9125 request=req_a4f2c8 event=capture_failed
+2026-05-14T09:13:51Z INFO  retry.scheduled order=ord_9125 request=req_a4f2c8 in_seconds=60 # PAY-731
+2026-05-14T09:14:10Z INFO  order.submit order=ord_9127 request=req_0b9e11 total=2199
+2026-05-14T09:14:11Z INFO  payment.authorise order=ord_9127 request=req_0b9e11 result=approved
+2026-05-14T09:15:42Z INFO  retry.fired order=ord_9121 request=req_77b0d3 attempt=2
+2026-05-14T09:15:43Z INFO  payment.capture order=ord_9121 request=req_77b0d3 result=captured
+2026-05-14T09:16:00Z INFO  worker.heartbeat pool=payments inflight=1 scheduled=1
+2026-05-14T09:31:00Z INFO  worker.heartbeat pool=payments inflight=0 scheduled=1
+2026-05-14T09:46:00Z INFO  worker.heartbeat pool=payments inflight=0 scheduled=1

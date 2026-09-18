@@ -1,0 +1,142 @@
+@meta
+id: 31-09
+title: Scenario — four things wrong in init.lua
+chapter: 31
+type: scenario
+skills: lua-config, nvim-differences, obj-word, search-slash
+par: 140
+minutes: 12
+vscode: reading a stack trace in the output panel and guessing
+open: init.lua
+
+@brief
+A ticket, not an exercise.
+
+    NVIM-12  A colleague hand-ported their vimrc over the weekend. Neovim
+             starts, complains, and half the config does not take effect.
+             Four separate problems. Fix the file.
+
+This is what they reported, in the order they hit it:
+
+  1. Startup prints an error from the options section: something about a
+     string being expected. One option is being set through the wrong
+     table for its type.
+
+  2. `<leader>w` works, but `:map <leader>w` shows it with no description
+     and the which-key popup lists it as unnamed. Every other mapping in
+     the file is fine. Give it the description `Write the file`.
+
+  3. The plugin manager warns about an invalid field in the telescope
+     spec. The field is real — it is just the wrong plugin manager's
+     spelling. lazy.nvim wants the other one.
+
+  4. `:checkhealth` reports a deprecated function call in the status line
+     helper. The replacement dropped the `buf_` prefix when the function
+     stopped being buffer-specific.
+
+Fix all four and change nothing else. The file is graded in vim, and the
+Lua is never run — read it the way you would read a diff.
+
+@keys
+| `ciw` | change the word under the cursor |
+| `/text` `Enter` | search to navigate, rather than counting lines |
+| `$` `i` | insert just before the last character on the line |
+
+@hints
+All four fixes are on four different lines and none of them needs more
+than one small edit. Search for each symptom rather than scrolling.
+--
+Problem 1: `vim.o` takes plain values, `vim.opt` takes tables and has
+`:append`. A list option assigned a Lua table has to go through `vim.opt`.
+Problem 4: `vim.lsp.buf_get_clients()` became `vim.lsp.get_clients()` in
+0.10 and is on its way out.
+--
+Problem 2 is a missing fourth argument: the options table goes after the
+right-hand side, inside the closing paren. `$` lands on the `)`, and `i`
+inserts before it. Problem 3: packer called it `requires`; lazy.nvim calls
+it `dependencies`.
+
+@solution
+    /\.o\.wild<Enter> l ciw opt <Esc>
+    /leader>w<Enter> $ i, { desc = 'Write the file' } <Esc>
+    /requires<Enter> ciw dependencies <Esc>
+    /buf_get<Enter> ciw get_clients <Esc>
+    :wq<Enter>
+
+About 120 keystrokes, and four searches doing all the navigation.
+
+Each of these is a mistake people actually make, and each one fails in a
+different and instructive way:
+
+- **`vim.o` with a table** is a hard error at startup, which sounds worse
+  than it is. The whole file after the failing line is skipped, so one bad
+  line looks like "none of my config loaded". When Neovim starts looking
+  like stock vim, read the first error, not the last.
+- **A keymap with no `desc`** fails silently and forever. Nothing breaks;
+  the mapping is simply undiscoverable. This is why the drill made you type
+  it every rep.
+- **`requires` vs `dependencies`** is the tax on a plugin ecosystem that
+  moved from packer to lazy.nvim. Copied snippets from a 2021 blog post are
+  the usual source, and the only defence is reading the plugin manager's
+  own README rather than the first search result.
+- **Deprecated API** is the running cost of Neovim's pace. Functions get
+  renamed, the old name keeps working for a release or two with a warning,
+  and `:checkhealth` tells you before it breaks. Vim does not have this
+  problem, because vim does not move. That is a genuine trade-off and you
+  should count it on the honest side of the ledger, not the marketing side.
+
+@start init.lua
+-- ~/.config/nvim/init.lua
+
+vim.g.mapleader = ' '
+
+-- Options
+vim.opt.number = true
+vim.opt.expandtab = true
+vim.o.wildmode = { 'longest', 'full' }
+vim.opt.scrolloff = 8
+
+-- Mappings
+vim.keymap.set('n', '<leader>h', ':nohlsearch<CR>', { desc = 'Clear search highlight' })
+vim.keymap.set('n', '<leader>w', ':w<CR>')
+
+-- Plugins
+require('lazy').setup({
+  {
+    'nvim-telescope/telescope.nvim',
+    requires = { 'nvim-lua/plenary.nvim' },
+  },
+})
+
+-- Status line helper
+local function lsp_attached()
+  return #vim.lsp.buf_get_clients() > 0
+end
+
+@expected init.lua
+-- ~/.config/nvim/init.lua
+
+vim.g.mapleader = ' '
+
+-- Options
+vim.opt.number = true
+vim.opt.expandtab = true
+vim.opt.wildmode = { 'longest', 'full' }
+vim.opt.scrolloff = 8
+
+-- Mappings
+vim.keymap.set('n', '<leader>h', ':nohlsearch<CR>', { desc = 'Clear search highlight' })
+vim.keymap.set('n', '<leader>w', ':w<CR>', { desc = 'Write the file' })
+
+-- Plugins
+require('lazy').setup({
+  {
+    'nvim-telescope/telescope.nvim',
+    dependencies = { 'nvim-lua/plenary.nvim' },
+  },
+})
+
+-- Status line helper
+local function lsp_attached()
+  return #vim.lsp.get_clients() > 0
+end

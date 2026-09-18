@@ -1,0 +1,300 @@
+@meta
+id: 04-14
+title: When counting is the wrong answer
+chapter: 04
+type: lesson
+skills: count-prefix, relativenumber, hjkl
+par: 36
+minutes: 6
+vscode: Ctrl-G, type a line number
+open: seed.sql
+vimrc: set relativenumber number
+
+@brief
+A hundred and twelve lines of seed data and two small jobs. One is
+close, one is not, and they want different tools.
+
+  1. Line 8 has lost its trailing semicolon. Put it back.
+
+  2. Line 104 is the QA test account. Mark it by appending
+     `  -- qa fixture` — two spaces, then the comment — to the end of
+     that line.
+
+There is no arrow-key route to line 104 that you would be willing to
+watch, so do not look for one.
+
+The first is a counted jump: the margin tells you the distance, you type
+it. The second is not, and the reason is on your screen — line 104 is not
+on it. A relative number only exists for a line you can see, so there is
+nothing to read and nothing to count.
+
+For that one, give the command line the line number instead: `:104` and
+Enter puts the cursor on line 104. It is the same command line you have
+been using for `:w` and `:q`.
+
+@keys
+| `7j` | down seven lines |
+| `:104` `Enter` | go to line 104 |
+| `A` | append at the end of the line |
+| `k` | up one line |
+
+@hints
+Do the near one with a count read off the margin, exactly as before.
+--
+Do not count your way to line 104. Ask for it by number on the command
+line.
+--
+`:104` `Enter` lands you on that line whatever is on screen. From there
+it is the same `A` and the same typing as the first fix.
+
+@solution
+    7j A ; <Esc>
+    :104<Enter> A <space><space>-- qa fixture <Esc>
+    :wq<Enter>
+
+The rule of thumb, and it is worth writing down: **count when you can see
+it, name it when you cannot.**
+
+Counts are exact and cheap for short hops, because the number is already
+printed next to the line you are looking at. The moment the target is off
+screen, working out the number costs more than the jump saves, and an
+approximate jump followed by hunting around is worse than either.
+
+The tools for naming a place instead of counting to it arrive shortly.
+Chapter 7 gives you `104G`, which is what people actually type for a line
+number, and `gg` and `G` for the ends of the file. Chapter 12 gives you
+`/CUS-402` and Enter, which is how you would really have found this one —
+you knew what the row looked like, not where it lived.
+
+Until then: if the count is bigger than about twenty, you are probably
+using the wrong tool, and after chapter 12 you will be using the wrong
+tool at any size. Counts stay excellent for the short hops that make up
+most of your day.
+
+@start seed.sql
+-- seed data: customers and their default addresses
+-- generated 2024-03-11, do not edit below the marker
+INSERT INTO customer VALUES ('CUS-301', 'bob1@example.com', 'Bob Bristol');
+INSERT INTO customer VALUES ('CUS-302', 'carla2@example.com', 'Carla Derby');
+INSERT INTO customer VALUES ('CUS-303', 'dan3@example.com', 'Dan Exeter');
+INSERT INTO customer VALUES ('CUS-304', 'erin4@example.com', 'Erin Hull');
+INSERT INTO customer VALUES ('CUS-305', 'frank5@example.com', 'Frank Ipswich');
+INSERT INTO customer VALUES ('CUS-306', 'gita6@example.com', 'Gita Kendal')
+INSERT INTO customer VALUES ('CUS-307', 'hugo7@example.com', 'Hugo Luton');
+INSERT INTO customer VALUES ('CUS-308', 'iris8@example.com', 'Iris Margate');
+INSERT INTO customer VALUES ('CUS-309', 'jack9@example.com', 'Jack Newport');
+INSERT INTO customer VALUES ('CUS-310', 'kim10@example.com', 'Kim Oxford');
+INSERT INTO customer VALUES ('CUS-311', 'liam11@example.com', 'Liam Poole');
+INSERT INTO customer VALUES ('CUS-312', 'mara12@example.com', 'Mara Ripon');
+INSERT INTO customer VALUES ('CUS-313', 'nate13@example.com', 'Nate Slough');
+INSERT INTO customer VALUES ('CUS-314', 'omar14@example.com', 'Omar Truro');
+INSERT INTO customer VALUES ('CUS-315', 'pia15@example.com', 'Pia Leeds');
+INSERT INTO customer VALUES ('CUS-316', 'quinn16@example.com', 'Quinn Bristol');
+INSERT INTO customer VALUES ('CUS-317', 'rosa17@example.com', 'Rosa Derby');
+INSERT INTO customer VALUES ('CUS-318', 'sam18@example.com', 'Sam Exeter');
+INSERT INTO customer VALUES ('CUS-319', 'tara19@example.com', 'Tara Hull');
+INSERT INTO customer VALUES ('CUS-320', 'alice20@example.com', 'Alice Ipswich');
+INSERT INTO customer VALUES ('CUS-321', 'bob21@example.com', 'Bob Kendal');
+INSERT INTO customer VALUES ('CUS-322', 'carla22@example.com', 'Carla Luton');
+INSERT INTO customer VALUES ('CUS-323', 'dan23@example.com', 'Dan Margate');
+INSERT INTO customer VALUES ('CUS-324', 'erin24@example.com', 'Erin Newport');
+INSERT INTO customer VALUES ('CUS-325', 'frank25@example.com', 'Frank Oxford');
+INSERT INTO customer VALUES ('CUS-326', 'gita26@example.com', 'Gita Poole');
+INSERT INTO customer VALUES ('CUS-327', 'hugo27@example.com', 'Hugo Ripon');
+INSERT INTO customer VALUES ('CUS-328', 'iris28@example.com', 'Iris Slough');
+INSERT INTO customer VALUES ('CUS-329', 'jack29@example.com', 'Jack Truro');
+INSERT INTO customer VALUES ('CUS-330', 'kim30@example.com', 'Kim Leeds');
+INSERT INTO customer VALUES ('CUS-331', 'liam31@example.com', 'Liam Bristol');
+INSERT INTO customer VALUES ('CUS-332', 'mara32@example.com', 'Mara Derby');
+INSERT INTO customer VALUES ('CUS-333', 'nate33@example.com', 'Nate Exeter');
+INSERT INTO customer VALUES ('CUS-334', 'omar34@example.com', 'Omar Hull');
+INSERT INTO customer VALUES ('CUS-335', 'pia35@example.com', 'Pia Ipswich');
+INSERT INTO customer VALUES ('CUS-336', 'quinn36@example.com', 'Quinn Kendal');
+INSERT INTO customer VALUES ('CUS-337', 'rosa37@example.com', 'Rosa Luton');
+INSERT INTO customer VALUES ('CUS-338', 'sam38@example.com', 'Sam Margate');
+INSERT INTO customer VALUES ('CUS-339', 'tara39@example.com', 'Tara Newport');
+INSERT INTO customer VALUES ('CUS-340', 'alice40@example.com', 'Alice Oxford');
+INSERT INTO customer VALUES ('CUS-341', 'bob41@example.com', 'Bob Poole');
+INSERT INTO customer VALUES ('CUS-342', 'carla42@example.com', 'Carla Ripon');
+INSERT INTO customer VALUES ('CUS-343', 'dan43@example.com', 'Dan Slough');
+INSERT INTO customer VALUES ('CUS-344', 'erin44@example.com', 'Erin Truro');
+INSERT INTO customer VALUES ('CUS-345', 'frank45@example.com', 'Frank Leeds');
+INSERT INTO customer VALUES ('CUS-346', 'gita46@example.com', 'Gita Bristol');
+INSERT INTO customer VALUES ('CUS-347', 'hugo47@example.com', 'Hugo Derby');
+INSERT INTO customer VALUES ('CUS-348', 'iris48@example.com', 'Iris Exeter');
+INSERT INTO customer VALUES ('CUS-349', 'jack49@example.com', 'Jack Hull');
+INSERT INTO customer VALUES ('CUS-350', 'kim50@example.com', 'Kim Ipswich');
+INSERT INTO customer VALUES ('CUS-351', 'liam51@example.com', 'Liam Kendal');
+INSERT INTO customer VALUES ('CUS-352', 'mara52@example.com', 'Mara Luton');
+INSERT INTO customer VALUES ('CUS-353', 'nate53@example.com', 'Nate Margate');
+INSERT INTO customer VALUES ('CUS-354', 'omar54@example.com', 'Omar Newport');
+INSERT INTO customer VALUES ('CUS-355', 'pia55@example.com', 'Pia Oxford');
+INSERT INTO customer VALUES ('CUS-356', 'quinn56@example.com', 'Quinn Poole');
+INSERT INTO customer VALUES ('CUS-357', 'rosa57@example.com', 'Rosa Ripon');
+INSERT INTO customer VALUES ('CUS-358', 'sam58@example.com', 'Sam Slough');
+INSERT INTO customer VALUES ('CUS-359', 'tara59@example.com', 'Tara Truro');
+INSERT INTO customer VALUES ('CUS-360', 'alice60@example.com', 'Alice Leeds');
+INSERT INTO customer VALUES ('CUS-361', 'bob61@example.com', 'Bob Bristol');
+INSERT INTO customer VALUES ('CUS-362', 'carla62@example.com', 'Carla Derby');
+INSERT INTO customer VALUES ('CUS-363', 'dan63@example.com', 'Dan Exeter');
+INSERT INTO customer VALUES ('CUS-364', 'erin64@example.com', 'Erin Hull');
+INSERT INTO customer VALUES ('CUS-365', 'frank65@example.com', 'Frank Ipswich');
+INSERT INTO customer VALUES ('CUS-366', 'gita66@example.com', 'Gita Kendal');
+INSERT INTO customer VALUES ('CUS-367', 'hugo67@example.com', 'Hugo Luton');
+INSERT INTO customer VALUES ('CUS-368', 'iris68@example.com', 'Iris Margate');
+INSERT INTO customer VALUES ('CUS-369', 'jack69@example.com', 'Jack Newport');
+INSERT INTO customer VALUES ('CUS-370', 'kim70@example.com', 'Kim Oxford');
+INSERT INTO customer VALUES ('CUS-371', 'liam71@example.com', 'Liam Poole');
+INSERT INTO customer VALUES ('CUS-372', 'mara72@example.com', 'Mara Ripon');
+INSERT INTO customer VALUES ('CUS-373', 'nate73@example.com', 'Nate Slough');
+INSERT INTO customer VALUES ('CUS-374', 'omar74@example.com', 'Omar Truro');
+INSERT INTO customer VALUES ('CUS-375', 'pia75@example.com', 'Pia Leeds');
+INSERT INTO customer VALUES ('CUS-376', 'quinn76@example.com', 'Quinn Bristol');
+INSERT INTO customer VALUES ('CUS-377', 'rosa77@example.com', 'Rosa Derby');
+INSERT INTO customer VALUES ('CUS-378', 'sam78@example.com', 'Sam Exeter');
+INSERT INTO customer VALUES ('CUS-379', 'tara79@example.com', 'Tara Hull');
+INSERT INTO customer VALUES ('CUS-380', 'alice80@example.com', 'Alice Ipswich');
+INSERT INTO customer VALUES ('CUS-381', 'bob81@example.com', 'Bob Kendal');
+INSERT INTO customer VALUES ('CUS-382', 'carla82@example.com', 'Carla Luton');
+INSERT INTO customer VALUES ('CUS-383', 'dan83@example.com', 'Dan Margate');
+INSERT INTO customer VALUES ('CUS-384', 'erin84@example.com', 'Erin Newport');
+INSERT INTO customer VALUES ('CUS-385', 'frank85@example.com', 'Frank Oxford');
+INSERT INTO customer VALUES ('CUS-386', 'gita86@example.com', 'Gita Poole');
+INSERT INTO customer VALUES ('CUS-387', 'hugo87@example.com', 'Hugo Ripon');
+INSERT INTO customer VALUES ('CUS-388', 'iris88@example.com', 'Iris Slough');
+INSERT INTO customer VALUES ('CUS-389', 'jack89@example.com', 'Jack Truro');
+INSERT INTO customer VALUES ('CUS-390', 'kim90@example.com', 'Kim Leeds');
+INSERT INTO customer VALUES ('CUS-391', 'liam91@example.com', 'Liam Bristol');
+INSERT INTO customer VALUES ('CUS-392', 'mara92@example.com', 'Mara Derby');
+INSERT INTO customer VALUES ('CUS-393', 'nate93@example.com', 'Nate Exeter');
+INSERT INTO customer VALUES ('CUS-394', 'omar94@example.com', 'Omar Hull');
+INSERT INTO customer VALUES ('CUS-395', 'pia95@example.com', 'Pia Ipswich');
+INSERT INTO customer VALUES ('CUS-396', 'quinn96@example.com', 'Quinn Kendal');
+INSERT INTO customer VALUES ('CUS-397', 'rosa97@example.com', 'Rosa Luton');
+INSERT INTO customer VALUES ('CUS-398', 'sam98@example.com', 'Sam Margate');
+INSERT INTO customer VALUES ('CUS-399', 'tara99@example.com', 'Tara Newport');
+INSERT INTO customer VALUES ('CUS-400', 'alice100@example.com', 'Alice Oxford');
+INSERT INTO customer VALUES ('CUS-401', 'bob101@example.com', 'Bob Poole');
+INSERT INTO customer VALUES ('CUS-402', 'carla102@example.com', 'Carla Ripon');
+INSERT INTO customer VALUES ('CUS-403', 'dan103@example.com', 'Dan Slough');
+INSERT INTO customer VALUES ('CUS-404', 'erin104@example.com', 'Erin Truro');
+INSERT INTO customer VALUES ('CUS-405', 'frank105@example.com', 'Frank Leeds');
+INSERT INTO customer VALUES ('CUS-406', 'gita106@example.com', 'Gita Bristol');
+INSERT INTO customer VALUES ('CUS-407', 'hugo107@example.com', 'Hugo Derby');
+INSERT INTO customer VALUES ('CUS-408', 'iris108@example.com', 'Iris Exeter');
+INSERT INTO customer VALUES ('CUS-409', 'jack109@example.com', 'Jack Hull');
+INSERT INTO customer VALUES ('CUS-410', 'kim110@example.com', 'Kim Ipswich');
+
+@expected seed.sql
+-- seed data: customers and their default addresses
+-- generated 2024-03-11, do not edit below the marker
+INSERT INTO customer VALUES ('CUS-301', 'bob1@example.com', 'Bob Bristol');
+INSERT INTO customer VALUES ('CUS-302', 'carla2@example.com', 'Carla Derby');
+INSERT INTO customer VALUES ('CUS-303', 'dan3@example.com', 'Dan Exeter');
+INSERT INTO customer VALUES ('CUS-304', 'erin4@example.com', 'Erin Hull');
+INSERT INTO customer VALUES ('CUS-305', 'frank5@example.com', 'Frank Ipswich');
+INSERT INTO customer VALUES ('CUS-306', 'gita6@example.com', 'Gita Kendal');
+INSERT INTO customer VALUES ('CUS-307', 'hugo7@example.com', 'Hugo Luton');
+INSERT INTO customer VALUES ('CUS-308', 'iris8@example.com', 'Iris Margate');
+INSERT INTO customer VALUES ('CUS-309', 'jack9@example.com', 'Jack Newport');
+INSERT INTO customer VALUES ('CUS-310', 'kim10@example.com', 'Kim Oxford');
+INSERT INTO customer VALUES ('CUS-311', 'liam11@example.com', 'Liam Poole');
+INSERT INTO customer VALUES ('CUS-312', 'mara12@example.com', 'Mara Ripon');
+INSERT INTO customer VALUES ('CUS-313', 'nate13@example.com', 'Nate Slough');
+INSERT INTO customer VALUES ('CUS-314', 'omar14@example.com', 'Omar Truro');
+INSERT INTO customer VALUES ('CUS-315', 'pia15@example.com', 'Pia Leeds');
+INSERT INTO customer VALUES ('CUS-316', 'quinn16@example.com', 'Quinn Bristol');
+INSERT INTO customer VALUES ('CUS-317', 'rosa17@example.com', 'Rosa Derby');
+INSERT INTO customer VALUES ('CUS-318', 'sam18@example.com', 'Sam Exeter');
+INSERT INTO customer VALUES ('CUS-319', 'tara19@example.com', 'Tara Hull');
+INSERT INTO customer VALUES ('CUS-320', 'alice20@example.com', 'Alice Ipswich');
+INSERT INTO customer VALUES ('CUS-321', 'bob21@example.com', 'Bob Kendal');
+INSERT INTO customer VALUES ('CUS-322', 'carla22@example.com', 'Carla Luton');
+INSERT INTO customer VALUES ('CUS-323', 'dan23@example.com', 'Dan Margate');
+INSERT INTO customer VALUES ('CUS-324', 'erin24@example.com', 'Erin Newport');
+INSERT INTO customer VALUES ('CUS-325', 'frank25@example.com', 'Frank Oxford');
+INSERT INTO customer VALUES ('CUS-326', 'gita26@example.com', 'Gita Poole');
+INSERT INTO customer VALUES ('CUS-327', 'hugo27@example.com', 'Hugo Ripon');
+INSERT INTO customer VALUES ('CUS-328', 'iris28@example.com', 'Iris Slough');
+INSERT INTO customer VALUES ('CUS-329', 'jack29@example.com', 'Jack Truro');
+INSERT INTO customer VALUES ('CUS-330', 'kim30@example.com', 'Kim Leeds');
+INSERT INTO customer VALUES ('CUS-331', 'liam31@example.com', 'Liam Bristol');
+INSERT INTO customer VALUES ('CUS-332', 'mara32@example.com', 'Mara Derby');
+INSERT INTO customer VALUES ('CUS-333', 'nate33@example.com', 'Nate Exeter');
+INSERT INTO customer VALUES ('CUS-334', 'omar34@example.com', 'Omar Hull');
+INSERT INTO customer VALUES ('CUS-335', 'pia35@example.com', 'Pia Ipswich');
+INSERT INTO customer VALUES ('CUS-336', 'quinn36@example.com', 'Quinn Kendal');
+INSERT INTO customer VALUES ('CUS-337', 'rosa37@example.com', 'Rosa Luton');
+INSERT INTO customer VALUES ('CUS-338', 'sam38@example.com', 'Sam Margate');
+INSERT INTO customer VALUES ('CUS-339', 'tara39@example.com', 'Tara Newport');
+INSERT INTO customer VALUES ('CUS-340', 'alice40@example.com', 'Alice Oxford');
+INSERT INTO customer VALUES ('CUS-341', 'bob41@example.com', 'Bob Poole');
+INSERT INTO customer VALUES ('CUS-342', 'carla42@example.com', 'Carla Ripon');
+INSERT INTO customer VALUES ('CUS-343', 'dan43@example.com', 'Dan Slough');
+INSERT INTO customer VALUES ('CUS-344', 'erin44@example.com', 'Erin Truro');
+INSERT INTO customer VALUES ('CUS-345', 'frank45@example.com', 'Frank Leeds');
+INSERT INTO customer VALUES ('CUS-346', 'gita46@example.com', 'Gita Bristol');
+INSERT INTO customer VALUES ('CUS-347', 'hugo47@example.com', 'Hugo Derby');
+INSERT INTO customer VALUES ('CUS-348', 'iris48@example.com', 'Iris Exeter');
+INSERT INTO customer VALUES ('CUS-349', 'jack49@example.com', 'Jack Hull');
+INSERT INTO customer VALUES ('CUS-350', 'kim50@example.com', 'Kim Ipswich');
+INSERT INTO customer VALUES ('CUS-351', 'liam51@example.com', 'Liam Kendal');
+INSERT INTO customer VALUES ('CUS-352', 'mara52@example.com', 'Mara Luton');
+INSERT INTO customer VALUES ('CUS-353', 'nate53@example.com', 'Nate Margate');
+INSERT INTO customer VALUES ('CUS-354', 'omar54@example.com', 'Omar Newport');
+INSERT INTO customer VALUES ('CUS-355', 'pia55@example.com', 'Pia Oxford');
+INSERT INTO customer VALUES ('CUS-356', 'quinn56@example.com', 'Quinn Poole');
+INSERT INTO customer VALUES ('CUS-357', 'rosa57@example.com', 'Rosa Ripon');
+INSERT INTO customer VALUES ('CUS-358', 'sam58@example.com', 'Sam Slough');
+INSERT INTO customer VALUES ('CUS-359', 'tara59@example.com', 'Tara Truro');
+INSERT INTO customer VALUES ('CUS-360', 'alice60@example.com', 'Alice Leeds');
+INSERT INTO customer VALUES ('CUS-361', 'bob61@example.com', 'Bob Bristol');
+INSERT INTO customer VALUES ('CUS-362', 'carla62@example.com', 'Carla Derby');
+INSERT INTO customer VALUES ('CUS-363', 'dan63@example.com', 'Dan Exeter');
+INSERT INTO customer VALUES ('CUS-364', 'erin64@example.com', 'Erin Hull');
+INSERT INTO customer VALUES ('CUS-365', 'frank65@example.com', 'Frank Ipswich');
+INSERT INTO customer VALUES ('CUS-366', 'gita66@example.com', 'Gita Kendal');
+INSERT INTO customer VALUES ('CUS-367', 'hugo67@example.com', 'Hugo Luton');
+INSERT INTO customer VALUES ('CUS-368', 'iris68@example.com', 'Iris Margate');
+INSERT INTO customer VALUES ('CUS-369', 'jack69@example.com', 'Jack Newport');
+INSERT INTO customer VALUES ('CUS-370', 'kim70@example.com', 'Kim Oxford');
+INSERT INTO customer VALUES ('CUS-371', 'liam71@example.com', 'Liam Poole');
+INSERT INTO customer VALUES ('CUS-372', 'mara72@example.com', 'Mara Ripon');
+INSERT INTO customer VALUES ('CUS-373', 'nate73@example.com', 'Nate Slough');
+INSERT INTO customer VALUES ('CUS-374', 'omar74@example.com', 'Omar Truro');
+INSERT INTO customer VALUES ('CUS-375', 'pia75@example.com', 'Pia Leeds');
+INSERT INTO customer VALUES ('CUS-376', 'quinn76@example.com', 'Quinn Bristol');
+INSERT INTO customer VALUES ('CUS-377', 'rosa77@example.com', 'Rosa Derby');
+INSERT INTO customer VALUES ('CUS-378', 'sam78@example.com', 'Sam Exeter');
+INSERT INTO customer VALUES ('CUS-379', 'tara79@example.com', 'Tara Hull');
+INSERT INTO customer VALUES ('CUS-380', 'alice80@example.com', 'Alice Ipswich');
+INSERT INTO customer VALUES ('CUS-381', 'bob81@example.com', 'Bob Kendal');
+INSERT INTO customer VALUES ('CUS-382', 'carla82@example.com', 'Carla Luton');
+INSERT INTO customer VALUES ('CUS-383', 'dan83@example.com', 'Dan Margate');
+INSERT INTO customer VALUES ('CUS-384', 'erin84@example.com', 'Erin Newport');
+INSERT INTO customer VALUES ('CUS-385', 'frank85@example.com', 'Frank Oxford');
+INSERT INTO customer VALUES ('CUS-386', 'gita86@example.com', 'Gita Poole');
+INSERT INTO customer VALUES ('CUS-387', 'hugo87@example.com', 'Hugo Ripon');
+INSERT INTO customer VALUES ('CUS-388', 'iris88@example.com', 'Iris Slough');
+INSERT INTO customer VALUES ('CUS-389', 'jack89@example.com', 'Jack Truro');
+INSERT INTO customer VALUES ('CUS-390', 'kim90@example.com', 'Kim Leeds');
+INSERT INTO customer VALUES ('CUS-391', 'liam91@example.com', 'Liam Bristol');
+INSERT INTO customer VALUES ('CUS-392', 'mara92@example.com', 'Mara Derby');
+INSERT INTO customer VALUES ('CUS-393', 'nate93@example.com', 'Nate Exeter');
+INSERT INTO customer VALUES ('CUS-394', 'omar94@example.com', 'Omar Hull');
+INSERT INTO customer VALUES ('CUS-395', 'pia95@example.com', 'Pia Ipswich');
+INSERT INTO customer VALUES ('CUS-396', 'quinn96@example.com', 'Quinn Kendal');
+INSERT INTO customer VALUES ('CUS-397', 'rosa97@example.com', 'Rosa Luton');
+INSERT INTO customer VALUES ('CUS-398', 'sam98@example.com', 'Sam Margate');
+INSERT INTO customer VALUES ('CUS-399', 'tara99@example.com', 'Tara Newport');
+INSERT INTO customer VALUES ('CUS-400', 'alice100@example.com', 'Alice Oxford');
+INSERT INTO customer VALUES ('CUS-401', 'bob101@example.com', 'Bob Poole');
+INSERT INTO customer VALUES ('CUS-402', 'carla102@example.com', 'Carla Ripon');  -- qa fixture
+INSERT INTO customer VALUES ('CUS-403', 'dan103@example.com', 'Dan Slough');
+INSERT INTO customer VALUES ('CUS-404', 'erin104@example.com', 'Erin Truro');
+INSERT INTO customer VALUES ('CUS-405', 'frank105@example.com', 'Frank Leeds');
+INSERT INTO customer VALUES ('CUS-406', 'gita106@example.com', 'Gita Bristol');
+INSERT INTO customer VALUES ('CUS-407', 'hugo107@example.com', 'Hugo Derby');
+INSERT INTO customer VALUES ('CUS-408', 'iris108@example.com', 'Iris Exeter');
+INSERT INTO customer VALUES ('CUS-409', 'jack109@example.com', 'Jack Hull');
+INSERT INTO customer VALUES ('CUS-410', 'kim110@example.com', 'Kim Ipswich');

@@ -1,0 +1,104 @@
+@meta
+id: 13-07
+title: The edges of the line
+chapter: 13
+type: lesson
+skills: regex-anchors
+par: 26
+minutes: 5
+vscode: Ctrl+F for PORT=, land on DB_PORT, Enter, Enter, Enter, Enter
+open: .env
+
+@brief
+The API is moving to port `8080`. Change `PORT` in this env file —
+just `PORT`, not the database port, the broker port, the metrics port
+or the SMTP port, all of which come before it in the file and all of
+which end in `PORT=`.
+
+A search for `PORT=` lands on `DB_PORT=` and stays wrong for four more
+presses of `n`. The thing that makes the right line different is not
+the text, it is the position: on that line `PORT` is the first thing on
+it.
+
+Patterns can talk about position. Two characters anchor a match to the
+edges of a line.
+
+@keys
+| `^` | the start of the line — matches a position, not a character |
+| `$` | the end of the line |
+| `/^PORT=` | `PORT=` only where it starts the line |
+| `/=$` | an equals sign with nothing after it — an empty value |
+| `$` then `ciw` | to the end of the line, change the word there |
+
+@hints
+Four keys end in `PORT=`. Only one *begins* with it. Say so in the
+pattern.
+--
+`^` at the front of a pattern means "at the start of the line". It is
+the same character that negated a bracket set, but outside brackets it
+is an anchor.
+--
+`/^PORT=` `Enter` lands on the right line. `$` to the value, `ciw8080`
+and `Esc` — the value is one word.
+
+@solution
+/^PORT=<Enter>  $ciw8080<Esc>  :wq<Enter>
+
+Twenty-one keystrokes, one search, no `n`.
+
+`^` and `$` are anchors. They do not consume a character; they assert
+where the match is allowed to sit. `^PORT` matches `PORT` only when
+there is nothing before it on the line, and `=$` matches an equals sign
+only when there is nothing after it — which in an env file is exactly
+"a key with no value", a useful thing to be able to search for when the
+deploy fails with a blank config.
+
+Anchors are the cheapest precision there is. Half the false matches you
+will ever get come from a short pattern that also lives inside longer
+words — `PORT` inside `DB_PORT`, `id` inside `paid`, `test` inside
+`latest`. When the thing you want is at the start or end of a line,
+one extra character removes every one of those.
+
+You already know `^` and `$` as motions: `0` and `$` from chapter 6,
+and `^` to the first non-blank. It is not a coincidence. Inside a
+pattern they name the same two places.
+
+The `$ciw` at the end is one of those pairs worth having ready. A
+value at the end of a line, of unknown length: go to the end, change
+the word. No counting.
+
+@start .env
+NODE_ENV=production
+LOG_LEVEL=info
+DB_HOST=database
+DB_PORT=3306
+DB_NAME=orders
+DB_USER=orders
+RABBIT_HOST=rabbit-1
+RABBIT_PORT=5672
+RABBIT_VHOST=payments
+METRICS_PORT=9100
+SMTP_HOST=smtp.internal
+SMTP_PORT=2525
+PORT=4000
+HOST=0.0.0.0
+GATEWAY_URL=https://gateway.internal:8443
+SENTRY_DSN=
+
+@expected .env
+NODE_ENV=production
+LOG_LEVEL=info
+DB_HOST=database
+DB_PORT=3306
+DB_NAME=orders
+DB_USER=orders
+RABBIT_HOST=rabbit-1
+RABBIT_PORT=5672
+RABBIT_VHOST=payments
+METRICS_PORT=9100
+SMTP_HOST=smtp.internal
+SMTP_PORT=2525
+PORT=8080
+HOST=0.0.0.0
+GATEWAY_URL=https://gateway.internal:8443
+SENTRY_DSN=

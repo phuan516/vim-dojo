@@ -1,0 +1,100 @@
+@meta
+id: 11-15
+title: Ampersand repeats the substitute
+chapter: 11
+type: lesson
+skills: amp-repeat-sub, dot-repeat
+par: 46
+minutes: 6
+vscode: replace-all, and then repair the ten comments it also changed
+open: refund.test.ts
+
+@brief
+Ten assertions, each expecting `'GBP'`, each followed by a comment that
+mentions GBP as a word. The ledger has moved to euros, so the ten
+assertions expect `'EUR'` now. The ten comments are history and stay as
+they are.
+
+The pattern you need includes the quotes, which is not something the word
+search you have been using can express. So this one is a substitute, and
+the command is written out for you below — chapter 14 is where `:s` gets
+explained properly.
+
+What this lesson is about is the second line and the ninth. Run the
+substitute once and then find out what `.` does with it.
+
+@keys
+| `:s/'GBP'/'EUR'/` `Enter` | on this line, replace the first `'GBP'` with `'EUR'` |
+| `&` | run that same substitute again on the current line |
+| `.` | does nothing useful here — `:s` is not a change `.` remembers |
+| `j` | down a line |
+
+@hints
+Run the command on the first assertion. Then move down one line and try
+to repeat it — you will find the key you have been using all chapter is
+not the one.
+--
+`.` repeats the last change to the text. `:s` is an ex command, and ex
+commands are kept in a different place. The key for repeating the last
+substitute on the current line is `&`.
+--
+`:s/'GBP'/'EUR'/` and Enter on the first assertion, then `j&` nine times.
+
+@solution
+    :s/'GBP'/'EUR'/<Enter>   then  j&  nine times
+
+`&` is shorthand for "the last substitute, here". It reuses the pattern
+and the replacement, but not the flags, so a `:s` you ran with `g` comes
+back without it — one occurrence per line, which is exactly what this file
+wants and is worth remembering as a trap in files where it is not.
+
+The real content of this lesson is the division. Vim keeps two separate
+memories of what you last did:
+
+- `.` holds the last change made from normal mode. It knows nothing about
+  the command line.
+- `&` holds the last `:substitute`, whatever range or flags it ran with.
+
+They do not overlap and neither one overwrites the other. You can make a
+normal-mode edit, run a substitute, and `.` still holds your edit.
+
+Which of them to reach for is mostly a question of what the pattern looks
+like. When you can put the cursor on the thing, `*` and `cgn` and `.` will
+be shorter and will show you every match on the way past. When the thing
+is only describable as a pattern — with punctuation in it, or anchored, or
+part of a word — a substitute states it once and `&` walks it down the
+file. Chapter 14 makes the substitute do whole files at a stroke and you
+will need `&` less, but it never stops being the cheapest way to say
+"again, here".
+
+@start refund.test.ts
+describe('legacy refunds', () => {
+  it('reports the ledger currency', () => {
+    expect(refunds['ORD-1182'].currency).toEqual('GBP'); // GBP ledger, closes in Q3
+    expect(refunds['ORD-1183'].currency).toEqual('GBP'); // GBP ledger, closes in Q3
+    expect(refunds['ORD-1184'].currency).toEqual('GBP'); // raised as GBP in 2023
+    expect(refunds['ORD-1185'].currency).toEqual('GBP'); // raised as GBP in 2023
+    expect(refunds['ORD-1186'].currency).toEqual('GBP'); // GBP, card payment
+    expect(refunds['ORD-1187'].currency).toEqual('GBP'); // GBP, card payment
+    expect(refunds['ORD-1188'].currency).toEqual('GBP'); // GBP, bank transfer
+    expect(refunds['ORD-1189'].currency).toEqual('GBP'); // GBP, bank transfer
+    expect(refunds['ORD-1190'].currency).toEqual('GBP'); // GBP, manual adjustment
+    expect(refunds['ORD-1191'].currency).toEqual('GBP'); // GBP, manual adjustment
+  });
+});
+
+@expected refund.test.ts
+describe('legacy refunds', () => {
+  it('reports the ledger currency', () => {
+    expect(refunds['ORD-1182'].currency).toEqual('EUR'); // GBP ledger, closes in Q3
+    expect(refunds['ORD-1183'].currency).toEqual('EUR'); // GBP ledger, closes in Q3
+    expect(refunds['ORD-1184'].currency).toEqual('EUR'); // raised as GBP in 2023
+    expect(refunds['ORD-1185'].currency).toEqual('EUR'); // raised as GBP in 2023
+    expect(refunds['ORD-1186'].currency).toEqual('EUR'); // GBP, card payment
+    expect(refunds['ORD-1187'].currency).toEqual('EUR'); // GBP, card payment
+    expect(refunds['ORD-1188'].currency).toEqual('EUR'); // GBP, bank transfer
+    expect(refunds['ORD-1189'].currency).toEqual('EUR'); // GBP, bank transfer
+    expect(refunds['ORD-1190'].currency).toEqual('EUR'); // GBP, manual adjustment
+    expect(refunds['ORD-1191'].currency).toEqual('EUR'); // GBP, manual adjustment
+  });
+});

@@ -1,0 +1,73 @@
+@meta
+id: 20-18
+title: Drill — Ctrl-R on the command line
+chapter: 20
+type: drill
+skills: register-zero
+par: 36
+minutes: 5
+reps: 8
+vscode: F2 rename, if the language server is awake
+open: cancellation.ts
+
+@brief
+Eight times: `cancellationReason` becomes `cancelReason` everywhere in
+the file. Yank the old name once and let `Ctrl-R 0` type it into the
+substitute. You should never type the long name.
+
+@keys
+| `yiw` | yank the word under the cursor |
+| `:%s/` `Ctrl-R 0` `/new/g` | the yank becomes the pattern |
+| `Ctrl-R /` | the last search pattern, on the command line |
+
+@hints
+`2w` puts the cursor on the name in the first line. `yiw`, then start
+the substitute and press `Ctrl-R 0` where the pattern goes.
+--
+`2w yiw :%s/` `Ctrl-R 0` `/cancelReason/g` Enter.
+
+@solution
+    2w yiw :%s/<Ctrl-R>0/cancelReason/g<Enter> :wq<Enter>
+
+Eighteen characters of identifier, one chord. It is the same `Ctrl-R`
+as insert mode, and the same registers: `Ctrl-R a` for a named one,
+`Ctrl-R %` for the file name (`:!prettier --write` `Ctrl-R %` is a
+common one), `Ctrl-R /` for the last search, so a pattern you have
+already found with `/` becomes the pattern of a `:s` or `:g` without
+retyping.
+
+Chapter 12 gave you `*`, which searches for the word under the cursor
+with word boundaries, and chapter 14 gave you the empty pattern in
+`:%s//new/g`, which reuses the last search. `*` then `:%s//cancelReason/g`
+is a fair rival here. `Ctrl-R 0` wins when the thing you want is not
+under the cursor any more.
+
+@start cancellation.ts
+export const cancellationReason = 'REFUND_WINDOW_EXPIRED';
+
+export function cancel(order: Order) {
+  if (order.cancellationReason) {
+    return order;
+  }
+
+  return { ...order, status: 'CANCELLED', cancellationReason };
+}
+
+export function wasRefunded(order: Order) {
+  return order.cancellationReason !== cancellationReason;
+}
+
+@expected cancellation.ts
+export const cancelReason = 'REFUND_WINDOW_EXPIRED';
+
+export function cancel(order: Order) {
+  if (order.cancelReason) {
+    return order;
+  }
+
+  return { ...order, status: 'CANCELLED', cancelReason };
+}
+
+export function wasRefunded(order: Order) {
+  return order.cancelReason !== cancelReason;
+}

@@ -1,0 +1,214 @@
+@meta
+id: 32-14
+title: Conflict — neither side is the answer
+chapter: 32
+type: scenario
+skills: conflict-resolution, range-pattern, global-delete, search-slash
+par: 113
+minutes: 13
+vscode: three panes, and the merge editor cannot express this
+open: src/domain/order/order.provider.ts src/configuration/registry.ts src/infrastructure/services/audit.service.ts src/infrastructure/services/metrics.service.ts
+vimrc: set hidden
+
+@brief
+Third merge, and the hardest kind: one of the hunks has no correct
+answer on either side.
+
+    $ git merge main
+    CONFLICT (content): Merge conflict in src/domain/order/order.provider.ts
+    CONFLICT (content): Merge conflict in src/configuration/registry.ts
+
+Four hunks. Three of them are "both sides added something and both are
+wanted". The fourth is not.
+
+`main` renamed `cancel` to `cancelOrder` — that rename is already
+everywhere else in the codebase, so the name has to survive. Your branch
+replaced the repository update with `markCancelled`, which is the whole
+point of your branch, so the body has to survive. The merged method is
+`main`'s signature with your body, and neither block in the file says
+that.
+
+The two services are open for reference and do not change.
+
+Sequence matters in this one. Resolve the hunk that needs thought first,
+while you can still see which block is which, and sweep the "keep both"
+hunks afterwards.
+
+@keys
+| `?^<<<` | search backwards to the start of this conflict |
+| `:.,/^=/d` | delete from here down to the separator |
+| `ciw` | change the word under the cursor |
+| `:g/^[<>=]\{7\}/d` | delete every marker line left in the file |
+
+@hints
+Four hunks, two tools. Work out which hunk is the odd one before you
+delete anything, and do that one first: once you have run the marker
+sweep you can no longer tell which lines came from which side.
+--
+For the odd hunk, keep the lower block — it is the one with the body you
+want — and fix its signature afterwards. Deleting the upper block is one
+range command: from the `<<<<<<<` line down to the `=======`.
+--
+`/markCancelled` `Enter` puts you inside the hunk that matters. `?^<<<`
+`Enter` gets you to its top. `:.,/^=/d` removes `main`'s block, and the
+cursor lands on the signature you now have to rename. `/^>>>` `Enter`
+`dd` takes the last marker, and `:g/^[<>=]\{7\}/d` clears what is left.
+
+@solution
+`/markCancelled` `Enter` `?^<<<` `Enter` `:.,/^=/d` `ww` `ciwcancelOrder`
+`Esc` `/^>>>` `Enter` `dd` `:g/^[<>=]\{7\}/d`, then `:bn`
+`:g/^[<>=]\{7\}/d` `:wqa`. 98 keystrokes.
+
+**Navigate to the hunk by its content, not by its markers.** `/^<<<` from
+the top of the file lands on the constructor hunk, which is not the one
+you want to think about. `/markCancelled` lands you inside the hunk that
+needs a decision, and `?^<<<` walks up to its top. Searching for the
+thing you care about and then backing out to the structure around it is
+worth having as a reflex — it is the same move as landing on a function
+by name and then pressing `[{`.
+
+**Keep the bigger side, patch the smaller difference.** Your body is five
+lines; `main`'s contribution to the merged method is one word. Deleting
+`main`'s block and retyping one identifier is far less work, and far less
+error-prone, than keeping `main`'s block and reconstructing your body
+inside it. Whenever both sides must contribute, ask which side is closer
+to the answer and start from that one.
+
+**Then sweep.** With the thinking hunk resolved, the remaining three are
+all "both sides, in order, no spacing to preserve", which is exactly
+`:g/^[<>=]\{7\}/d` — once per file. Doing the sweep first would have
+merged both blocks of the method hunk into one file that defines `cancel`
+and `cancelOrder` back to back, and you would have had to work out which
+lines came from where with the markers already gone.
+
+The general shape: in a multi-hunk merge, the hunks are not equally hard.
+Find the one that needs a decision, make it while the markers are still
+telling you who wrote what, and let a single command clean up the rest.
+
+@start src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { AuditService } from '../../infrastructure/services/audit.service';
+import { MetricsService } from '../../infrastructure/services/metrics.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+<<<<<<< HEAD
+    @inject(AuditService) protected auditService: AuditService,
+=======
+    @inject(MetricsService) protected metricsService: MetricsService,
+>>>>>>> feature/mark-cancelled
+  ) {}
+
+  public async findOne(id: string) {
+    return this.orderRepository.findOne({ where: { id } });
+  }
+
+<<<<<<< HEAD
+  public async cancelOrder(id: string) {
+    const order = await this.findOne(id);
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.update({
+      where: { id },
+      values: { status: 'CANCELLED' },
+    });
+  }
+=======
+  public async cancel(id: string) {
+    const order = await this.findOne(id);
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.markCancelled({ id, reason: 'CUSTOMER_REQUEST' });
+  }
+>>>>>>> feature/mark-cancelled
+}
+
+@expected src/domain/order/order.provider.ts
+import { injectable, inject } from 'tsyringe';
+import { OrderRepository } from './order.repository';
+import { PaymentService } from '../../infrastructure/services/payment.service';
+import { AuditService } from '../../infrastructure/services/audit.service';
+import { MetricsService } from '../../infrastructure/services/metrics.service';
+
+@injectable()
+export class OrderProvider {
+  constructor(
+    @inject(OrderRepository) protected orderRepository: OrderRepository,
+    @inject(PaymentService) protected paymentService: PaymentService,
+    @inject(AuditService) protected auditService: AuditService,
+    @inject(MetricsService) protected metricsService: MetricsService,
+  ) {}
+
+  public async findOne(id: string) {
+    return this.orderRepository.findOne({ where: { id } });
+  }
+
+  public async cancelOrder(id: string) {
+    const order = await this.findOne(id);
+
+    await this.paymentService.refund(order.id);
+
+    return this.orderRepository.markCancelled({ id, reason: 'CUSTOMER_REQUEST' });
+  }
+}
+
+@start src/configuration/registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+<<<<<<< HEAD
+import { AuditService } from '../infrastructure/services/audit.service';
+=======
+import { MetricsService } from '../infrastructure/services/metrics.service';
+>>>>>>> feature/mark-cancelled
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('PaymentService', { useClass: PaymentService });
+<<<<<<< HEAD
+container.register('AuditService', { useClass: AuditService });
+=======
+container.register('MetricsService', { useClass: MetricsService });
+>>>>>>> feature/mark-cancelled
+
+@expected src/configuration/registry.ts
+import { container } from 'tsyringe';
+import { OrderRepository } from '../domain/order/order.repository';
+import { OrderProvider } from '../domain/order/order.provider';
+import { PaymentService } from '../infrastructure/services/payment.service';
+import { AuditService } from '../infrastructure/services/audit.service';
+import { MetricsService } from '../infrastructure/services/metrics.service';
+
+container.register('OrderRepository', { useClass: OrderRepository });
+container.register('OrderProvider', { useClass: OrderProvider });
+container.register('PaymentService', { useClass: PaymentService });
+container.register('AuditService', { useClass: AuditService });
+container.register('MetricsService', { useClass: MetricsService });
+
+@start src/infrastructure/services/audit.service.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class AuditService {
+  public async record(event: string, subjectId: string) {
+    return this.http.post(`/audit`, { event, subjectId });
+  }
+}
+
+@start src/infrastructure/services/metrics.service.ts
+import { injectable } from 'tsyringe';
+
+@injectable()
+export class MetricsService {
+  public increment(metric: string) {
+    return this.statsd.increment(metric);
+  }
+}

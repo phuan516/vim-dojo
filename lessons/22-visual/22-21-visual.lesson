@@ -1,0 +1,109 @@
+@meta
+id: 22-21
+title: Capstone — visual mode and the column trick
+chapter: 22
+type: scenario
+skills: visual-char, visual-line, visual-block, block-insert
+par: 52
+minutes: 6
+vscode: Alt+click multi-cursor, Alt+Shift+drag
+open: order.types.ts
+
+@brief
+Visual mode is the one place vim works like every other editor:
+select first, then act. Use it when you cannot describe the target
+with a motion.
+
+The killer feature is VISUAL BLOCK ( Ctrl-V ): a rectangular
+selection down a column. It is how vim does the multi-cursor edits
+you use Alt+click for.
+
+In order.types.ts:
+
+  1. Put  readonly  in front of all four field names - one edit,
+     not four.
+  2. Put a  ;  at the end of all four field lines - again one edit.
+  3. Uppercase the three status strings: 'pending' -> 'PENDING' etc.
+
+Do steps 1 and 2 with Ctrl-V. Doing them four times by hand counts
+as failing the level even though the checker will pass you.
+
+@keys
+v         visual: select characters
+V         visual line: select whole lines
+Ctrl-V    visual BLOCK: select a rectangle
+Esc       cancel the selection
+
+With a block selected:
+  I  type  Esc     insert that text at the start of EVERY line
+  A  type  Esc     append it to the end of every line
+  $ then A         append at each line's own end, ragged edges fine
+  d  /  c  /  y    delete / change / yank the rectangle
+  r x              fill the whole block with x
+
+On any visual selection:
+  U  /  u          upper case / lower case the selection
+  >  /  <          indent / outdent      .  repeats it
+  gv               reselect whatever you had selected last time
+Outside visual mode:
+  gUiw             upper case the word under the cursor
+
+@hints
+Put the cursor on the i of id (line 2, column 3). Press Ctrl-V, then
+jjj to stretch the block down four lines. It looks like a thin
+column - that is correct.
+--
+With the block showing, press I (capital i), type  readonly  with a
+trailing space, then Esc. The text appears on all four lines the
+moment you press Esc, not before. Wait for it.
+--
+For the semicolons: cursor on line 2, Ctrl-V, jjj, then $ to run the
+block to the end of every line however long it is, then A ; Esc .
+--
+For the strings: cursor on the p of pending, then  gUiw  - "make
+upper case, inner word". Then j and . on the next two.
+
+@solution
+2G ^                      first field name
+Ctrl-V jjj                block down four lines
+I readonly<space> Esc     appears on all four
+
+2G Ctrl-V jjj $ A ; Esc   semicolon on every line end
+
+/pending Enter
+gUiw                      'PENDING'
+j .    j .                repeat on the other two
+
+:wq
+
+Rule of thumb: if you are about to do the same small edit on
+several consecutive lines, that is Ctrl-V. If the lines are
+scattered, that is  *  and  .  from level 4.
+
+@start order.types.ts
+type Order = {
+  id: string
+  customerId: string
+  status: string
+  total: number
+}
+
+const statuses = [
+  'pending',
+  'shipped',
+  'cancelled',
+]
+
+@expected order.types.ts
+type Order = {
+  readonly id: string;
+  readonly customerId: string;
+  readonly status: string;
+  readonly total: number;
+}
+
+const statuses = [
+  'PENDING',
+  'SHIPPED',
+  'CANCELLED',
+]
