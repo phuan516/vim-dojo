@@ -59,7 +59,7 @@ it just looks at the line.
 
 @start sentry.json
 {
-  "name": "@thrive/orders",
+  "name": "@globex/orders",
   "sentry": {
     "dsn": "https://4504@ingest.sentry.io/orders",
     "environment": "staging",
@@ -69,7 +69,7 @@ it just looks at the line.
 
 @expected sentry.json
 {
-  "name": "@thrive/orders",
+  "name": "@globex/orders",
   "sentry": {
     "dsn": "https://4504@ingest.sentry.io/orders",
     "environment": "production",

@@ -38,9 +38,9 @@ it works on a bracket, a comma or a colon instead. You are not learning
 edits any more, you are learning to spell them.
 
 @start mail.ts
-const from = 'billing@thrive.example';
+const from = 'billing@globex.example';
 const replyTo = '';
 
 @expected mail.ts
-const from = 'billing@thrive.example';
-const replyTo = 'billing@thrive.example';
+const from = 'billing@globex.example';
+const replyTo = 'billing@globex.example';

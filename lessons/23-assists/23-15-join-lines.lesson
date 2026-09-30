@@ -68,7 +68,7 @@ whole block you have already highlighted.
   generic 500.
 - Fixed the customer lookup in the seed script.
 
-Dashboard: https://grafana.thrive.example/d/payments?orgId=1&from=now-7d&to=
+Dashboard: https://grafana.globex.example/d/payments?orgId=1&from=now-7d&to=
 now
 
 @expected RELEASE-NOTES.md
@@ -78,4 +78,4 @@ now
 - Declined payments raise PAYMENT_DECLINED with a 402 instead of a generic 500.
 - Fixed the customer lookup in the seed script.
 
-Dashboard: https://grafana.thrive.example/d/payments?orgId=1&from=now-7d&to=now
+Dashboard: https://grafana.globex.example/d/payments?orgId=1&from=now-7d&to=now

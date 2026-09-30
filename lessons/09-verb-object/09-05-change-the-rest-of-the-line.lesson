@@ -14,7 +14,7 @@ Support mail has moved off the old domain. The config still points at it:
 
     supportEmail: 'billing@old-domain.example',
 
-It should read `'billing@thrive.example',` — same quotes, same trailing
+It should read `'billing@globex.example',` — same quotes, same trailing
 comma, new address. Fix it and save.
 
 The key is on the line already and the value is not; do not retype the
@@ -36,7 +36,7 @@ of what remains. `C` is the same thing in one key.
 value including its closing quote and comma.
 
 @solution
-    j f' C 'billing@thrive.example', <Esc> :wq<Enter>
+    j f' C 'billing@globex.example', <Esc> :wq<Enter>
 
 Retyping the value is unavoidable — it is new text. Retyping
 `  supportEmail: ` would not have been, and that is the difference between
@@ -61,7 +61,7 @@ export const config = {
 
 @expected config.ts
 export const config = {
-  supportEmail: 'billing@thrive.example',
+  supportEmail: 'billing@globex.example',
   refundWindowDays: 30,
   retryLimit: 5,
 };

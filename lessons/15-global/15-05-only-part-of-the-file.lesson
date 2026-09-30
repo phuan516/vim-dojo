@@ -59,8 +59,8 @@ asymmetry in mind and it will not bite you.
 -- staging
 INSERT INTO customer (id, email, tier) VALUES ('cust_10', 'ana@example.com', 'basic');
 INSERT INTO customer (id, email, tier) VALUES ('cust_11', 'ben@example.com', 'premium');
-INSERT INTO customer (id, email, tier) VALUES ('test_01', 'qa-one@thrive.test', 'basic');
-INSERT INTO customer (id, email, tier) VALUES ('test_02', 'qa-two@thrive.test', 'premium');
+INSERT INTO customer (id, email, tier) VALUES ('test_01', 'qa-one@globex.test', 'basic');
+INSERT INTO customer (id, email, tier) VALUES ('test_02', 'qa-two@globex.test', 'premium');
 INSERT INTO "order" (id, customer_id, status, total) VALUES ('ord_4001', 'cust_10', 'PENDING', 4999);
 INSERT INTO "order" (id, customer_id, status, total) VALUES ('ord_4002', 'cust_11', 'SHIPPED', 12000);
 INSERT INTO "order" (id, customer_id, status, total) VALUES ('ord_4003', 'test_01', 'PENDING', 100);
@@ -71,8 +71,8 @@ INSERT INTO payment (id, order_id, amount) VALUES ('pay_9002', 'ord_4002', 12000
 -- production
 INSERT INTO customer (id, email, tier) VALUES ('cust_10', 'ana@example.com', 'basic');
 INSERT INTO customer (id, email, tier) VALUES ('cust_11', 'ben@example.com', 'premium');
-INSERT INTO customer (id, email, tier) VALUES ('test_01', 'qa-one@thrive.test', 'basic');
-INSERT INTO customer (id, email, tier) VALUES ('test_02', 'qa-two@thrive.test', 'premium');
+INSERT INTO customer (id, email, tier) VALUES ('test_01', 'qa-one@globex.test', 'basic');
+INSERT INTO customer (id, email, tier) VALUES ('test_02', 'qa-two@globex.test', 'premium');
 INSERT INTO "order" (id, customer_id, status, total) VALUES ('ord_4001', 'cust_10', 'PENDING', 4999);
 INSERT INTO "order" (id, customer_id, status, total) VALUES ('ord_4002', 'cust_11', 'SHIPPED', 12000);
 INSERT INTO "order" (id, customer_id, status, total) VALUES ('ord_4003', 'test_01', 'PENDING', 100);
@@ -84,8 +84,8 @@ INSERT INTO payment (id, order_id, amount) VALUES ('pay_9002', 'ord_4002', 12000
 -- staging
 INSERT INTO customer (id, email, tier) VALUES ('cust_10', 'ana@example.com', 'basic');
 INSERT INTO customer (id, email, tier) VALUES ('cust_11', 'ben@example.com', 'premium');
-INSERT INTO customer (id, email, tier) VALUES ('test_01', 'qa-one@thrive.test', 'basic');
-INSERT INTO customer (id, email, tier) VALUES ('test_02', 'qa-two@thrive.test', 'premium');
+INSERT INTO customer (id, email, tier) VALUES ('test_01', 'qa-one@globex.test', 'basic');
+INSERT INTO customer (id, email, tier) VALUES ('test_02', 'qa-two@globex.test', 'premium');
 INSERT INTO "order" (id, customer_id, status, total) VALUES ('ord_4001', 'cust_10', 'PENDING', 4999);
 INSERT INTO "order" (id, customer_id, status, total) VALUES ('ord_4002', 'cust_11', 'SHIPPED', 12000);
 INSERT INTO "order" (id, customer_id, status, total) VALUES ('ord_4003', 'test_01', 'PENDING', 100);

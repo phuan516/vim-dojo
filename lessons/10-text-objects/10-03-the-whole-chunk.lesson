@@ -61,7 +61,7 @@ flag you removed sat in the middle of each script and not at the end.
 
 @start package.json
 {
-  "name": "@thrive/orders",
+  "name": "@globex/orders",
   "version": "2.4.0",
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
@@ -73,7 +73,7 @@ flag you removed sat in the middle of each script and not at the end.
 
 @expected package.json
 {
-  "name": "@thrive/orders",
+  "name": "@globex/orders",
   "version": "2.4.0",
   "scripts": {
     "build": "tsc --project tsconfig.build.json",

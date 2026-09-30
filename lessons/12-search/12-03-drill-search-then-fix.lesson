@@ -43,7 +43,7 @@ that way.
 @start http.config.ts
 export const httpConfig = {
   baseUrl: 'https://api.example.com',
-  userAgent: 'clarity-order-service/2.4.1',
+  userAgent: 'initech-order-service/2.4.1',
   keepAlive: true,
   maxSockets: 64,
   compression: 'gzip',
@@ -73,7 +73,7 @@ export const httpConfig = {
 @expected http.config.ts
 export const httpConfig = {
   baseUrl: 'https://api.example.com',
-  userAgent: 'clarity-order-service/2.4.1',
+  userAgent: 'initech-order-service/2.4.1',
   keepAlive: true,
   maxSockets: 64,
   compression: 'gzip',
