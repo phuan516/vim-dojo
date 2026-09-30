@@ -1,0 +1,30 @@
+vim-dojo
+Copyright (c) 2026 Peter Huang
+https://github.com/phuan516/vim-dojo
+
+This project is released under two licenses.
+
+Code: MIT License (see LICENSE)
+  dojo
+  engine/
+  tests/
+
+Lessons and teaching material: Creative Commons Attribution 4.0
+International, CC BY 4.0 (see LICENSE-LESSONS,
+https://creativecommons.org/licenses/by/4.0/)
+  lessons/
+  levels/
+  curriculum.json
+  CHEATSHEET.md
+  docs/
+  .dojo/codebase/
+  README.md
+
+Both licenses require attribution. If you reuse, adapt or redistribute
+any part of this project, credit it like this:
+
+  Based on vim-dojo by Peter Huang
+  (https://github.com/phuan516/vim-dojo), licensed under CC BY 4.0 / MIT.
+
+State if you changed anything, and keep the copyright notice and license
+text with any copy of the code.

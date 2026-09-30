@@ -130,3 +130,18 @@ ground.
 The curriculum lives in `curriculum.json`, lessons in `lessons/`, one
 plain-text file each. `docs/AUTHORING.md` is the format and the house
 rules; `./dojo doctor` validates every lesson file.
+
+## License
+
+The code (`dojo`, `engine/`, `tests/`) is under the [MIT License](LICENSE).
+The lessons and teaching material (`lessons/`, `levels/`,
+`curriculum.json`, `CHEATSHEET.md`, `docs/`, `.dojo/codebase/`) are under
+[CC BY 4.0](LICENSE-LESSONS).
+
+You are free to use, adapt and share any of it, including commercially,
+as long as you give credit:
+
+> Based on [vim-dojo](https://github.com/phuan516/vim-dojo) by Peter Huang,
+> licensed under CC BY 4.0 / MIT.
+
+See [NOTICE](NOTICE) for details.
